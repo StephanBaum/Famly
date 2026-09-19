@@ -141,158 +141,159 @@
 /* =========================================================================
    🌙 CONSEQUENT & COMPLETE DARK MODE STYLES
    ========================================================================= */
-.dark {
+html.dark {
   color-scheme: dark;
 }
 
-.dark body {
+html.dark body,
+html.dark #root,
+html.dark .min-h-screen {
   background-color: #0b0f19 !important;
   color: #e2e8f0 !important;
 }
 
-/* Cards & Elevated Containers */
-.dark .duo-card,
-.dark .bg-white {
+/* ALL cards, containers, panels and white backgrounds */
+html.dark .duo-card,
+html.dark .bg-white,
+html.dark [class*="bg-gradient-to-"] {
+  background-image: none !important;
   background-color: #141c2e !important;
-  border-color: #27354f !important;
-  color: #f1f5f9;
-}
-
-.dark .duo-card {
-  box-shadow: 0 4px 0 0 #090d16 !important;
-}
-
-/* Secondary & Subtle Surfaces */
-.dark .bg-stone-50,
-.dark .bg-stone-100 {
-  background-color: #1a243a !important;
-  border-color: #283650 !important;
-  color: #e2e8f0;
-}
-
-.dark .bg-stone-200 {
-  background-color: #24314c !important;
-  border-color: #334363 !important;
-}
-
-/* Headings & Text High-Contrast Overrides */
-.dark .text-stone-900,
-.dark .text-stone-800 {
+  border-color: #26334d !important;
   color: #f8fafc !important;
 }
 
-.dark .text-stone-700,
-.dark .text-stone-600 {
+html.dark .duo-card {
+  box-shadow: 0 4px 0 0 #070a12 !important;
+}
+
+/* Preserve image overlay gradients for photos */
+html.dark .aspect-4\/3 [class*="bg-gradient-to-"],
+html.dark .relative [class*="bg-gradient-to-t"][class*="from-black"],
+html.dark .relative [class*="bg-gradient-to-t"][class*="from-slate-950"] {
+  background-image: linear-gradient(to top, var(--tw-gradient-stops)) !important;
+  background-color: transparent !important;
+}
+
+/* Subtle inner cards, lists, table cells, secondary surfaces */
+html.dark .bg-stone-50,
+html.dark .bg-stone-50\/40,
+html.dark .bg-stone-50\/50,
+html.dark .bg-stone-50\/80,
+html.dark .bg-stone-100,
+html.dark .bg-stone-200 {
+  background-color: #1a253c !important;
+  border-color: #26334d !important;
+  color: #e2e8f0 !important;
+}
+
+/* Headings and body texts across all elements */
+html.dark .text-stone-900,
+html.dark .text-stone-800 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-stone-700,
+html.dark .text-stone-600 {
   color: #cbd5e1 !important;
 }
 
-.dark .text-stone-500,
-.dark .text-stone-400 {
+html.dark .text-stone-500,
+html.dark .text-stone-400 {
   color: #94a3b8 !important;
 }
 
 /* Form inputs, textareas, and selects */
-.dark input[type="text"],
-.dark input[type="date"],
-.dark input[type="time"],
-.dark input[type="search"],
-.dark input[type="number"],
-.dark select,
-.dark textarea {
-  background-color: #0f172a !important;
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0d1424 !important;
   color: #f8fafc !important;
-  border-color: #334155 !important;
+  border-color: #2b3954 !important;
 }
 
-.dark input::placeholder,
-.dark textarea::placeholder {
+html.dark input::placeholder,
+html.dark textarea::placeholder {
   color: #64748b !important;
 }
 
 /* Borders */
-.dark .border-stone-100,
-.dark .border-stone-200,
-.dark .border-stone-300 {
-  border-color: #24324d !important;
+html.dark .border-stone-100,
+html.dark .border-stone-200,
+html.dark .border-stone-300 {
+  border-color: #26334d !important;
 }
 
-/* Buttons */
-.dark .duo-btn-white {
-  background-color: #1a243a !important;
+/* White 3D Buttons */
+html.dark .duo-btn-white {
+  background-color: #1a253c !important;
   border: 2px solid #2d3b55 !important;
   border-bottom: 4px solid #2d3b55 !important;
   color: #f8fafc !important;
 }
-.dark .duo-btn-white:hover {
+html.dark .duo-btn-white:hover {
   background-color: #24314c !important;
 }
 
-/* Translucent & Pastel Color Badges Adaptations */
-.dark .bg-emerald-50,
-.dark .bg-emerald-50\/40,
-.dark .bg-emerald-50\/50,
-.dark .bg-emerald-100 {
+/* Badges with light pastel colors become pleasant deep tinted badges */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
   background-color: rgba(6, 78, 59, 0.45) !important;
   color: #6ee7b7 !important;
   border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
-.dark .bg-teal-50,
-.dark .bg-teal-50\/50,
-.dark .bg-teal-100 {
+html.dark .bg-teal-50,
+html.dark .bg-teal-100 {
   background-color: rgba(19, 78, 74, 0.45) !important;
   color: #5eead4 !important;
   border-color: rgba(20, 184, 166, 0.3) !important;
 }
 
-.dark .bg-blue-50,
-.dark .bg-blue-50\/50,
-.dark .bg-blue-100 {
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
   background-color: rgba(30, 58, 138, 0.45) !important;
   color: #93c5fd !important;
   border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
-.dark .bg-amber-50,
-.dark .bg-amber-50\/50,
-.dark .bg-amber-100 {
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 {
   background-color: rgba(120, 53, 15, 0.45) !important;
   color: #fde68a !important;
   border-color: rgba(245, 158, 11, 0.3) !important;
 }
 
-.dark .bg-rose-50,
-.dark .bg-rose-50\/50,
-.dark .bg-rose-100 {
+html.dark .bg-rose-50,
+html.dark .bg-rose-100 {
   background-color: rgba(136, 19, 55, 0.45) !important;
   color: #fda4af !important;
   border-color: rgba(244, 63, 94, 0.3) !important;
 }
 
-.dark .bg-purple-50,
-.dark .bg-purple-50\/50,
-.dark .bg-purple-100 {
+html.dark .bg-purple-50,
+html.dark .bg-purple-100,
+html.dark .border-purple-200 {
   background-color: rgba(88, 28, 135, 0.45) !important;
   color: #d8b4fe !important;
   border-color: rgba(168, 85, 247, 0.3) !important;
 }
 
-/* Modals & Backdrop */
-.dark .bg-white\/95 {
+/* Modals & translucent overlays */
+html.dark .bg-white\/95,
+html.dark .bg-white\/90,
+html.dark .bg-white\/80 {
   background-color: rgba(20, 28, 46, 0.95) !important;
-}
-.dark .bg-white\/80 {
-  background-color: rgba(20, 28, 46, 0.85) !important;
+  border-color: #26334d !important;
 }
 
 /* Scrollbars in Dark Mode */
-.dark ::-webkit-scrollbar-track {
+html.dark ::-webkit-scrollbar-track {
   background: #0b0f19;
 }
-.dark ::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #283652;
 }
-.dark ::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #3b4d70;
 }
 

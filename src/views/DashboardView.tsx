@@ -42,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     addNote,
     deleteNote,
     addRecipeIngredientsToGrocery,
+    familyName,
   } = useFamily();
 
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
@@ -98,7 +99,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-black text-stone-900 tracking-tight">
-                  {currentMember ? `Hi, ${currentMember.name}!` : 'Hello, Miller Family!'}
+                  {currentMember ? `Hi, ${currentMember.name}!` : `Hello, ${familyName}!`}
                 </h2>
                 <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#FFC800] text-stone-900 border-b-2 border-[#E5A500]">
                   {format(new Date(), 'EEEE')}
