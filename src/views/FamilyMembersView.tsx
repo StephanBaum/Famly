@@ -9,7 +9,7 @@ const AVATAR_OPTIONS = ['👩‍💼', '👨‍💻', '👦', '👧', '👵', '�
 const COLOR_OPTIONS = ['#EC4899', '#0D9488', '#F59E0B', '#8B5CF6', '#3B82F6', '#10B981', '#F43F5E', '#6366F1'];
 
 export const FamilyMembersView: React.FC = () => {
-  const { members, addMember, updateMember, currentMemberId, setCurrentMemberId } = useFamily();
+  const { members, addMember, updateMember, loggedInMemberId } = useFamily();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -103,7 +103,7 @@ export const FamilyMembersView: React.FC = () => {
       {/* Members Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {members.map((member) => {
-          const isCurrent = currentMemberId === member.id;
+          const isLoggedIn = member.id === loggedInMemberId;
           const isChild = Boolean(
             member.isChild ||
               member.role.toLowerCase().includes('sohn') ||
@@ -119,9 +119,9 @@ export const FamilyMembersView: React.FC = () => {
           return (
             <div
               key={member.id}
-              className={`duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-col justify-between transition-all ${
-                isCurrent ? 'border-purple-400 dark:border-purple-500 ring-2 ring-purple-400/30' : ''
-              }`}
+              className={`duo-card p-6 bg-white dark:bg-slate-900 border-2 ${
+                isLoggedIn ? 'border-purple-300 dark:border-purple-700 ring-2 ring-purple-400/20' : 'border-stone-200 dark:border-slate-800'
+              } flex flex-col justify-between transition-all`}
             >
               <div className="space-y-4">
                 
@@ -149,6 +149,11 @@ export const FamilyMembersView: React.FC = () => {
                         {isChild && (
                           <span className="text-[10px] font-black text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.2 rounded-full border border-amber-300 dark:border-amber-700">
                             Kind
+                          </span>
+                        )}
+                        {isLoggedIn && (
+                          <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700">
+                            Dein Profil
                           </span>
                         )}
                       </div>
@@ -297,25 +302,28 @@ export const FamilyMembersView: React.FC = () => {
               </div>
 
               {/* Card Footer */}
-              <div className="mt-5 pt-3 border-t-2 border-stone-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <div className="mt-5 pt-3 border-t-2 border-stone-100 dark:border-slate-800 flex items-center gap-2">
                 <button
-                  onClick={() => setSelectedDetailsMember(member)}
-                  className={`duo-btn px-3 py-1.5 text-xs font-black rounded-xl flex-1 ${
+                  type="button"
+                  onClick={() => {
+                    setSelectedDetailsMember(member);
+                    setDetailsInitialEditMode(false);
+                  }}
+                  className={`duo-btn px-3 py-2 text-xs font-black rounded-xl flex-1 ${
                     isChild ? 'duo-btn-purple' : 'duo-btn-white text-stone-700 dark:text-slate-200'
                   }`}
                 >
-                  {isChild ? '🧸 Kinder-Pass & Größen' : '👤 Profil & Details'}
+                  {isChild ? '🧸 Kinder-Pass öffnen' : '👤 Profil & Details'}
                 </button>
 
                 <button
-                  onClick={() => setCurrentMemberId(member.id)}
-                  className={`duo-btn px-3 py-1.5 text-xs font-extrabold rounded-xl ${
-                    isCurrent
-                      ? 'bg-stone-900 dark:bg-purple-600 text-white'
-                      : 'duo-btn-white'
-                  }`}
+                  type="button"
+                  onClick={() => openEditModal(member)}
+                  className="duo-btn duo-btn-white px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white shrink-0"
+                  title="Basisdaten bearbeiten"
                 >
-                  {isCurrent ? 'Aktiv' : 'Wählen'}
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Bearbeiten</span>
                 </button>
               </div>
 
