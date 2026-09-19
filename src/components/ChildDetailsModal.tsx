@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FamilyMember, ChildDetails, CustomInfoField } from '../types';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
@@ -19,16 +19,22 @@ interface ChildDetailsModalProps {
   member: FamilyMember;
   isOpen: boolean;
   onClose: () => void;
+  initialEditMode?: boolean;
 }
 
 export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
   member,
   isOpen,
   onClose,
+  initialEditMode = false,
 }) => {
   const { updateMember } = useFamily();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsEditing(Boolean(initialEditMode));
+  }, [isOpen, initialEditMode, member?.id]);
 
   const isChild = Boolean(
     member.isChild ||

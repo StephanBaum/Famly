@@ -36,23 +36,23 @@ export const Header: React.FC<HeaderProps> = ({
   } = useFamily();
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-stone-200 dark:border-slate-800 shadow-xs transition-colors">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-stone-200 dark:border-slate-800 shadow-xs transition-colors w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-3">
           
           {/* Brand */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0 animate-pop-in">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-base sm:text-xl shadow-xs shrink-0 animate-pop-in">
               🏡
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight shrink-0">
                 Famly
               </h1>
               {familyName && (
                 <>
-                  <span className="text-stone-300 dark:text-slate-600 font-bold">•</span>
-                  <span className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                  <span className="text-stone-300 dark:text-slate-600 font-bold shrink-0">•</span>
+                  <span className="text-xs sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight truncate max-w-[95px] xs:max-w-[130px] sm:max-w-none">
                     {familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`}
                   </span>
                 </>
@@ -61,20 +61,23 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Side: Logged-in Profile Badge & Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             
             {/* Active Logged-in Member Pill */}
             {loggedInMember && (
-              <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 p-1 rounded-2xl border-2 border-stone-200 dark:border-slate-700">
-                <div
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0"
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-2xl border-2 border-stone-200 dark:border-slate-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={logout}
+                  title={`${loggedInMember.name} (${loggedInMember.role}) - Tippen zum Wechseln`}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0 hover:scale-105 transition-transform"
                   style={{
                     backgroundColor: `${loggedInMember.color}20`,
                     borderColor: `${loggedInMember.color}50`,
                   }}
                 >
                   {loggedInMember.avatar}
-                </div>
+                </button>
 
                 <div className="hidden md:block text-left px-1">
                   <span className="block text-xs font-black text-stone-900 dark:text-white leading-tight">
@@ -91,20 +94,20 @@ export const Header: React.FC<HeaderProps> = ({
                     setCurrentMemberId(currentMemberId === 'all' ? loggedInMember.id : 'all')
                   }
                   title="Zwischen persönlicher Ansicht und der ganzen Familie wechseln"
-                  className={`duo-btn px-2 py-1 text-[11px] font-extrabold rounded-xl ${
+                  className={`duo-btn px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-extrabold rounded-xl ${
                     currentMemberId === 'all'
                       ? 'duo-btn-white text-stone-700 dark:text-slate-200'
                       : 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600'
                   }`}
                 >
-                  {currentMemberId === 'all' ? 'Alle' : 'Meine Ansicht'}
+                  {currentMemberId === 'all' ? 'Alle' : 'Ich'}
                 </button>
 
-                {/* Switch Profile / Log Out */}
+                {/* Switch Profile / Log Out (desktop) */}
                 <button
                   onClick={logout}
                   title="Familienmitglied wechseln / Abmelden"
-                  className="p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                  className="hidden sm:flex p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -115,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenSettings}
               title="Einstellungen & Datenverwaltung"
-              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5"
+              className="p-1.5 sm:p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 shrink-0"
             >
               <Settings className="w-4 h-4 text-stone-700 dark:text-slate-300" />
               <span className="hidden md:inline text-xs font-bold text-stone-700 dark:text-slate-300">Einstellungen</span>
@@ -124,10 +127,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick Add Button */}
             <button
               onClick={onQuickAdd}
-              className="duo-btn duo-btn-green px-3 sm:px-4 py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1"
+              className="duo-btn duo-btn-green px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1 shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span>+ Neu</span>
+              <span className="hidden xs:inline">+ Neu</span>
             </button>
 
           </div>

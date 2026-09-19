@@ -14,6 +14,7 @@ export const FamilyMembersView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [selectedDetailsMember, setSelectedDetailsMember] = useState<FamilyMember | null>(null);
+  const [detailsInitialEditMode, setDetailsInitialEditMode] = useState<boolean>(false);
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -175,14 +176,29 @@ export const FamilyMembersView: React.FC = () => {
                   <div className="bg-amber-50/50 dark:bg-amber-950/20 p-3.5 rounded-2xl border-2 border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase font-black text-amber-900 dark:text-amber-200 tracking-wider">
-                        Kinder-Größen & Betreuung
+                        🧸 Kinder-Pass
                       </span>
-                      <button
-                        onClick={() => setSelectedDetailsMember(member)}
-                        className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
-                      >
-                        Kinder-Pass öffnen →
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedDetailsMember(member);
+                            setDetailsInitialEditMode(false);
+                          }}
+                          className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
+                        >
+                          Pass ansehen
+                        </button>
+                        <span className="text-stone-300 dark:text-slate-600">•</span>
+                        <button
+                          onClick={() => {
+                            setSelectedDetailsMember(member);
+                            setDetailsInitialEditMode(true);
+                          }}
+                          className="text-[11px] font-black text-amber-700 dark:text-amber-400 hover:underline"
+                        >
+                          ✏️ Bearbeiten
+                        </button>
+                      </div>
                     </div>
 
                     {/* Sizes chips */}
@@ -230,12 +246,27 @@ export const FamilyMembersView: React.FC = () => {
                       <span className="text-[10px] uppercase font-black text-stone-500 dark:text-slate-400 tracking-wider">
                         Persönliche Infos
                       </span>
-                      <button
-                        onClick={() => setSelectedDetailsMember(member)}
-                        className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
-                      >
-                        + Infos bearbeiten →
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedDetailsMember(member);
+                            setDetailsInitialEditMode(false);
+                          }}
+                          className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
+                        >
+                          Ansehen
+                        </button>
+                        <span className="text-stone-300 dark:text-slate-600">•</span>
+                        <button
+                          onClick={() => {
+                            setSelectedDetailsMember(member);
+                            setDetailsInitialEditMode(true);
+                          }}
+                          className="text-[11px] font-black text-amber-700 dark:text-amber-400 hover:underline"
+                        >
+                          ✏️ Bearbeiten
+                        </button>
+                      </div>
                     </div>
 
                     {customFields.length > 0 ? (
@@ -319,7 +350,11 @@ export const FamilyMembersView: React.FC = () => {
         <ChildDetailsModal
           member={selectedDetailsMember}
           isOpen={true}
-          onClose={() => setSelectedDetailsMember(null)}
+          initialEditMode={detailsInitialEditMode}
+          onClose={() => {
+            setSelectedDetailsMember(null);
+            setDetailsInitialEditMode(false);
+          }}
         />
       )}
 

@@ -8,12 +8,12 @@ import { format } from 'date-fns';
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigateTab: (tab: 'calendar' | 'meals' | 'photos' | 'lists') => void;
+  onNavigateTab?: (tab: 'calendar' | 'meals' | 'photos' | 'lists') => void;
 }
 
 type QuickType = 'event' | 'grocery' | 'chore' | 'note';
 
-export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose, onNavigateTab }) => {
+export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose }) => {
   const { members, currentMemberId, addAppointment, addGrocery, addChore, addNote, stores } = useFamily();
   const [selectedType, setSelectedType] = useState<QuickType>('event');
 
@@ -51,15 +51,12 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose, o
         category: eventCategory,
         memberIds: currentMemberId === 'all' ? [members[0]?.id || 'm1'] : [currentMemberId],
       });
-      onNavigateTab('calendar');
     } else if (selectedType === 'grocery') {
       if (!groceryName.trim()) return;
       addGrocery(groceryName.trim(), groceryStore, groceryAmount.trim() || undefined, groceryCat);
-      onNavigateTab('lists');
     } else if (selectedType === 'chore') {
       if (!choreTitle.trim()) return;
       addChore(choreTitle.trim(), choreMember, 'daily', 3);
-      onNavigateTab('lists');
     } else if (selectedType === 'note') {
       if (!noteTitle.trim() || !noteContent.trim()) return;
       addNote(noteTitle.trim(), noteContent.trim(), 'info', true);

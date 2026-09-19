@@ -22,20 +22,20 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-stone-200 dark:border-slate-800 px-1 py-1.5 flex items-center justify-around shadow-lg transition-colors">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-stone-200 dark:border-slate-800 px-1 py-1 flex items-center justify-between shadow-lg transition-colors w-full max-w-full overflow-hidden">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-2xl transition-all relative ${
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all relative ${
               isActive
                 ? 'text-emerald-600 dark:text-emerald-400 font-black'
                 : 'text-stone-400 dark:text-slate-500 hover:text-stone-700 dark:hover:text-slate-300 font-bold'
             }`}
           >
-            <div className="relative">
+            <div className="relative shrink-0">
               {tab.icon}
               {tab.badge !== undefined && tab.badge > 0 && (
                 <span className="absolute -top-1.5 -right-2 bg-emerald-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
@@ -43,9 +43,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
                 </span>
               )}
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">{tab.label}</span>
+            <span className="text-[10px] mt-0.5 tracking-tight truncate w-full text-center block">
+              {tab.label}
+            </span>
             {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5 shrink-0" />
             )}
           </button>
         );
