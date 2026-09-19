@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f7f9fa;
+    color: #3c3c3c;
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent iOS auto-zoom on input focus by guaranteeing 16px font-size */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+/* Duolingo-style Chunky 3D Buttons */
+.duo-btn {
+  transition: all 0.08s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  cursor: pointer;
+}
+
+.duo-btn:active {
+  transform: translateY(2px);
+}
+
+.duo-btn-green {
+  background-color: #58cc02;
+  border-bottom: 4px solid #46a302;
+  color: #ffffff;
+}
+.duo-btn-green:hover {
+  background-color: #61e002;
+}
+.duo-btn-green:active {
+  border-bottom-width: 2px;
+}
+
+.duo-btn-blue {
+  background-color: #1cb0f6;
+  border-bottom: 4px solid #1899d6;
+  color: #ffffff;
+}
+.duo-btn-blue:hover {
+  background-color: #2ab8fc;
+}
+.duo-btn-blue:active {
+  border-bottom-width: 2px;
+}
+
+.duo-btn-amber {
+  background-color: #ffc800;
+  border-bottom: 4px solid #e5a500;
+  color: #4b3d00;
+}
+.duo-btn-amber:hover {
+  background-color: #ffd224;
+}
+.duo-btn-amber:active {
+  border-bottom-width: 2px;
+}
+
+.duo-btn-rose {
+  background-color: #ff4b4b;
+  border-bottom: 4px solid #ea2b2b;
+  color: #ffffff;
+}
+.duo-btn-rose:hover {
+  background-color: #ff5e5e;
+}
+.duo-btn-rose:active {
+  border-bottom-width: 2px;
+}
+
+.duo-btn-purple {
+  background-color: #ce82ff;
+  border-bottom: 4px solid #b35ae8;
+  color: #ffffff;
+}
+.duo-btn-purple:hover {
+  background-color: #d694ff;
+}
+.duo-btn-purple:active {
+  border-bottom-width: 2px;
+}
+
+.duo-btn-white {
+  background-color: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-bottom: 4px solid #e5e5e5;
+  color: #4b4b4b;
+}
+.duo-btn-white:hover {
+  background-color: #f7f7f7;
+}
+.duo-btn-white:active {
+  border-bottom-width: 2px;
+}
+
+/* Duolingo-style Chunky Card */
+.duo-card {
+  background-color: #ffffff;
+  border-radius: 1.5rem;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 4px 0 0 #e5e7eb;
+}

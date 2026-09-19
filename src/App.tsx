@@ -1,0 +1,108 @@
+import React, { useState } from 'react';
+import { FamilyProvider, useFamily } from './context/FamilyContext';
+import { Header, ActiveTab } from './components/Header';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { LoginView } from './views/LoginView';
+import { DashboardView } from './views/DashboardView';
+import { CalendarView } from './views/CalendarView';
+import { MealPlannerView } from './views/MealPlannerView';
+import { PhotoStreamView } from './views/PhotoStreamView';
+import { ListsAndChoresView } from './views/ListsAndChoresView';
+import { FamilyMembersView } from './views/FamilyMembersView';
+import { QuickAddModal } from './components/QuickAddModal';
+import { GuestGalleryViewer } from './components/GuestGalleryViewer';
+
+const MainAppContent: React.FC = () => {
+  const { loggedInMemberId, galleries } = useFamily();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+  // Detect direct guest link for relatives: e.g. #guest-gallery=gal_1
+  const [guestGalleryId, setGuestGalleryId] = useState<string | null>(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#guest-gallery=')) {
+      return hash.replace('#guest-gallery=', '');
+    }
+    return null;
+  });
+
+  const sharedGuestGallery = guestGalleryId
+    ? galleries.find((g) => g.id === guestGalleryId || g.shareCode === guestGalleryId)
+    : null;
+
+  if (sharedGuestGallery) {
+    return (
+      <GuestGalleryViewer
+        gallery={sharedGuestGallery}
+        onClose={() => {
+          window.location.hash = '';
+          setGuestGalleryId(null);
+        }}
+      />
+    );
+  }
+
+  // If no member is logged in, show the Login / Who is using screen
+  if (!loggedInMemberId) {
+    return <LoginView />;
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#F7F9FA] font-sans pb-24 sm:pb-8">
+      {/* Sticky Header with Logged-in Profile & Quick Add */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onQuickAdd={() => setIsQuickAddOpen(true)}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {activeTab === 'dashboard' && (
+          <DashboardView
+            onNavigate={(tab) => setActiveTab(tab)}
+            onOpenAddAppointment={() => setActiveTab('calendar')}
+          />
+        )}
+
+        {activeTab === 'calendar' && <CalendarView />}
+
+        {activeTab === 'meals' && <MealPlannerView />}
+
+        {activeTab === 'photos' && <PhotoStreamView />}
+
+        {activeTab === 'lists' && <ListsAndChoresView />}
+
+        {activeTab === 'members' && <FamilyMembersView />}
+      </main>
+
+      {/* Footer (Hidden on small mobile screens to keep space clean) */}
+      <footer className="hidden sm:block border-t-2 border-stone-200/80 bg-white/70 py-6 mt-12 text-center text-xs text-stone-400">
+        <p className="font-extrabold text-stone-600">Famly 🏡 Family Hub & Coordinator</p>
+        <p className="mt-1 font-semibold">
+          Designed for 3–6 family members • Mobile-first, private & local.
+        </p>
+      </footer>
+
+      {/* Mobile Bottom Navigation Bar (Visible on mobile only) */}
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Quick Add Universal Modal */}
+      <QuickAddModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+      />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <FamilyProvider>
+      <MainAppContent />
+    </FamilyProvider>
+  );
+};
+
+export default App;

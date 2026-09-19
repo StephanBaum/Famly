@@ -1,0 +1,168 @@
+export interface CustomInfoField {
+  id: string;
+  label: string;
+  value: string;
+  category?: 'sizes' | 'health' | 'school' | 'other';
+}
+
+export interface ChildDetails {
+  clothingSize?: string;
+  shoeSize?: string;
+  pantsSize?: string;
+  doctorName?: string;
+  doctorPhone?: string;
+  doctorAddress?: string;
+  dentistName?: string;
+  dentistPhone?: string;
+  dentistAddress?: string;
+  allergies?: string;
+  bloodType?: string;
+  schoolName?: string;
+  grade?: string;
+  emergencyContact?: string;
+  customFields?: CustomInfoField[];
+}
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  role: string;
+  isChild?: boolean; // True for children/kids
+  avatar: string; // URL or emoji
+  color: string; // Tailwind color class or hex
+  bgLight: string;
+  borderClass: string;
+  textClass: string;
+  birthday?: string;
+  notes?: string;
+  pin?: string; // 4-digit login passcode
+  childDetails?: ChildDetails;
+  customFields?: CustomInfoField[]; // Custom fields for adults or kids
+}
+
+export type AppointmentCategory = 'school' | 'health' | 'sports' | 'family' | 'work' | 'social';
+
+export interface Appointment {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  time: string; // "14:30" or "All Day"
+  durationMinutes?: number;
+  location?: string;
+  memberIds: string[]; // which family members are attending
+  category: AppointmentCategory;
+  notes?: string;
+}
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner';
+
+export interface Ingredient {
+  name: string;
+  amount: string;
+  category: GroceryCategory;
+}
+
+export interface Recipe {
+  id: string;
+  title: string;
+  prepTime: string;
+  servings: number;
+  category: 'quick' | 'comfort' | 'healthy' | 'baking' | 'family-favorite';
+  imageUrl: string;
+  ingredients: Ingredient[];
+  notes?: string;
+  instructions?: string[];
+  tags?: string[];
+  sourceUrl?: string;
+  sourceType?: 'link' | 'photo' | 'describe' | 'manual';
+}
+
+export interface MealPlanDay {
+  date: string; // YYYY-MM-DD
+  breakfast?: { title: string; recipeId?: string; chefId?: string };
+  lunch?: { title: string; recipeId?: string; chefId?: string };
+  dinner?: { title: string; recipeId?: string; chefId?: string };
+}
+
+export interface PhotoItem {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+  uploadedByMemberId: string;
+  uploadedAt: string;
+  likes: string[]; // memberIds
+}
+
+export interface GuestReaction {
+  id: string;
+  author: string; // e.g. "Grandma Elena", "Uncle Marc"
+  message: string;
+  emoji: string;
+  timestamp: string;
+}
+
+export interface GalleryAlbum {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  coverPhotoUrl: string;
+  category: 'vacation' | 'birthday' | 'sports' | 'everyday' | 'milestones' | 'holidays';
+  createdByMemberId: string;
+  photos: PhotoItem[];
+  isPublicShared: boolean;
+  shareCode: string;
+  guestReactions?: GuestReaction[];
+}
+
+export interface PhotoMemory {
+  id: string;
+  title: string;
+  caption: string;
+  imageUrl: string;
+  date: string; // YYYY-MM-DD
+  uploadedByMemberId: string;
+  taggedMemberIds: string[];
+  likes: string[]; // memberIds who liked
+  album: string; // e.g. "Summer Holiday", "Weekend", "Milestones", "Everyday"
+}
+
+export type GroceryCategory = 'produce' | 'dairy' | 'bakery' | 'meat' | 'pantry' | 'household' | 'snacks' | 'drugstore' | 'pharmacy';
+
+export interface StoreDefinition {
+  id: string;
+  name: string;
+  icon: string;
+  badgeColor: string;
+  borderColor: string;
+}
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  amount?: string;
+  store: string; // e.g. "Rewe", "dm", "Bakery", "Pharmacy"
+  category?: GroceryCategory;
+  checked: boolean;
+  addedByMemberId?: string;
+}
+
+export interface Chore {
+  id: string;
+  title: string;
+  assignedMemberId: string;
+  frequency: 'daily' | 'weekly' | 'once';
+  completed: boolean;
+  stars: number;
+  dueDate?: string;
+}
+
+export interface PinnedNote {
+  id: string;
+  title: string;
+  content: string;
+  isPinned: boolean;
+  tag: 'urgent' | 'info' | 'fun' | 'wifi';
+  authorMemberId: string;
+  createdAt: string;
+}
