@@ -22,7 +22,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-stone-200 px-1 py-1.5 flex items-center justify-around shadow-lg">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-stone-200 dark:border-slate-800 px-1 py-1.5 flex items-center justify-around shadow-lg transition-colors">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -31,8 +31,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
             onClick={() => setActiveTab(tab.id)}
             className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-2xl transition-all relative ${
               isActive
-                ? 'text-emerald-600 font-black'
-                : 'text-stone-400 hover:text-stone-700 font-bold'
+                ? 'text-emerald-600 dark:text-emerald-400 font-black'
+                : 'text-stone-400 dark:text-slate-500 hover:text-stone-700 dark:hover:text-slate-300 font-bold'
             }`}
           >
             <div className="relative">

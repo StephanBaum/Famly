@@ -135,4 +135,118 @@
   border-radius: 1.5rem;
   border: 2px solid #e5e7eb;
   box-shadow: 0 4px 0 0 #e5e7eb;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* =========================================================================
+   🌙 DARK MODE STYLES
+   ========================================================================= */
+.dark body {
+  background-color: #0c1222;
+  color: #e2e8f0;
+}
+
+.dark .duo-card {
+  background-color: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 0 0 #0f172a;
+}
+
+.dark .duo-btn-white {
+  background-color: #1e293b;
+  border: 2px solid #334155;
+  border-bottom: 4px solid #334155;
+  color: #f8fafc;
+}
+.dark .duo-btn-white:hover {
+  background-color: #334155;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* =========================================================================
+   ✨ JOYFUL ANIMATIONS
+   ========================================================================= */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-float {
+  animation: gentleFloat 3s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Smooth color transition on theme change */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-out;
 }

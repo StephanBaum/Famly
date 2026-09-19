@@ -111,6 +111,16 @@ interface FamilyContextType {
   deleteNote: (id: string) => void;
 
   resetToDefaults: () => void;
+
+  // Theme & Identity
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+  familyName: string;
+  setFamilyName: (name: string) => void;
+
+  // Data Management
+  exportAllData: () => string;
+  importAllData: (jsonData: string) => { success: boolean; error?: string };
 }
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
@@ -130,6 +140,8 @@ const STORAGE_KEYS = {
   STORE_MAP: 'famly_store_map_v2',
   ALWAYS_IN_STOCK: 'famly_always_in_stock_v2',
   LOGGED_IN_MEMBER: 'famly_logged_in_member_v3',
+  THEME: 'famly_theme_mode',
+  FAMILY_NAME: 'famly_family_name',
 };
 
 function getStoredOrDefault<T>(key: string, defaultValue: T): T {
@@ -194,6 +206,39 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [alwaysInStock, setAlwaysInStock] = useState<string[]>(() =>
     getStoredOrDefault(STORAGE_KEYS.ALWAYS_IN_STOCK, INITIAL_ALWAYS_IN_STOCK)
   );
+
+  // Theme (Dark Mode)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+    if (saved !== null) {
+      return saved === 'dark';
+    }
+    return typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false;
+  });
+
+  // Family Identity
+  const [familyName, setFamilyNameState] = useState<string>(() =>
+    getStoredOrDefault<string>(STORAGE_KEYS.FAMILY_NAME, 'Miller Family')
+  );
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.THEME, isDarkMode ? 'dark' : 'light');
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
+  const setFamilyName = (name: string) => {
+    const clean = name.trim() || 'Miller Family';
+    setFamilyNameState(clean);
+    localStorage.setItem(STORAGE_KEYS.FAMILY_NAME, JSON.stringify(clean));
+  };
 
   // Sync state to localStorage
   useEffect(() => {
@@ -780,7 +825,81 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStores(INITIAL_STORES);
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
     setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
+    setFamilyNameState('Miller Family');
     setLoggedInMemberId(null);
+  };
+
+  const exportAllData = (): string => {
+    const dump = {
+      app: 'Famly',
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      familyName,
+      members,
+      appointments,
+      recipes,
+      mealPlans,
+      photos,
+      galleries,
+      groceries,
+      chores,
+      notes,
+      stores,
+      storeLearningMap,
+      alwaysInStock,
+    };
+    return JSON.stringify(dump, null, 2);
+  };
+
+  const importAllData = (jsonData: string): { success: boolean; error?: string } => {
+    try {
+      const data = JSON.parse(jsonData);
+      if (!data || typeof data !== 'object') {
+        return { success: false, error: 'File is not a valid JSON object.' };
+      }
+      if (Array.isArray(data.members) && data.members.length > 0) {
+        setMembers(data.members);
+      }
+      if (typeof data.familyName === 'string' && data.familyName.trim()) {
+        setFamilyName(data.familyName.trim());
+      }
+      if (Array.isArray(data.appointments)) {
+        setAppointments(data.appointments);
+      }
+      if (Array.isArray(data.recipes)) {
+        setRecipes(data.recipes);
+      }
+      if (Array.isArray(data.mealPlans)) {
+        setMealPlans(data.mealPlans);
+      }
+      if (Array.isArray(data.photos)) {
+        setPhotos(data.photos);
+      }
+      if (Array.isArray(data.galleries)) {
+        setGalleries(data.galleries);
+      }
+      if (Array.isArray(data.groceries)) {
+        setGroceries(data.groceries);
+      }
+      if (Array.isArray(data.chores)) {
+        setChores(data.chores);
+      }
+      if (Array.isArray(data.notes)) {
+        setNotes(data.notes);
+      }
+      if (Array.isArray(data.stores)) {
+        setStores(data.stores);
+      }
+      if (data.storeLearningMap && typeof data.storeLearningMap === 'object') {
+        setStoreLearningMap(data.storeLearningMap);
+      }
+      if (Array.isArray(data.alwaysInStock)) {
+        setAlwaysInStock(data.alwaysInStock);
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Invalid JSON file format' };
+    }
   };
 
   return (
@@ -839,6 +958,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addNote,
         deleteNote,
         resetToDefaults,
+        isDarkMode,
+        toggleDarkMode,
+        familyName,
+        setFamilyName,
+        exportAllData,
+        importAllData,
       }}
     >
       {children}

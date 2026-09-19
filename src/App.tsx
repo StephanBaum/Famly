@@ -11,11 +11,13 @@ import { ListsAndChoresView } from './views/ListsAndChoresView';
 import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
+import { SettingsModal } from './components/SettingsModal';
 
 const MainAppContent: React.FC = () => {
   const { loggedInMemberId, galleries } = useFamily();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Detect direct guest link for relatives: e.g. #guest-gallery=gal_1
   const [guestGalleryId, setGuestGalleryId] = useState<string | null>(() => {
@@ -48,16 +50,17 @@ const MainAppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F9FA] font-sans pb-24 sm:pb-8">
-      {/* Sticky Header with Logged-in Profile & Quick Add */}
+    <div className="min-h-screen flex flex-col bg-[#F7F9FA] dark:bg-[#0c1222] text-stone-900 dark:text-slate-100 font-sans pb-24 sm:pb-8 transition-colors">
+      {/* Sticky Header with Logged-in Profile, Theme & Quick Add */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onQuickAdd={() => setIsQuickAddOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Main Content Area with Smooth Page Animation */}
+      <main key={activeTab} className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 animate-page-enter">
         {activeTab === 'dashboard' && (
           <DashboardView
             onNavigate={(tab) => setActiveTab(tab)}
@@ -77,8 +80,8 @@ const MainAppContent: React.FC = () => {
       </main>
 
       {/* Footer (Hidden on small mobile screens to keep space clean) */}
-      <footer className="hidden sm:block border-t-2 border-stone-200/80 bg-white/70 py-6 mt-12 text-center text-xs text-stone-400">
-        <p className="font-extrabold text-stone-600">Famly 🏡 Family Hub & Coordinator</p>
+      <footer className="hidden sm:block border-t-2 border-stone-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 py-6 mt-12 text-center text-xs text-stone-400 dark:text-slate-500 transition-colors">
+        <p className="font-extrabold text-stone-600 dark:text-slate-300">Famly 🏡 Family Hub & Coordinator</p>
         <p className="mt-1 font-semibold">
           Designed for 3–6 family members • Mobile-first, private & local.
         </p>
@@ -92,6 +95,16 @@ const MainAppContent: React.FC = () => {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onNavigateTab={(tab) => setActiveTab(tab)}
+      />
+
+      {/* Settings & Data Management Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          setIsSettingsOpen(false);
+        }}
       />
     </div>
   );

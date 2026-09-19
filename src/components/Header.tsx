@@ -9,7 +9,9 @@ import {
   Users,
   Plus,
   LogOut,
-  RotateCcw,
+  Moon,
+  Sun,
+  Settings,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
@@ -18,48 +20,56 @@ interface HeaderProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   onQuickAdd: () => void;
+  onOpenSettings: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuickAdd }) => {
+export const Header: React.FC<HeaderProps> = ({
+  activeTab,
+  setActiveTab,
+  onQuickAdd,
+  onOpenSettings,
+}) => {
   const {
     loggedInMember,
     logout,
     currentMemberId,
     setCurrentMemberId,
-    resetToDefaults,
+    isDarkMode,
+    toggleDarkMode,
+    familyName,
   } = useFamily();
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-2 border-stone-200 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
-        <div className="flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-stone-200 dark:border-slate-800 shadow-xs transition-colors">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           
           {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-xl shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0 animate-pop-in">
               🏡
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-lg font-black text-stone-900 tracking-tight">Famly</h1>
-                <span className="hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  Miller Family
+                <h1 className="text-base sm:text-lg font-black text-stone-900 dark:text-white tracking-tight">Famly</h1>
+                <span className="hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                  {familyName}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-stone-400 hidden sm:block">
+              <p className="text-[10px] sm:text-[11px] font-bold text-stone-400 dark:text-slate-400 hidden sm:block">
                 Happy household coordinator
               </p>
             </div>
           </div>
 
           {/* Right Side: Logged-in Profile Badge & Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             
             {/* Active Logged-in Member Pill */}
             {loggedInMember && (
-              <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-2xl border-2 border-stone-200">
+              <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 p-1 rounded-2xl border-2 border-stone-200 dark:border-slate-700">
                 <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-base border"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0"
                   style={{
                     backgroundColor: `${loggedInMember.color}20`,
                     borderColor: `${loggedInMember.color}50`,
@@ -68,11 +78,11 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
                   {loggedInMember.avatar}
                 </div>
 
-                <div className="hidden xs:block text-left px-1">
-                  <span className="block text-xs font-black text-stone-900 leading-tight">
+                <div className="hidden md:block text-left px-1">
+                  <span className="block text-xs font-black text-stone-900 dark:text-white leading-tight">
                     {loggedInMember.name}
                   </span>
-                  <span className="block text-[10px] font-bold text-stone-400">
+                  <span className="block text-[10px] font-bold text-stone-400 dark:text-slate-400">
                     {loggedInMember.role}
                   </span>
                 </div>
@@ -85,44 +95,53 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
                   title="Toggle between your personal items and whole family"
                   className={`duo-btn px-2 py-1 text-[11px] font-extrabold rounded-xl ${
                     currentMemberId === 'all'
-                      ? 'duo-btn-white text-stone-700'
-                      : 'bg-white text-emerald-700 border-emerald-300'
+                      ? 'duo-btn-white text-stone-700 dark:text-slate-200'
+                      : 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600'
                   }`}
                 >
-                  {currentMemberId === 'all' ? 'All Family' : 'My View'}
+                  {currentMemberId === 'all' ? 'All' : 'My View'}
                 </button>
 
                 {/* Switch Profile / Log Out */}
                 <button
                   onClick={logout}
                   title="Switch family member / Log out"
-                  className="p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white transition-colors"
+                  className="p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
+            {/* Dark Mode Toggle Button */}
+            <button
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition-all shadow-2xs"
+            >
+              {isDarkMode ? (
+                <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-700" />
+              )}
+            </button>
+
+            {/* Settings & Data Button */}
+            <button
+              onClick={onOpenSettings}
+              title="Settings & Data Management"
+              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
             {/* Quick Add Button */}
             <button
               onClick={onQuickAdd}
-              className="duo-btn duo-btn-green px-3 sm:px-4 py-2 text-xs font-black rounded-2xl shadow-sm whitespace-nowrap"
+              className="duo-btn duo-btn-green px-3 sm:px-4 py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap"
             >
               <Plus className="w-4 h-4 mr-1 stroke-[3]" />
               <span>Quick Add</span>
-            </button>
-
-            {/* Reset to sample data button */}
-            <button
-              onClick={() => {
-                if (window.confirm('Reset family data back to demo sample?')) {
-                  resetToDefaults();
-                }
-              }}
-              title="Reset demo data"
-              className="p-2 text-stone-300 hover:text-stone-600 rounded-xl hover:bg-stone-100 transition-colors hidden sm:block"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
           </div>
@@ -130,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
       </div>
 
       {/* Desktop Navigation Tabs (Hidden on small mobile screens where bottom nav is used) */}
-      <div className="hidden sm:block border-t-2 border-stone-100 bg-white">
+      <div className="hidden sm:block border-t-2 border-stone-100 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-2 py-2 overflow-x-auto scrollbar-none">
             
@@ -138,8 +157,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('dashboard')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'dashboard'
-                  ? 'bg-rose-50 text-rose-700 border-2 border-b-4 border-rose-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-2 border-b-4 border-rose-300 dark:border-rose-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <Home className="w-3.5 h-3.5 mr-1.5" />
@@ -150,8 +169,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('calendar')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'calendar'
-                  ? 'bg-blue-50 text-blue-700 border-2 border-b-4 border-blue-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-b-4 border-blue-300 dark:border-blue-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -162,8 +181,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('meals')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'meals'
-                  ? 'bg-teal-50 text-teal-700 border-2 border-b-4 border-teal-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-2 border-b-4 border-teal-300 dark:border-teal-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <Utensils className="w-3.5 h-3.5 mr-1.5" />
@@ -174,8 +193,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('photos')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'photos'
-                  ? 'bg-amber-50 text-amber-800 border-2 border-b-4 border-amber-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-2 border-b-4 border-amber-300 dark:border-amber-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <Camera className="w-3.5 h-3.5 mr-1.5" />
@@ -186,8 +205,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('lists')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'lists'
-                  ? 'bg-emerald-50 text-emerald-700 border-2 border-b-4 border-emerald-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-2 border-b-4 border-emerald-300 dark:border-emerald-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
@@ -198,8 +217,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onQuick
               onClick={() => setActiveTab('members')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'members'
-                  ? 'bg-purple-50 text-purple-700 border-2 border-b-4 border-purple-300'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50 border-2 border-transparent'
+                  ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-2 border-b-4 border-purple-300 dark:border-purple-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
               }`}
             >
               <Users className="w-3.5 h-3.5 mr-1.5" />
