@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FamilyMember, ChildDetails, CustomInfoField } from '../types';
 import { useFamily } from '../context/FamilyContext';
+import { ModalPortal } from './ModalPortal';
 import {
   Phone,
   MapPin,
@@ -129,11 +130,14 @@ export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
     setIsEditing(false);
   };
 
+  if (!isOpen || !member) return null;
+
   const details = member.childDetails || {};
   const activeCustomFields = member.customFields || details.customFields || [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
@@ -680,5 +684,6 @@ export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 };

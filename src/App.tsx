@@ -12,9 +12,10 @@ import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
 import { SettingsModal } from './components/SettingsModal';
+import { OnboardingView } from './views/OnboardingView';
 
 const MainAppContent: React.FC = () => {
-  const { loggedInMemberId, galleries } = useFamily();
+  const { loggedInMemberId, galleries, isOnboarded } = useFamily();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -42,6 +43,11 @@ const MainAppContent: React.FC = () => {
         }}
       />
     );
+  }
+
+  // If family is not onboarded yet, show friendly Onboarding Wizard
+  if (!isOnboarded) {
+    return <OnboardingView />;
   }
 
   // If no member is logged in, show the Login / Who is using screen

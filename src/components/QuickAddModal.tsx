@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { AppointmentCategory, GroceryCategory } from '../types';
 import { Calendar, ShoppingCart, Sparkles, Pin } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 import { format } from 'date-fns';
 
 interface QuickAddModalProps {
@@ -67,8 +68,11 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose, o
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
         <div className="flex items-center justify-between mb-4 border-b border-stone-100 dark:border-slate-800 pb-3">
           <h3 className="text-lg font-black text-stone-900 dark:text-white">Schnell hinzufügen</h3>
@@ -280,5 +284,6 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose, o
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };

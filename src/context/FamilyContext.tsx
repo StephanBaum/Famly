@@ -112,6 +112,17 @@ interface FamilyContextType {
 
   resetToDefaults: () => void;
 
+  // Onboarding & Customization
+  isOnboarded: boolean;
+  completeOnboarding: (config: {
+    familyName: string;
+    members: Array<Omit<FamilyMember, 'id'>>;
+    loadSampleRecipes?: boolean;
+    loadSampleStores?: boolean;
+  }) => void;
+  loadDemoData: () => void;
+  resetToFreshStart: () => void;
+
   // Theme & Identity
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -126,6 +137,7 @@ interface FamilyContextType {
 const FamilyContext = createContext<FamilyContextType | null>(null);
 
 const STORAGE_KEYS = {
+  IS_ONBOARDED: 'famly_is_onboarded_v2',
   MEMBERS: 'famly_members_v2',
   ACTIVE_MEMBER: 'famly_active_member_v2',
   APPOINTMENTS: 'famly_appointments_v2',
@@ -162,39 +174,87 @@ function getStoredOrDefault<T>(key: string, defaultValue: T): T {
 }
 
 export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
+    if (stored !== null) {
+      return stored === 'true';
+    }
+    // Backward compatibility: If the user had already customized their family in localStorage, keep them onboarded:
+    const hasCustomMembers = localStorage.getItem(STORAGE_KEYS.MEMBERS);
+    if (hasCustomMembers) {
+      try {
+        const parsed = JSON.parse(hasCustomMembers);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return true;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return false;
+  });
+
   const [loggedInMemberId, setLoggedInMemberId] = useState<string | null>(() =>
     getStoredOrDefault<string | null>(STORAGE_KEYS.LOGGED_IN_MEMBER, null)
   );
-  const [members, setMembers] = useState<FamilyMember[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS)
-  );
+
+  const [members, setMembers] = useState<FamilyMember[]>(() => {
+    const stored = getStoredOrDefault<FamilyMember[] | null>(STORAGE_KEYS.MEMBERS, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
   const [currentMemberId, setCurrentMemberId] = useState<string | 'all'>(() =>
     getStoredOrDefault(STORAGE_KEYS.ACTIVE_MEMBER, 'all')
   );
-  const [appointments, setAppointments] = useState<Appointment[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.APPOINTMENTS, INITIAL_APPOINTMENTS)
-  );
-  const [recipes, setRecipes] = useState<Recipe[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.RECIPES, INITIAL_RECIPES)
-  );
-  const [mealPlans, setMealPlans] = useState<MealPlanDay[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.MEAL_PLANS, INITIAL_MEAL_PLANS)
-  );
-  const [photos, setPhotos] = useState<PhotoMemory[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.PHOTOS, INITIAL_PHOTOS)
-  );
-  const [galleries, setGalleries] = useState<GalleryAlbum[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.GALLERIES, INITIAL_GALLERIES)
-  );
-  const [groceries, setGroceries] = useState<GroceryItem[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.GROCERIES, INITIAL_GROCERIES)
-  );
-  const [chores, setChores] = useState<Chore[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.CHORES, INITIAL_CHORES)
-  );
-  const [notes, setNotes] = useState<PinnedNote[]>(() =>
-    getStoredOrDefault(STORAGE_KEYS.NOTES, INITIAL_NOTES)
-  );
+
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const stored = getStoredOrDefault<Appointment[] | null>(STORAGE_KEYS.APPOINTMENTS, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    const stored = getStoredOrDefault<Recipe[] | null>(STORAGE_KEYS.RECIPES, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [mealPlans, setMealPlans] = useState<MealPlanDay[]>(() => {
+    const stored = getStoredOrDefault<MealPlanDay[] | null>(STORAGE_KEYS.MEAL_PLANS, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [photos, setPhotos] = useState<PhotoMemory[]>(() => {
+    const stored = getStoredOrDefault<PhotoMemory[] | null>(STORAGE_KEYS.PHOTOS, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [galleries, setGalleries] = useState<GalleryAlbum[]>(() => {
+    const stored = getStoredOrDefault<GalleryAlbum[] | null>(STORAGE_KEYS.GALLERIES, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [groceries, setGroceries] = useState<GroceryItem[]>(() => {
+    const stored = getStoredOrDefault<GroceryItem[] | null>(STORAGE_KEYS.GROCERIES, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [chores, setChores] = useState<Chore[]>(() => {
+    const stored = getStoredOrDefault<Chore[] | null>(STORAGE_KEYS.CHORES, null);
+    if (stored !== null) return stored;
+    return [];
+  });
+
+  const [notes, setNotes] = useState<PinnedNote[]>(() => {
+    const stored = getStoredOrDefault<PinnedNote[] | null>(STORAGE_KEYS.NOTES, null);
+    if (stored !== null) return stored;
+    return [];
+  });
 
   // Stores & Learning states
   const [stores, setStores] = useState<StoreDefinition[]>(() =>
@@ -219,9 +279,11 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   // Family Identity
-  const [familyName, setFamilyNameState] = useState<string>(() =>
-    getStoredOrDefault<string>(STORAGE_KEYS.FAMILY_NAME, 'Familie Baum')
-  );
+  const [familyName, setFamilyNameState] = useState<string>(() => {
+    const stored = getStoredOrDefault<string | null>(STORAGE_KEYS.FAMILY_NAME, null);
+    if (stored !== null) return stored;
+    return '';
+  });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.THEME, isDarkMode ? 'dark' : 'light');
@@ -235,7 +297,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
   const setFamilyName = (name: string) => {
-    const clean = name.trim() || 'Miller Family';
+    const clean = name.trim() || 'Familie';
     setFamilyNameState(clean);
     localStorage.setItem(STORAGE_KEYS.FAMILY_NAME, JSON.stringify(clean));
   };
@@ -812,6 +874,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const resetToDefaults = () => {
+    loadDemoData();
+  };
+
+  const loadDemoData = () => {
     setMembers(INITIAL_MEMBERS);
     setCurrentMemberId('all');
     setAppointments(INITIAL_APPOINTMENTS);
@@ -826,7 +892,84 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
     setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
     setFamilyNameState('Familie Baum');
+    setLoggedInMemberId('m2'); // Alex logged in by default
+    setIsOnboarded(true);
+    localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
+
+    try {
+      confetti({
+        particleCount: 60,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const completeOnboarding = (config: {
+    familyName: string;
+    members: Array<Omit<FamilyMember, 'id'>>;
+    loadSampleRecipes?: boolean;
+    loadSampleStores?: boolean;
+  }) => {
+    const cleanFamilyName = config.familyName.trim() || 'Familie';
+    const createdMembers: FamilyMember[] = config.members.map((m, idx) => ({
+      ...m,
+      id: `m_${Date.now()}_${idx + 1}`,
+    }));
+
+    setFamilyNameState(cleanFamilyName);
+    setMembers(createdMembers);
+
+    // Auto-login first parent or member
+    const firstAdult = createdMembers.find((m) => !m.isChild) || createdMembers[0];
+    if (firstAdult) {
+      setLoggedInMemberId(firstAdult.id);
+    }
+    setCurrentMemberId('all');
+
+    setAppointments([]);
+    setRecipes(config.loadSampleRecipes ? INITIAL_RECIPES : []);
+    setMealPlans([]);
+    setPhotos([]);
+    setGalleries([]);
+    setGroceries([]);
+    setChores([]);
+    setNotes([]);
+    setStores(config.loadSampleStores !== false ? INITIAL_STORES : []);
+    setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
+    setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
+
+    setIsOnboarded(true);
+    localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
+
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const resetToFreshStart = () => {
+    setIsOnboarded(false);
+    localStorage.removeItem(STORAGE_KEYS.IS_ONBOARDED);
     setLoggedInMemberId(null);
+    setCurrentMemberId('all');
+    setMembers([]);
+    setFamilyNameState('');
+    setAppointments([]);
+    setRecipes([]);
+    setMealPlans([]);
+    setPhotos([]);
+    setGalleries([]);
+    setGroceries([]);
+    setChores([]);
+    setNotes([]);
   };
 
   const exportAllData = (): string => {
@@ -896,6 +1039,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Array.isArray(data.alwaysInStock)) {
         setAlwaysInStock(data.alwaysInStock);
       }
+      setIsOnboarded(true);
+      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
       return { success: true };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Invalid JSON file format' };
@@ -958,6 +1103,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addNote,
         deleteNote,
         resetToDefaults,
+        isOnboarded,
+        completeOnboarding,
+        loadDemoData,
+        resetToFreshStart,
         isDarkMode,
         toggleDarkMode,
         familyName,

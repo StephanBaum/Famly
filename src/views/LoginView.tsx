@@ -4,7 +4,7 @@ import { FamilyMember } from '../types';
 import { Lock, Delete, Sparkles } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
-  const { members, login } = useFamily();
+  const { members, login, resetToFreshStart } = useFamily();
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,12 +53,24 @@ export const LoginView: React.FC = () => {
           </div>
           <h1 className="text-3xl font-black text-stone-900 dark:text-white tracking-tight">Famly</h1>
           <p className="text-sm font-extrabold text-stone-400 dark:text-slate-400">
-            Wer nutzt Famly gerade?
+            {members.length > 0 ? 'Wer nutzt Famly gerade?' : 'Noch keine Familie eingerichtet'}
           </p>
         </div>
 
-        {/* Member Avatar Grid */}
-        {!selectedMember || !selectedMember.pin ? (
+        {/* Empty Members Fallback */}
+        {members.length === 0 ? (
+          <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 rounded-3xl space-y-4">
+            <p className="text-sm text-stone-600 dark:text-slate-300">
+              Es sind noch keine Familienmitglieder angelegt. Richte jetzt eure Familie ein!
+            </p>
+            <button
+              onClick={resetToFreshStart}
+              className="w-full py-3 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm shadow-md transition-all"
+            >
+              🚀 Jetzt Familie einrichten
+            </button>
+          </div>
+        ) : !selectedMember || !selectedMember.pin ? (
           <div className="grid grid-cols-2 gap-3.5 pt-2 animate-in fade-in slide-in-from-bottom-3">
             {members.map((member) => (
               <button
@@ -98,58 +110,46 @@ export const LoginView: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{selectedMember.avatar}</span>
                 <div className="text-left">
-                  <h2 className="text-base font-black text-stone-900 dark:text-white">{selectedMember.name}</h2>
-                  <p className="text-xs font-bold text-stone-400 dark:text-slate-400">{selectedMember.role}</p>
+                  <h3 className="font-black text-stone-900 dark:text-white text-base">
+                    Hallo {selectedMember.name}!
+                  </h3>
+                  <p className="text-xs font-bold text-stone-400 dark:text-slate-400">
+                    4-stelligen PIN eingeben
+                  </p>
                 </div>
               </div>
 
               <button
-                onClick={() => {
-                  setSelectedMember(null);
-                  setPinInput('');
-                  setErrorMessage(null);
-                }}
-                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-black rounded-xl"
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="text-xs font-black text-stone-400 dark:text-slate-500 hover:text-stone-700 dark:hover:text-stone-200"
               >
-                Wechseln
+                Abbrechen
               </button>
             </div>
 
-            <div>
-              <p className="text-xs font-extrabold text-stone-600 dark:text-slate-300 mb-3">
-                4-stelligen PIN eingeben
-              </p>
-
-              {/* 4 PIN Dots */}
-              <div className="flex justify-center items-center gap-3 py-2">
-                {[0, 1, 2, 3].map((index) => {
-                  const isFilled = pinInput.length > index;
-                  return (
-                    <div
-                      key={index}
-                      className={`w-4 h-4 rounded-full border-2 transition-all ${
-                        isFilled
-                          ? 'bg-emerald-500 border-emerald-600 scale-110'
-                          : 'border-stone-300 dark:border-slate-700 bg-stone-100 dark:bg-slate-800'
-                      }`}
-                    />
-                  );
-                })}
-              </div>
-
-              {errorMessage && (
-                <p className="text-xs font-black text-rose-600 dark:text-rose-400 mt-2 animate-bounce">
-                  {errorMessage}
-                </p>
-              )}
-
-              <p className="text-[11px] font-bold text-stone-400 dark:text-slate-500 mt-1">
-                Demo Eltern-PIN ist <strong className="text-stone-700 dark:text-slate-300">1234</strong>
-              </p>
+            {/* PIN Dots Display */}
+            <div className="flex justify-center items-center gap-3 py-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`w-4 h-4 rounded-full transition-all duration-150 ${
+                    pinInput.length > i
+                      ? 'bg-emerald-500 scale-125 shadow-xs'
+                      : 'bg-stone-200 dark:bg-slate-700'
+                  }`}
+                />
+              ))}
             </div>
 
-            {/* Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-2.5 max-w-xs mx-auto">
+            {errorMessage && (
+              <p className="text-xs font-extrabold text-rose-500 animate-bounce">
+                {errorMessage}
+              </p>
+            )}
+
+            {/* Keypad */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1 max-w-xs mx-auto">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <button
                   key={digit}
@@ -190,6 +190,20 @@ export const LoginView: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Footer link to restart onboarding */}
+        <div className="pt-4 border-t border-stone-200/60 dark:border-slate-800">
+          <button
+            onClick={() => {
+              if (window.confirm('Möchtest du zur Familien-Einrichtung zurückkehren?')) {
+                resetToFreshStart();
+              }
+            }}
+            className="text-xs font-bold text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
+          >
+            ⚙️ Familie neu einrichten oder zurücksetzen
+          </button>
+        </div>
 
       </div>
     </div>

@@ -22,6 +22,7 @@ import { format, addDays, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { RecipeImportModal } from '../components/RecipeImportModal';
 import { RecipeEditModal } from '../components/RecipeEditModal';
+import { ModalPortal } from '../components/ModalPortal';
 
 // Robust food photo fallback helper
 const getRecipePhoto = (recipe: Recipe): string => {
@@ -867,12 +868,39 @@ export const MealPlannerView: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {recipes.length === 0 && (
+            <div className="col-span-full p-12 text-center duo-card bg-white dark:bg-slate-900 border-2 border-dashed border-stone-200 dark:border-slate-800 rounded-3xl">
+              <span className="text-4xl block mb-2">🍳</span>
+              <h4 className="text-base font-black text-stone-900 dark:text-white">Noch keine Rezepte im Kochbuch</h4>
+              <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                Fügt euer erstes Familien-Lieblingsrezept hinzu oder importiert Rezepte direkt von Webseiten wie Chefkoch!
+              </p>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                >
+                  Link importieren
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecipeToEdit({} as any)}
+                  className="duo-btn duo-btn-green px-4 py-2 text-xs font-black rounded-xl"
+                >
+                  + Rezept erstellen
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Edit Slot Modal */}
       {editingSlot && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto">
             
             {/* Modal Header */}
@@ -1307,11 +1335,13 @@ export const MealPlannerView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Recipe Detail Modal */}
       {selectedRecipeForModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="relative h-48 rounded-2xl overflow-hidden mb-4">
               <img
@@ -1478,6 +1508,7 @@ export const MealPlannerView: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Smart Recipe Import Modal */}
@@ -1511,38 +1542,40 @@ export const MealPlannerView: React.FC = () => {
 
       {/* Recipe Delete Confirmation Dialog */}
       {recipeToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-black text-stone-900 dark:text-white">Rezept wirklich löschen?</h3>
-            <p className="text-xs text-stone-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-              Möchtest du <strong className="text-stone-900 dark:text-white">"{recipeToDelete.title}"</strong> wirklich löschen? Das Rezept wird aus der Rezeptbox und aus allen geplanten Mahlzeiten entfernt.
-            </p>
-            <div className="flex items-center justify-end gap-2 mt-5">
-              <button
-                type="button"
-                onClick={() => setRecipeToDelete(null)}
-                className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  deleteRecipe(recipeToDelete.id);
-                  setSyncFeedback(`Rezept "${recipeToDelete.title}" gelöscht.`);
-                  setRecipeToDelete(null);
-                  setTimeout(() => setSyncFeedback(null), 4000);
-                }}
-                className="duo-btn duo-btn-rose px-5 py-2 text-xs font-black rounded-xl"
-              >
-                Ja, Rezept löschen
-              </button>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-stone-900 dark:text-white">Rezept wirklich löschen?</h3>
+              <p className="text-xs text-stone-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                Möchtest du <strong className="text-stone-900 dark:text-white">"{recipeToDelete.title}"</strong> wirklich löschen? Das Rezept wird aus der Rezeptbox und aus allen geplanten Mahlzeiten entfernt.
+              </p>
+              <div className="flex items-center justify-end gap-2 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setRecipeToDelete(null)}
+                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteRecipe(recipeToDelete.id);
+                    setSyncFeedback(`Rezept "${recipeToDelete.title}" gelöscht.`);
+                    setRecipeToDelete(null);
+                    setTimeout(() => setSyncFeedback(null), 4000);
+                  }}
+                  className="duo-btn duo-btn-rose px-5 py-2 text-xs font-black rounded-xl"
+                >
+                  Ja, Rezept löschen
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

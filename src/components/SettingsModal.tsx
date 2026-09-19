@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useFamily } from '../context/FamilyContext';
+import { ModalPortal } from './ModalPortal';
 import {
   X,
   Moon,
@@ -30,7 +31,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setFamilyName,
     exportAllData,
     importAllData,
-    resetToDefaults,
+    loadDemoData,
+    resetToFreshStart,
     members,
     recipes,
     groceries,
@@ -92,8 +94,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in zoom-in-95 my-auto space-y-6 text-stone-900 dark:text-slate-100">
         
         {/* Header */}
@@ -328,32 +333,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* Section 5: Reset Data / Danger Zone */}
-        <div className="pt-2 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('Möchtest du wirklich alle Famly-Daten auf die Demo-Beispiele zurücksetzen? Nicht gesicherte Änderungen gehen verloren.')) {
-                resetToDefaults();
-                onClose();
-              }
-            }}
-            className="text-xs font-bold text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1.5 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Auf Standard-Beispieldaten zurücksetzen</span>
-          </button>
+        {/* Section 5: Reset & Demo Data Zone */}
+        <div className="pt-3 border-t border-stone-100 dark:border-slate-800 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Möchtest du die Beispieldaten (Familie Baum mit Rezepten & Terminen) laden?')) {
+                  loadDemoData();
+                  onClose();
+                }
+              }}
+              className="flex-1 py-2.5 px-3 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-700 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <span>✨ Beispieldaten laden (Demo-Modus)</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-black bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 transition-colors"
-          >
-            Fertig
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Möchtest du Famly wirklich komplett zurücksetzen und das Onboarding neu starten? Alle lokalen Daten werden gelöscht.')) {
+                  resetToFreshStart();
+                  onClose();
+                }
+              }}
+              className="flex-1 py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Zurücksetzen & Onboarding neu starten</span>
+            </button>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-black bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 transition-colors"
+            >
+              Fertig
+            </button>
+          </div>
         </div>
 
       </div>
     </div>
+    </ModalPortal>
   );
 };

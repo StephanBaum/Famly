@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Recipe, Ingredient, GroceryCategory } from '../types';
 import { useFamily } from '../context/FamilyContext';
+import { ModalPortal } from './ModalPortal';
 import {
   Link as LinkIcon,
   Camera,
@@ -223,8 +224,11 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
     }, 1800);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto text-stone-900 dark:text-slate-100">
         
         {/* Modal Header */}
@@ -982,5 +986,6 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { GalleryAlbum } from '../types';
 import { useFamily } from '../context/FamilyContext';
+import { ModalPortal } from './ModalPortal';
 import {
   X,
   Upload,
@@ -122,8 +123,11 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col text-stone-900 dark:text-slate-100">
         
         {/* Header */}
@@ -439,5 +443,6 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
       </div>
     </div>
+    </ModalPortal>
   );
 };

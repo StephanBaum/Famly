@@ -16,6 +16,7 @@ import {
 import { GalleryShareModal } from '../components/GalleryShareModal';
 import { GuestGalleryViewer } from '../components/GuestGalleryViewer';
 import { GalleryUploadModal } from '../components/GalleryUploadModal';
+import { ModalPortal } from '../components/ModalPortal';
 
 export const PhotoStreamView: React.FC = () => {
   const {
@@ -459,57 +460,59 @@ export const PhotoStreamView: React.FC = () => {
 
       {/* Lightbox Modal */}
       {selectedGallery && lightboxPhotoIdx !== null && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 animate-in fade-in">
-          <div className="flex items-center justify-between text-white pb-2">
-            <span className="text-xs font-bold text-stone-400">
-              {lightboxPhotoIdx + 1} / {selectedGallery.photos.length}
-            </span>
-            <button
-              onClick={() => setLightboxPhotoIdx(null)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 flex items-center justify-between gap-4 max-h-[80vh] my-auto relative">
-            <button
-              onClick={() =>
-                setLightboxPhotoIdx((prev) =>
-                  prev !== null && prev > 0 ? prev - 1 : selectedGallery.photos.length - 1
-                )
-              }
-              className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-xs transition-transform active:scale-90"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-
-            <img
-              src={selectedGallery.photos[lightboxPhotoIdx].imageUrl}
-              alt="Vergrößert"
-              className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl mx-auto"
-            />
-
-            <button
-              onClick={() =>
-                setLightboxPhotoIdx((prev) =>
-                  prev !== null && prev < selectedGallery.photos.length - 1 ? prev + 1 : 0
-                )
-              }
-              className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-xs transition-transform active:scale-90"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
-
-          {selectedGallery.photos[lightboxPhotoIdx].caption && (
-            <div className="text-center pt-3 pb-2 text-white max-w-lg mx-auto">
-              <p className="text-sm font-semibold">
-                {selectedGallery.photos[lightboxPhotoIdx].caption}
-              </p>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 animate-in fade-in">
+            <div className="flex items-center justify-between text-white pb-2">
+              <span className="text-xs font-bold text-stone-400">
+                {lightboxPhotoIdx + 1} / {selectedGallery.photos.length}
+              </span>
+              <button
+                onClick={() => setLightboxPhotoIdx(null)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          )}
-        </div>
+
+            <div className="flex-1 flex items-center justify-between gap-4 max-h-[80vh] my-auto relative">
+              <button
+                onClick={() =>
+                  setLightboxPhotoIdx((prev) =>
+                    prev !== null && prev > 0 ? prev - 1 : selectedGallery.photos.length - 1
+                  )
+                }
+                className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-xs transition-transform active:scale-90"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              <img
+                src={selectedGallery.photos[lightboxPhotoIdx].imageUrl}
+                alt="Vergrößert"
+                className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl mx-auto"
+              />
+
+              <button
+                onClick={() =>
+                  setLightboxPhotoIdx((prev) =>
+                    prev !== null && prev < selectedGallery.photos.length - 1 ? prev + 1 : 0
+                  )
+                }
+                className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-xs transition-transform active:scale-90"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+
+            {selectedGallery.photos[lightboxPhotoIdx].caption && (
+              <div className="text-center pt-3 pb-2 text-white max-w-lg mx-auto">
+                <p className="text-sm font-semibold">
+                  {selectedGallery.photos[lightboxPhotoIdx].caption}
+                </p>
+              </div>
+            )}
+          </div>
+        </ModalPortal>
       )}
 
       {/* Share with Relatives Modal */}

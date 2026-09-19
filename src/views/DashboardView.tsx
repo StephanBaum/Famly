@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
 import { FamilyMember } from '../types';
+import { ModalPortal } from '../components/ModalPortal';
 
 interface DashboardViewProps {
   onNavigate: (tab: 'calendar' | 'meals' | 'photos' | 'lists' | 'members') => void;
@@ -182,62 +183,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) */}
-      <div className="duo-card p-5 bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/50">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🧸</span>
-            <div>
-              <h3 className="font-extrabold text-stone-900 dark:text-white text-sm">
-                Wichtige Kinder-Infos & Kleidergrößen
-              </h3>
-              <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400">
-                Schuhgrößen, Kinderarzt-Telefon und Schuldetails sofort griffbereit
-              </p>
+      {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) - Render only if kids exist */}
+      {kids.length > 0 && (
+        <div className="duo-card p-5 bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/50">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🧸</span>
+              <div>
+                <h3 className="font-extrabold text-stone-900 dark:text-white text-sm">
+                  Wichtige Kinder-Infos & Kleidergrößen
+                </h3>
+                <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400">
+                  Schuhgrößen, Kinderarzt-Telefon und Schuldetails sofort griffbereit
+                </p>
+              </div>
             </div>
-          </div>
-          <button
-            onClick={() => onNavigate('members')}
-            className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline"
-          >
-            Alle Familien-Infos ansehen →
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {kids.map((kid) => (
-            <div
-              key={kid.id}
-              onClick={() => setSelectedChildForModal(kid)}
-              className="cursor-pointer p-3.5 rounded-2xl border-2 border-b-4 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/60 hover:bg-purple-50/40 dark:hover:bg-purple-950/30 hover:border-purple-300 dark:hover:border-purple-700 transition-all flex items-center justify-between"
+            <button
+              onClick={() => onNavigate('members')}
+              className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{kid.avatar}</span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <strong className="text-xs font-black text-stone-900 dark:text-white">{kid.name}</strong>
-                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-md">
-                      {kid.role}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] text-stone-600 dark:text-slate-300 font-semibold mt-1">
-                    <span className="flex items-center gap-1">
-                      <Shirt className="w-3 h-3 text-stone-400 dark:text-slate-400" />
-                      <span>{kid.childDetails?.clothingSize || 'Größe'}</span>
-                    </span>
-                    <span>•</span>
-                    <span>👟 {kid.childDetails?.shoeSize || 'Schuhe'}</span>
+              Alle Familien-Infos ansehen →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {kids.map((kid) => (
+              <div
+                key={kid.id}
+                onClick={() => setSelectedChildForModal(kid)}
+                className="cursor-pointer p-3.5 rounded-2xl border-2 border-b-4 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/60 hover:bg-purple-50/40 dark:hover:bg-purple-950/30 hover:border-purple-300 dark:hover:border-purple-700 transition-all flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{kid.avatar}</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <strong className="text-xs font-black text-stone-900 dark:text-white">{kid.name}</strong>
+                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-md">
+                        {kid.role}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-stone-600 dark:text-slate-300 font-semibold mt-1">
+                      <span className="flex items-center gap-1">
+                        <Shirt className="w-3 h-3 text-stone-400 dark:text-slate-400" />
+                        <span>{kid.childDetails?.clothingSize || 'Größe'}</span>
+                      </span>
+                      <span>•</span>
+                      <span>👟 {kid.childDetails?.shoeSize || 'Schuhe'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button className="duo-btn duo-btn-white px-2.5 py-1 text-[11px] font-black rounded-xl">
-                Karte öffnen
-              </button>
-            </div>
-          ))}
+                <button className="duo-btn duo-btn-white px-2.5 py-1 text-[11px] font-black rounded-xl">
+                  Karte öffnen
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Grid: Left Column (Events & Dinner) / Right Column (Board & Memories) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -444,48 +447,61 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-2">
-              {relevantChores.slice(0, 4).map((chore) => {
-                const assigned = members.find((m) => m.id === chore.assignedMemberId);
-                return (
-                  <div
-                    key={chore.id}
-                    onClick={() => toggleChore(chore.id)}
-                    className={`cursor-pointer flex items-center justify-between p-3 rounded-2xl border-2 transition-all ${
-                      chore.completed
-                        ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-60'
-                        : 'bg-white dark:bg-slate-800/80 border-b-4 border-stone-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {chore.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
-                      )}
-                      <div>
-                        <p
-                          className={`text-xs font-extrabold ${
-                            chore.completed ? 'line-through text-stone-400 dark:text-slate-500' : 'text-stone-800 dark:text-white'
-                          }`}
-                        >
-                          {chore.title}
-                        </p>
-                        {assigned && currentMemberId === 'all' && (
-                          <span className="text-[10px] text-stone-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5">
-                            <span>{assigned.avatar}</span>
-                            <span>{assigned.name}</span>
-                          </span>
+            {relevantChores.length === 0 ? (
+              <div className="text-center py-6 bg-stone-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-stone-200 dark:border-slate-700">
+                <span className="text-2xl mb-1 block">✨</span>
+                <p className="text-xs font-bold text-stone-600 dark:text-slate-300">Keine offenen Aufgaben für heute.</p>
+                <button
+                  onClick={() => onNavigate('lists')}
+                  className="mt-2 text-xs font-black text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  + Erste Aufgabe eintragen
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {relevantChores.slice(0, 4).map((chore) => {
+                  const assigned = members.find((m) => m.id === chore.assignedMemberId);
+                  return (
+                    <div
+                      key={chore.id}
+                      onClick={() => toggleChore(chore.id)}
+                      className={`cursor-pointer flex items-center justify-between p-3 rounded-2xl border-2 transition-all ${
+                        chore.completed
+                          ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-60'
+                          : 'bg-white dark:bg-slate-800/80 border-b-4 border-stone-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {chore.completed ? (
+                          <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
                         )}
+                        <div>
+                          <p
+                            className={`text-xs font-extrabold ${
+                              chore.completed ? 'line-through text-stone-400 dark:text-slate-500' : 'text-stone-800 dark:text-white'
+                            }`}
+                          >
+                            {chore.title}
+                          </p>
+                          {assigned && currentMemberId === 'all' && (
+                            <span className="text-[10px] text-stone-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                              <span>{assigned.avatar}</span>
+                              <span>{assigned.name}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg">
+                        ⭐ +{chore.stars}
+                      </span>
                     </div>
-                    <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg">
-                      ⭐ +{chore.stars}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Family Notice Board */}
@@ -508,47 +524,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3">
-              {notes.map((note) => {
-                const author = members.find((m) => m.id === note.authorMemberId);
-                const tagStyles = {
-                  wifi: 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-200',
-                  urgent: 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200',
-                  fun: 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200',
-                  info: 'bg-stone-50 dark:bg-slate-800 border-stone-300 dark:border-slate-700 text-stone-950 dark:text-slate-200',
-                };
-                return (
-                  <div
-                    key={note.id}
-                    className={`p-3.5 rounded-2xl border-2 border-b-4 ${
-                      tagStyles[note.tag]
-                    } relative group`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5 font-black text-xs">
-                        {note.tag === 'wifi' && <Wifi className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
-                        {note.tag === 'urgent' && <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
-                        {note.tag === 'fun' && <PartyPopper className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
-                        <span>{note.title}</span>
+            {notes.length === 0 ? (
+              <div className="text-center py-6 bg-stone-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-stone-200 dark:border-slate-700">
+                <span className="text-2xl mb-1 block">📌</span>
+                <p className="text-xs font-bold text-stone-600 dark:text-slate-300">Noch keine Notizen auf dem Schwarzen Brett.</p>
+                <button
+                  onClick={() => setShowAddNoteModal(true)}
+                  className="mt-2 text-xs font-black text-rose-600 dark:text-rose-400 hover:underline"
+                >
+                  + Erste Notiz anheften
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notes.map((note) => {
+                  const author = members.find((m) => m.id === note.authorMemberId);
+                  const tagStyles = {
+                    wifi: 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-200',
+                    urgent: 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200',
+                    fun: 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200',
+                    info: 'bg-stone-50 dark:bg-slate-800 border-stone-300 dark:border-slate-700 text-stone-950 dark:text-slate-200',
+                  };
+                  return (
+                    <div
+                      key={note.id}
+                      className={`p-3.5 rounded-2xl border-2 border-b-4 ${
+                        tagStyles[note.tag]
+                      } relative group`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 font-black text-xs">
+                          {note.tag === 'wifi' && <Wifi className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
+                          {note.tag === 'urgent' && <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
+                          {note.tag === 'fun' && <PartyPopper className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
+                          <span>{note.title}</span>
+                        </div>
+                        <button
+                          onClick={() => deleteNote(note.id)}
+                          className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-rose-600 text-xs font-bold"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <button
-                        onClick={() => deleteNote(note.id)}
-                        className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-rose-600 text-xs font-bold"
-                      >
-                        ✕
-                      </button>
+                      <p className="text-xs font-medium whitespace-pre-line leading-relaxed">
+                        {note.content}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-stone-400 dark:text-slate-400 font-semibold">
+                        <span>Von {author ? author.name : 'Familie'}</span>
+                        <span>{note.createdAt}</span>
+                      </div>
                     </div>
-                    <p className="text-xs font-medium whitespace-pre-line leading-relaxed">
-                      {note.content}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between text-[10px] text-stone-400 dark:text-slate-400 font-semibold">
-                      <span>Von {author ? author.name : 'Familie'}</span>
-                      <span>{note.createdAt}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>
@@ -566,7 +595,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Add Note Modal */}
       {showAddNoteModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
             <h3 className="text-lg font-black text-stone-900 dark:text-white mb-2">Notiz anheften</h3>
             <form onSubmit={handleAddNote} className="space-y-4">
@@ -637,6 +667,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
     </div>

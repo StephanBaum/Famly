@@ -3,6 +3,7 @@ import { useFamily } from '../context/FamilyContext';
 import { FamilyMember } from '../types';
 import { Plus, Edit2, Calendar, Shirt, HeartPulse } from 'lucide-react';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
+import { ModalPortal } from '../components/ModalPortal';
 
 const AVATAR_OPTIONS = ['👩‍💼', '👨‍💻', '👦', '👧', '👵', '👴', '👶', '🐶', '🐱', '⚽', '🎨', '🚀', '🌟', '📚'];
 const COLOR_OPTIONS = ['#EC4899', '#0D9488', '#F59E0B', '#8B5CF6', '#3B82F6', '#10B981', '#F43F5E', '#6366F1'];
@@ -303,126 +304,128 @@ export const FamilyMembersView: React.FC = () => {
 
       {/* Add / Edit Member Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">
-              {editingMember ? 'Mitglied bearbeiten' : 'Familienmitglied hinzufügen'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="z.B. Leo, Mia, Oma"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Rolle
-                </label>
-                <input
-                  type="text"
-                  placeholder="z.B. Mama, Papa, Sohn (12), Tochter (8)"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                  required
-                />
-              </div>
-
-              {/* Avatar Picker */}
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1.5">
-                  Avatar wählen
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {AVATAR_OPTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setAvatar(emoji)}
-                      className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center border-2 transition-all ${
-                        avatar === emoji
-                          ? 'bg-purple-100 dark:bg-purple-950 border-purple-500 scale-110 shadow-2xs'
-                          : 'bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 hover:bg-stone-100'
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">
+                {editingMember ? 'Mitglied bearbeiten' : 'Familienmitglied hinzufügen'}
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Leo, Mia, Oma"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    required
+                  />
                 </div>
-              </div>
 
-              {/* Color Picker */}
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1.5">
-                  Farbe
-                </label>
-                <div className="flex items-center gap-2">
-                  {COLOR_OPTIONS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      style={{ backgroundColor: c }}
-                      className={`w-7 h-7 rounded-full transition-transform ${
-                        color === c ? 'scale-125 ring-2 ring-offset-2 ring-stone-800' : 'hover:scale-110'
-                      }`}
-                    />
-                  ))}
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Rolle
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Mama, Papa, Sohn (12), Tochter (8)"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    required
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Geburtstag (optional)
-                </label>
-                <input
-                  type="date"
-                  value={birthday}
-                  onChange={(e) => setBirthday(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                />
-              </div>
+                {/* Avatar Picker */}
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1.5">
+                    Avatar wählen
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {AVATAR_OPTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setAvatar(emoji)}
+                        className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center border-2 transition-all ${
+                          avatar === emoji
+                            ? 'bg-purple-100 dark:bg-purple-950 border-purple-500 scale-110 shadow-2xs'
+                            : 'bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 hover:bg-stone-100'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Notizen
-                </label>
-                <input
-                  type="text"
-                  placeholder="z.B. Liebt Robotik, Kunst, Fußball"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                />
-              </div>
+                {/* Color Picker */}
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1.5">
+                    Farbe
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {COLOR_OPTIONS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setColor(c)}
+                        style={{ backgroundColor: c }}
+                        className={`w-7 h-7 rounded-full transition-transform ${
+                          color === c ? 'scale-125 ring-2 ring-offset-2 ring-stone-800' : 'hover:scale-110'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  className="duo-btn duo-btn-purple px-5 py-2 text-xs font-black rounded-xl"
-                >
-                  Speichern
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Geburtstag (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Notizen
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Liebt Robotik, Kunst, Fußball"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="duo-btn duo-btn-purple px-5 py-2 text-xs font-black rounded-xl"
+                  >
+                    Speichern
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

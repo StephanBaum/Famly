@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { Chore } from '../types';
+import { ModalPortal } from '../components/ModalPortal';
 import {
   Plus,
   ShoppingCart,
@@ -708,130 +709,134 @@ export const ListsAndChoresView: React.FC = () => {
 
       {/* Add Custom Store Modal */}
       {showAddStoreModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-2">Laden hinzufügen</h3>
-            <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 mb-4">
-              Füge ein Geschäft für eure Familie hinzu (z.B. Aldi, Edeka, Bauhaus, Wochenmarkt).
-            </p>
-            <form onSubmit={handleAddCustomStore} className="space-y-4">
-              <div>
-                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">Name des Geschäfts</label>
-                <input
-                  type="text"
-                  placeholder="z.B. Aldi, Edeka, Bauhaus"
-                  value={newCustomStoreName}
-                  onChange={(e) => setNewCustomStoreName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                  required
-                />
-              </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-2">Laden hinzufügen</h3>
+              <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 mb-4">
+                Füge ein Geschäft für eure Familie hinzu (z.B. Aldi, Edeka, Bauhaus, Wochenmarkt).
+              </p>
+              <form onSubmit={handleAddCustomStore} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">Name des Geschäfts</label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Aldi, Edeka, Bauhaus"
+                    value={newCustomStoreName}
+                    onChange={(e) => setNewCustomStoreName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    required
+                  />
+                </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddStoreModal(false)}
-                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  className="duo-btn duo-btn-green px-5 py-2 text-xs font-black rounded-xl"
-                >
-                  Laden hinzufügen
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStoreModal(false)}
+                    className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="duo-btn duo-btn-green px-5 py-2 text-xs font-black rounded-xl"
+                  >
+                    Laden hinzufügen
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Add Chore Modal */}
       {isAddChoreOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">Aufgabe im Haushalt anlegen</h3>
-            <form onSubmit={handleAddChore} className="space-y-4">
-              <div>
-                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Beschreibung
-                </label>
-                <input
-                  type="text"
-                  placeholder="z.B. Bett machen, Spülmaschine ausräumen, Tomaten gießen"
-                  value={choreTitle}
-                  onChange={(e) => setChoreTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
-                  Zuweisen an
-                </label>
-                <select
-                  value={choreAssignee}
-                  onChange={(e) => setChoreAssignee(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
-                >
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.avatar} {m.name} ({m.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">Aufgabe im Haushalt anlegen</h3>
+              <form onSubmit={handleAddChore} className="space-y-4">
                 <div>
                   <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
-                    Häufigkeit
-                  </label>
-                  <select
-                    value={choreFrequency}
-                    onChange={(e) => setChoreFrequency(e.target.value as Chore['frequency'])}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
-                  >
-                    <option value="daily">Täglich</option>
-                    <option value="weekly">Wöchentlich</option>
-                    <option value="once">Einmalig</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
-                    Belohnung (Sterne)
+                    Beschreibung
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={choreStars}
-                    onChange={(e) => setChoreStars(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                    type="text"
+                    placeholder="z.B. Bett machen, Spülmaschine ausräumen, Tomaten gießen"
+                    value={choreTitle}
+                    onChange={(e) => setChoreTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    required
                   />
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddChoreOpen(false)}
-                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  className="duo-btn duo-btn-amber px-5 py-2 text-xs font-black rounded-xl"
-                >
-                  Aufgabe anlegen
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Zuweisen an
+                  </label>
+                  <select
+                    value={choreAssignee}
+                    onChange={(e) => setChoreAssignee(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                  >
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.avatar} {m.name} ({m.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                      Häufigkeit
+                    </label>
+                    <select
+                      value={choreFrequency}
+                      onChange={(e) => setChoreFrequency(e.target.value as Chore['frequency'])}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                    >
+                      <option value="daily">Täglich</option>
+                      <option value="weekly">Wöchentlich</option>
+                      <option value="once">Einmalig</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                      Belohnung (Sterne)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={choreStars}
+                      onChange={(e) => setChoreStars(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddChoreOpen(false)}
+                    className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="duo-btn duo-btn-amber px-5 py-2 text-xs font-black rounded-xl"
+                  >
+                    Aufgabe anlegen
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

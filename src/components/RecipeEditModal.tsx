@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Recipe, Ingredient } from '../types';
+import { ModalPortal } from './ModalPortal';
 import {
   X,
   Trash2,
@@ -147,8 +148,11 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
     onClose();
   };
 
+  if (!isOpen || !recipe) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto text-stone-900 dark:text-slate-100">
         
         {/* Header */}
@@ -592,5 +596,6 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
