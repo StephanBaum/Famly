@@ -9,8 +9,6 @@ import {
   Users,
   Plus,
   LogOut,
-  Moon,
-  Sun,
   Settings,
 } from 'lucide-react';
 
@@ -34,8 +32,6 @@ export const Header: React.FC<HeaderProps> = ({
     logout,
     currentMemberId,
     setCurrentMemberId,
-    isDarkMode,
-    toggleDarkMode,
     familyName,
   } = useFamily();
 
@@ -113,26 +109,14 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* Dark Mode Toggle Button */}
-            <button
-              onClick={toggleDarkMode}
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition-all shadow-2xs"
-            >
-              {isDarkMode ? (
-                <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20" />
-              ) : (
-                <Moon className="w-4 h-4 text-slate-700" />
-              )}
-            </button>
-
             {/* Settings & Data Button */}
             <button
               onClick={onOpenSettings}
               title="Settings & Data Management"
-              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs"
+              className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 text-stone-700 dark:text-slate-300" />
+              <span className="hidden md:inline text-xs font-bold text-stone-700 dark:text-slate-300">Settings</span>
             </button>
 
             {/* Quick Add Button */}
