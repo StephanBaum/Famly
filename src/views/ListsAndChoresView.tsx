@@ -13,6 +13,7 @@ import {
   Star,
   Home,
   Brain,
+  Edit2,
 } from 'lucide-react';
 
 export const ListsAndChoresView: React.FC = () => {
@@ -30,6 +31,7 @@ export const ListsAndChoresView: React.FC = () => {
     toggleAlwaysInStock,
     chores,
     addChore,
+    updateChore,
     toggleChore,
     deleteChore,
     currentMemberId,
@@ -50,10 +52,29 @@ export const ListsAndChoresView: React.FC = () => {
 
   // Chore Form
   const [isAddChoreOpen, setIsAddChoreOpen] = useState(false);
+  const [editingChoreId, setEditingChoreId] = useState<string | null>(null);
   const [choreTitle, setChoreTitle] = useState('');
   const [choreAssignee, setChoreAssignee] = useState(members[2]?.id || members[0]?.id || 'm1');
   const [choreFrequency, setChoreFrequency] = useState<Chore['frequency']>('daily');
   const [choreStars, setChoreStars] = useState(3);
+
+  const openAddChore = () => {
+    setEditingChoreId(null);
+    setChoreTitle('');
+    setChoreAssignee(members[2]?.id || members[0]?.id || 'm1');
+    setChoreFrequency('daily');
+    setChoreStars(3);
+    setIsAddChoreOpen(true);
+  };
+
+  const openEditChore = (chore: Chore) => {
+    setEditingChoreId(chore.id);
+    setChoreTitle(chore.title);
+    setChoreAssignee(chore.assignedMemberId);
+    setChoreFrequency(chore.frequency);
+    setChoreStars(chore.stars);
+    setIsAddChoreOpen(true);
+  };
 
   const handleAddGrocery = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +93,18 @@ export const ListsAndChoresView: React.FC = () => {
   const handleAddChore = (e: React.FormEvent) => {
     e.preventDefault();
     if (!choreTitle.trim()) return;
-    addChore(choreTitle.trim(), choreAssignee, choreFrequency, Number(choreStars));
+    if (editingChoreId) {
+      updateChore(editingChoreId, {
+        title: choreTitle.trim(),
+        assignedMemberId: choreAssignee,
+        frequency: choreFrequency,
+        stars: Number(choreStars),
+      });
+    } else {
+      addChore(choreTitle.trim(), choreAssignee, choreFrequency, Number(choreStars));
+    }
     setChoreTitle('');
+    setEditingChoreId(null);
     setIsAddChoreOpen(false);
   };
 
@@ -590,7 +621,7 @@ export const ListsAndChoresView: React.FC = () => {
               </div>
 
               <button
-                onClick={() => setIsAddChoreOpen(true)}
+                onClick={openAddChore}
                 className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
               >
                 <Plus className="w-4 h-4 mr-1 stroke-[3]" />
@@ -682,7 +713,7 @@ export const ListsAndChoresView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 text-xs font-black border border-amber-300 dark:border-amber-700">
                         <span>⭐</span>
                         <span>+{chore.stars} Sterne</span>
@@ -691,12 +722,23 @@ export const ListsAndChoresView: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          openEditChore(chore);
+                        }}
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                        title="Aufgabe bearbeiten"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           deleteChore(chore.id);
                         }}
-                        className="text-stone-300 hover:text-rose-500 p-1"
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                         title="Aufgabe löschen"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -755,7 +797,9 @@ export const ListsAndChoresView: React.FC = () => {
         <ModalPortal>
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
-              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">Aufgabe im Haushalt anlegen</h3>
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">
+                {editingChoreId ? 'Aufgabe bearbeiten' : 'Aufgabe im Haushalt anlegen'}
+              </h3>
               <form onSubmit={handleAddChore} className="space-y-4">
                 <div>
                   <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
@@ -821,7 +865,10 @@ export const ListsAndChoresView: React.FC = () => {
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setIsAddChoreOpen(false)}
+                    onClick={() => {
+                      setIsAddChoreOpen(false);
+                      setEditingChoreId(null);
+                    }}
                     className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
                   >
                     Abbrechen
@@ -830,7 +877,7 @@ export const ListsAndChoresView: React.FC = () => {
                     type="submit"
                     className="duo-btn duo-btn-amber px-5 py-2 text-xs font-black rounded-xl"
                   >
-                    Aufgabe anlegen
+                    {editingChoreId ? 'Änderungen speichern' : 'Aufgabe anlegen'}
                   </button>
                 </div>
               </form>

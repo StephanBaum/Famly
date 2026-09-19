@@ -103,6 +103,7 @@ interface FamilyContextType {
 
   chores: Chore[];
   addChore: (title: string, assignedMemberId: string, frequency: Chore['frequency'], stars: number) => void;
+  updateChore: (id: string, updates: Partial<Omit<Chore, 'id'>>) => void;
   toggleChore: (id: string) => void;
   deleteChore: (id: string) => void;
 
@@ -831,6 +832,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setChores((prev) => [newChore, ...prev]);
   };
 
+  const updateChore = (id: string, updates: Partial<Omit<Chore, 'id'>>) => {
+    setChores((prev) =>
+      prev.map((chore) => (chore.id === id ? { ...chore, ...updates } : chore))
+    );
+  };
+
   const toggleChore = (id: string) => {
     setChores((prev) =>
       prev.map((chore) => {
@@ -1097,6 +1104,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isItemInStock,
         chores,
         addChore,
+        updateChore,
         toggleChore,
         deleteChore,
         notes,
