@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
+import { isSupabaseConfigured } from '../services/supabase';
 import {
   X,
   Moon,
@@ -11,6 +12,8 @@ import {
   Check,
   RotateCcw,
   ChevronRight,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -163,7 +166,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* Section 2: Family Identity */}
+        {/* Section 2: Cloud & Multi-Device Sync */}
+        <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <div
+                className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+                  isSupabaseConfigured()
+                    ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-400'
+                }`}
+              >
+                {isSupabaseConfigured() ? <Cloud className="w-5 h-5" /> : <CloudOff className="w-5 h-5" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                    Cloud & Multi-Device Sync
+                  </h4>
+                  <span
+                    className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                      isSupabaseConfigured()
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                        : 'bg-stone-200 text-stone-700 dark:bg-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {isSupabaseConfigured() ? '🟢 Cloud Aktiv' : 'ℹ️ Lokaler Modus'}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {isSupabaseConfigured()
+                    ? 'Echtzeit-Synchronisierung und Cloud-Foto-Speicher sind aktiv! Alle Änderungen spiegeln sich live auf allen Handys der Familie wider.'
+                    : 'Aktuell speichert Famly lokal im Browser. Um die App auf mehreren Smartphones gleichzeitig mit Live-Sync und echtem Foto-Speicher zu nutzen, verbinde ein kostenloses Supabase-Projekt.'}
+                </p>
+
+                {!isSupabaseConfigured() && (
+                  <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 text-xs space-y-1.5">
+                    <p className="font-bold text-stone-800 dark:text-slate-200">
+                      So einfach richtest du die Cloud ein (Dauer: ca. 2 Min.):
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-stone-600 dark:text-slate-300 text-[11px]">
+                      <li>Kostenloses Projekt auf <strong className="text-emerald-600">supabase.com</strong> erstellen.</li>
+                      <li>Das mitgelieferte SQL-Skript (<code className="text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-slate-800 px-1 rounded">supabase/schema.sql</code>) im Supabase SQL Editor ausführen.</li>
+                      <li>In Vercel oder <code className="text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-slate-800 px-1 rounded">.env.local</code> die zwei Umgebungsvariablen <code className="text-emerald-600">VITE_SUPABASE_URL</code> und <code className="text-emerald-600">VITE_SUPABASE_ANON_KEY</code> eintragen.</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Family Identity */}
         <form onSubmit={handleSaveFamilyName} className="space-y-2">
           <label className="block text-xs font-black uppercase text-stone-500 dark:text-slate-400 tracking-wider">
             Familienname

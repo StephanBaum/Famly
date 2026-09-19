@@ -2,11 +2,13 @@ import React, { useState, useRef } from 'react';
 import { GalleryAlbum } from '../types';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
+import { uploadPhotoToStorage } from '../services/supabase';
 import {
   X,
   Upload,
   Sparkles,
   FolderPlus,
+  Loader2,
 } from 'lucide-react';
 
 interface GalleryUploadModalProps {
@@ -60,6 +62,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
   const [stagedPhotos, setStagedPhotos] = useState<
     { imageUrl: string; caption: string }[]
   >([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Input states for adding another photo
   const [customUrlInput, setCustomUrlInput] = useState('');
@@ -75,19 +78,26 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
     setCustomCaptionInput('');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          handleAddStagedPhoto(reader.result, file.name.replace(/\.[^/.]+$/, ''));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsUploading(true);
+    try {
+      const fileArray = Array.from(files);
+      for (const file of fileArray) {
+        const url = await uploadPhotoToStorage(file, 'albums');
+        const caption = file.name.replace(/\.[^/.]+$/, '');
+        handleAddStagedPhoto(url, caption);
+      }
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -401,14 +411,26 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-1 text-xs">
-              <span className="text-[11px] text-stone-500 dark:text-slate-400 font-medium">Oder vom Smartphone / PC auswählen:</span>
+              <span className="text-[11px] text-stone-500 dark:text-slate-400 font-medium">
+                {isUploading ? 'Fotos werden geladen & optimiert...' : 'Oder vom Smartphone / PC auswählen:'}
+              </span>
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 disabled:opacity-50"
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Fotos hochladen</span>
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                    <span>Wird hochgeladen...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Fotos hochladen</span>
+                  </>
+                )}
               </button>
               <input
                 ref={fileInputRef}
