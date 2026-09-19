@@ -20,13 +20,13 @@ interface RecipeEditModalProps {
 }
 
 const FOOD_PHOTO_PRESETS = [
-  { label: 'Pasta & Noodles', url: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281057?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Pizza & Flatbread', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Curry & Asian Bowl', url: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Salmon & Fish', url: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Crispy Tacos', url: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Golden Pot Pie / Meat', url: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Berry Pancakes & Baking', url: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Pasta & Nudeln', url: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281057?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Pizza & Flammkuchen', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Curry & Asia-Pfanne', url: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Lachs & Fisch', url: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Knusprige Tacos', url: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Auflauf & Herzhaftes', url: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Pfannkuchen & Waffeln', url: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=800&q=80' },
   { label: 'Allgäuer Kässpatzen', url: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80' },
 ];
 
@@ -149,25 +149,25 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto text-stone-900 dark:text-slate-100">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center font-black text-lg shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-400 flex items-center justify-center font-black text-lg shadow-xs">
               ✏️
             </div>
             <div>
-              <h3 className="text-lg font-black text-stone-900 leading-tight">Edit Recipe</h3>
-              <p className="text-xs text-stone-500 font-medium">
-                Modify ingredients, instructions, cooking time or photo
+              <h3 className="text-lg font-black text-stone-900 dark:text-white leading-tight">Rezept bearbeiten</h3>
+              <p className="text-xs text-stone-500 dark:text-slate-400 font-medium">
+                Zutaten, Zubereitungsschritte, Kochzeit oder Foto anpassen
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-2xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-500 dark:text-slate-400 flex items-center justify-center transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -178,7 +178,7 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
           
           {/* Cover Photo Preview & Selector */}
           <div className="space-y-2">
-            <div className="relative h-36 sm:h-44 rounded-2xl overflow-hidden bg-stone-100 border-2 border-stone-200 group">
+            <div className="relative h-36 sm:h-44 rounded-2xl overflow-hidden bg-stone-100 dark:bg-slate-800 border-2 border-stone-200 dark:border-slate-700 group">
               <img
                 src={imageUrl || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=800&q=80'}
                 alt={title}
@@ -191,19 +191,19 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPhotoPicker(!showPhotoPicker)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-stone-900 text-xs font-bold shadow-md transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 text-stone-900 dark:text-white text-xs font-bold shadow-md transition-all active:scale-95"
                 >
-                  <ImageIcon className="w-3.5 h-3.5 text-teal-600" />
-                  <span>{showPhotoPicker ? 'Close Gallery' : 'Change Photo'}</span>
+                  <ImageIcon className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>{showPhotoPicker ? 'Galerie schließen' : 'Foto ändern'}</span>
                 </button>
               </div>
             </div>
 
             {/* Photo Preset Gallery (Expandable) */}
             {showPhotoPicker && (
-              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200 space-y-2 animate-in fade-in">
-                <span className="block text-[11px] font-bold text-stone-600 uppercase">
-                  Pick a Food Photo Preset:
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/80 rounded-2xl border border-stone-200 dark:border-slate-700 space-y-2 animate-in fade-in">
+                <span className="block text-[11px] font-bold text-stone-600 dark:text-slate-300 uppercase">
+                  Foto-Vorlage auswählen:
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {FOOD_PHOTO_PRESETS.map((p, idx) => (
@@ -214,25 +214,25 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                         setImageUrl(p.url);
                         setShowPhotoPicker(false);
                       }}
-                      className="group/p text-left rounded-xl overflow-hidden border border-stone-200 hover:border-teal-400 relative"
+                      className="group/p text-left rounded-xl overflow-hidden border border-stone-200 dark:border-slate-700 hover:border-teal-400 relative"
                     >
                       <img src={p.url} alt={p.label} className="w-full h-16 object-cover group-hover/p:scale-105 transition-transform" />
-                      <span className="block text-[10px] font-bold text-stone-800 p-1 truncate bg-white">
+                      <span className="block text-[10px] font-bold text-stone-800 dark:text-slate-200 p-1 truncate bg-white dark:bg-slate-800">
                         {p.label}
                       </span>
                     </button>
                   ))}
                 </div>
                 <div className="pt-1">
-                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
-                    Or Paste Custom Image URL:
+                  <label className="block text-[10px] font-bold text-stone-500 dark:text-slate-400 uppercase mb-1">
+                    Oder Bild-URL einfügen:
                   </label>
                   <input
                     type="url"
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-2.5 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                    className="w-full px-2.5 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -241,58 +241,58 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-black text-stone-700 uppercase mb-1">
-              Recipe Title *
+            <label className="block text-xs font-black text-stone-700 dark:text-slate-300 uppercase mb-1">
+              Rezepttitel *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Creamy Lemon Pepper Pasta"
-              className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-stone-300 font-black text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+              placeholder="z. B. Cremige Zitronen-Pasta"
+              className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-stone-300 dark:border-slate-700 font-black text-base text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800"
               required
             />
           </div>
 
           {/* Metrics (Prep Time, Servings, Category) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-stone-50/80 rounded-2xl border border-stone-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-stone-50/80 dark:bg-slate-800/60 rounded-2xl border border-stone-200 dark:border-slate-700">
             {/* Prep Time */}
             <div>
-              <label className="block text-[11px] font-bold text-stone-600 uppercase mb-1 flex items-center gap-1">
+              <label className="block text-[11px] font-bold text-stone-600 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-amber-500" />
-                <span>Prep / Cook Time</span>
+                <span>Zubereitungszeit</span>
               </label>
               <input
                 type="text"
                 value={prepTime}
                 onChange={(e) => setPrepTime(e.target.value)}
-                placeholder="25 mins"
-                className="w-full px-3 py-1.5 rounded-xl border border-stone-300 font-bold text-xs bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="25 Min."
+                className="w-full px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-stone-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />
             </div>
 
             {/* Servings Counter */}
             <div>
-              <label className="block text-[11px] font-bold text-stone-600 uppercase mb-1 flex items-center gap-1">
+              <label className="block text-[11px] font-bold text-stone-600 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
                 <Users className="w-3 h-3 text-blue-500" />
-                <span>Servings</span>
+                <span>Portionen</span>
               </label>
-              <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-stone-300">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-2 py-1 rounded-xl border border-stone-300 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setServings((s) => Math.max(1, s - 1))}
-                  className="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 font-black text-stone-700 text-xs"
+                  className="w-6 h-6 rounded-lg bg-stone-100 dark:bg-slate-700 hover:bg-stone-200 dark:hover:bg-slate-600 font-black text-stone-700 dark:text-white text-xs"
                 >
                   -
                 </button>
-                <span className="font-black text-xs text-stone-900 flex-1 text-center">
-                  {servings} portions
+                <span className="font-black text-xs text-stone-900 dark:text-white flex-1 text-center">
+                  {servings} {servings === 1 ? 'Portion' : 'Portionen'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setServings((s) => s + 1)}
-                  className="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 font-black text-stone-700 text-xs"
+                  className="w-6 h-6 rounded-lg bg-stone-100 dark:bg-slate-700 hover:bg-stone-200 dark:hover:bg-slate-600 font-black text-stone-700 dark:text-white text-xs"
                 >
                   +
                 </button>
@@ -301,54 +301,54 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
 
             {/* Category */}
             <div>
-              <label className="block text-[11px] font-bold text-stone-600 uppercase mb-1">
-                Category
+              <label className="block text-[11px] font-bold text-stone-600 dark:text-slate-400 uppercase mb-1">
+                Kategorie
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as Recipe['category'])}
-                className="w-full px-2.5 py-1.5 rounded-xl border border-stone-300 font-bold text-xs bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-2.5 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-stone-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
-                <option value="quick">⚡ Quick Dinner</option>
-                <option value="comfort">🍲 Comfort Food</option>
-                <option value="healthy">🥗 Healthy & Fresh</option>
-                <option value="baking">🥐 Baking & Brunch</option>
-                <option value="family-favorite">🌟 Family Favorite</option>
+                <option value="quick">⚡ Schnelles Abendessen</option>
+                <option value="comfort">🍲 Wohlfühlessen</option>
+                <option value="healthy">🥗 Frisch & Gesund</option>
+                <option value="baking">🥐 Backen & Brunch</option>
+                <option value="family-favorite">🌟 Familien-Favorit</option>
               </select>
             </div>
           </div>
 
           {/* Notes & Family Tips */}
           <div>
-            <label className="block text-xs font-black text-stone-700 uppercase mb-1">
-              Family Cooking Notes & Tips
+            <label className="block text-xs font-black text-stone-700 dark:text-slate-300 uppercase mb-1">
+              Familien-Notizen & Koch-Tipps
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Grandma's secret: brown the butter first. Leo prefers it without too much pepper."
+              placeholder="z. B. Omas Geheimtipp: Butter zuerst leicht anbräunen. Leo mag es mit weniger Pfeffer."
               rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+              className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-medium text-stone-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800"
             />
           </div>
 
           {/* Tags */}
           <div>
-            <label className="block text-xs font-black text-stone-700 uppercase mb-1 flex items-center gap-1.5">
+            <label className="block text-xs font-black text-stone-700 dark:text-slate-300 uppercase mb-1 flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5 text-stone-400" />
-              <span>Tags</span>
+              <span>Schlagwörter / Tags</span>
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {tags.map((t, idx) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs font-bold text-stone-700 dark:text-slate-200"
                 >
                   <span>#{t}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(t)}
-                    className="text-stone-400 hover:text-stone-700 font-black ml-0.5"
+                    className="text-stone-400 hover:text-stone-700 dark:hover:text-white font-black ml-0.5"
                   >
                     ×
                   </button>
@@ -366,15 +366,15 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                     handleAddTag();
                   }
                 }}
-                placeholder="Add tag (e.g. Under 30m, Pasta, Leo's Pick)..."
-                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                placeholder="Tag hinzufügen (z. B. Unter 30 Min, Pasta, Leos Wunsch)..."
+                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
               />
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-200 text-xs font-bold transition-colors"
               >
-                + Add Tag
+                + Tag
               </button>
             </div>
           </div>
@@ -382,50 +382,50 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
           {/* Ingredients Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-black text-stone-800 uppercase tracking-wider">
-                🛒 Ingredients ({ingredients.length})
+              <label className="block text-xs font-black text-stone-800 dark:text-slate-200 uppercase tracking-wider">
+                🛒 Zutaten ({ingredients.length})
               </label>
-              <span className="text-[10px] text-stone-400 font-bold">
-                Categorized for store lists
+              <span className="text-[10px] text-stone-400 dark:text-slate-400 font-bold">
+                Wird auf Einkaufslisten aufgeteilt
               </span>
             </div>
 
-            <div className="divide-y divide-stone-100 border-2 border-stone-200 rounded-2xl overflow-hidden bg-white max-h-56 overflow-y-auto">
+            <div className="divide-y divide-stone-100 dark:divide-slate-800 border-2 border-stone-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 max-h-56 overflow-y-auto">
               {ingredients.map((ing, idx) => (
                 <div
                   key={idx}
-                  className="p-2 sm:px-3 flex items-center justify-between gap-2 text-xs hover:bg-stone-50"
+                  className="p-2 sm:px-3 flex items-center justify-between gap-2 text-xs hover:bg-stone-50 dark:hover:bg-slate-800/60"
                 >
                   <input
                     type="text"
                     value={ing.name}
                     onChange={(e) => handleUpdateIngredient(idx, 'name', e.target.value)}
-                    className="flex-1 font-bold text-stone-800 border-b border-transparent hover:border-stone-300 focus:border-teal-500 focus:outline-none px-1 py-0.5"
+                    className="flex-1 font-bold text-stone-800 dark:text-white border-b border-transparent hover:border-stone-300 dark:hover:border-slate-600 focus:border-teal-500 focus:outline-none px-1 py-0.5 bg-transparent"
                   />
                   <input
                     type="text"
                     value={ing.amount}
                     onChange={(e) => handleUpdateIngredient(idx, 'amount', e.target.value)}
-                    className="w-24 text-right font-medium text-stone-600 border-b border-transparent hover:border-stone-300 focus:border-teal-500 focus:outline-none px-1 py-0.5"
+                    className="w-24 text-right font-medium text-stone-600 dark:text-slate-300 border-b border-transparent hover:border-stone-300 dark:hover:border-slate-600 focus:border-teal-500 focus:outline-none px-1 py-0.5 bg-transparent"
                   />
                   <select
                     value={ing.category}
                     onChange={(e) => handleUpdateIngredient(idx, 'category', e.target.value)}
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-stone-200 bg-stone-50 text-stone-600"
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-300"
                   >
-                    <option value="produce">produce</option>
-                    <option value="dairy">dairy</option>
-                    <option value="meat">meat</option>
-                    <option value="pantry">pantry</option>
-                    <option value="bakery">bakery</option>
-                    <option value="frozen">frozen</option>
-                    <option value="household">household</option>
+                    <option value="produce">Obst & Gemüse</option>
+                    <option value="dairy">Kühlregal</option>
+                    <option value="meat">Fleisch & Fisch</option>
+                    <option value="pantry">Vorrat</option>
+                    <option value="bakery">Bäckerei</option>
+                    <option value="frozen">Tiefkühl</option>
+                    <option value="household">Haushalt</option>
                   </select>
                   <button
                     type="button"
                     onClick={() => handleRemoveIngredient(idx)}
                     className="text-stone-400 hover:text-rose-600 p-1"
-                    title="Remove ingredient"
+                    title="Zutat entfernen"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -439,50 +439,50 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                 type="text"
                 value={newIngName}
                 onChange={(e) => setNewIngName(e.target.value)}
-                placeholder="New ingredient (e.g. Grated Parmesan)..."
-                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                placeholder="Neue Zutat (z. B. Geriebener Parmesan)..."
+                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
               />
               <input
                 type="text"
                 value={newIngAmount}
                 onChange={(e) => setNewIngAmount(e.target.value)}
-                placeholder="Amount (e.g. 50g)"
-                className="w-28 px-3 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                placeholder="Menge (z. B. 50g)"
+                className="w-28 px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
               />
               <select
                 value={newIngCategory}
                 onChange={(e) => setNewIngCategory(e.target.value as Ingredient['category'])}
-                className="px-2 py-1.5 rounded-xl border border-stone-300 text-xs font-bold bg-white text-stone-700"
+                className="px-2 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-800 text-stone-700 dark:text-slate-200"
               >
-                <option value="produce">Produce</option>
-                <option value="dairy">Dairy</option>
-                <option value="meat">Meat</option>
-                <option value="pantry">Pantry</option>
-                <option value="bakery">Bakery</option>
-                <option value="frozen">Frozen</option>
-                <option value="household">Household</option>
+                <option value="produce">Obst & Gemüse</option>
+                <option value="dairy">Kühlregal</option>
+                <option value="meat">Fleisch & Fisch</option>
+                <option value="pantry">Vorrat</option>
+                <option value="bakery">Bäckerei</option>
+                <option value="frozen">Tiefkühl</option>
+                <option value="household">Haushalt</option>
               </select>
               <button
                 type="button"
                 onClick={handleAddIngredient}
                 className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors shrink-0"
               >
-                + Add
+                + Hinzufügen
               </button>
             </div>
           </div>
 
           {/* Instructions Section */}
           <div className="space-y-2">
-            <label className="block text-xs font-black text-stone-800 uppercase tracking-wider">
-              👩‍🍳 Step-by-Step Instructions ({instructions.length})
+            <label className="block text-xs font-black text-stone-800 dark:text-slate-200 uppercase tracking-wider">
+              👩‍🍳 Zubereitungsschritte ({instructions.length})
             </label>
 
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {instructions.map((step, idx) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-2 p-2 bg-stone-50 rounded-xl border border-stone-200 text-xs"
+                  className="flex items-start gap-2 p-2 bg-stone-50 dark:bg-slate-800/70 rounded-xl border border-stone-200 dark:border-slate-700 text-xs"
                 >
                   <span className="w-5 h-5 rounded-full bg-amber-400 text-stone-900 font-black flex items-center justify-center shrink-0 text-[11px] mt-0.5">
                     {idx + 1}
@@ -491,13 +491,13 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                     value={step}
                     onChange={(e) => handleUpdateStep(idx, e.target.value)}
                     rows={2}
-                    className="flex-1 font-medium text-stone-800 bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 rounded p-1"
+                    className="flex-1 font-medium text-stone-800 dark:text-slate-200 bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 rounded p-1"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveStep(idx)}
                     className="text-stone-400 hover:text-rose-600 p-1"
-                    title="Remove step"
+                    title="Schritt entfernen"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -517,44 +517,44 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                     handleAddStep();
                   }
                 }}
-                placeholder="Next cooking step..."
-                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                placeholder="Nächster Zubereitungsschritt..."
+                className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
               />
               <button
                 type="button"
                 onClick={handleAddStep}
                 className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors shrink-0"
               >
-                + Add Step
+                + Schritt
               </button>
             </div>
           </div>
 
           {/* Delete Danger Zone */}
           {onDelete && (
-            <div className="pt-3 border-t border-rose-100">
+            <div className="pt-3 border-t border-rose-100 dark:border-rose-900/40">
               {!isConfirmingDelete ? (
                 <button
                   type="button"
                   onClick={() => setIsConfirmingDelete(true)}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1.5 transition-colors"
+                  className="text-xs font-bold text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 flex items-center gap-1.5 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete this recipe from family box...</span>
+                  <span>Dieses Rezept aus dem Rezeptbuch löschen...</span>
                 </button>
               ) : (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
-                  <div className="flex items-center gap-2 text-rose-800 text-xs font-bold">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>Delete permanently? This removes it from meal plans too.</span>
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 text-xs font-bold">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                    <span>Dauerhaft löschen? Wird auch aus dem Essensplan entfernt.</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => setIsConfirmingDelete(false)}
-                      className="px-3 py-1 rounded-xl bg-white border border-stone-200 text-xs font-bold text-stone-600 hover:bg-stone-50"
+                      className="px-3 py-1 rounded-xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs font-bold text-stone-600 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-700"
                     >
-                      Keep Recipe
+                      Behalten
                     </button>
                     <button
                       type="button"
@@ -564,7 +564,7 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
                       }}
                       className="px-3.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-xs transition-colors"
                     >
-                      Yes, Delete Recipe
+                      Ja, Rezept löschen
                     </button>
                   </div>
                 </div>
@@ -573,20 +573,20 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
           )}
 
           {/* Modal Footer Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-stone-100 shrink-0">
+          <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-slate-800 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-500 hover:bg-stone-100 transition-colors"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-500 dark:text-slate-400 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
             >
-              Cancel
+              Abbrechen
             </button>
             <button
               type="submit"
               className="px-6 py-2.5 rounded-2xl text-xs font-black bg-teal-600 hover:bg-teal-700 text-white shadow-md active:translate-y-0.5 border-b-4 border-teal-800 transition-all flex items-center gap-1.5"
             >
               <Save className="w-4 h-4" />
-              <span>Save Changes</span>
+              <span>Änderungen speichern</span>
             </button>
           </div>
         </form>

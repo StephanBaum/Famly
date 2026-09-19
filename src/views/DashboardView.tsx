@@ -16,6 +16,7 @@ import {
   Shirt,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
 import { FamilyMember } from '../types';
 
@@ -83,32 +84,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setShowAddNoteModal(false);
   };
 
-  // Kids in household (Leo & Mia)
+  // Kids in household
   const kids = members.filter((m) => m.isChild);
+
+  // Greeting logic: ensure "Hallo Familie Baum!" without duplication
+  const displayGreetingName = currentMember
+    ? currentMember.name
+    : familyName.toLowerCase().startsWith('familie')
+      ? familyName
+      : `Familie ${familyName}`;
 
   return (
     <div className="space-y-6">
       
       {/* Duolingo-style Cheerful Welcome Header */}
-      <div className="duo-card p-6 bg-gradient-to-br from-amber-50 via-rose-50 to-emerald-50 border-2 border-stone-200">
+      <div className="duo-card p-6 bg-gradient-to-br from-amber-50 via-rose-50 to-emerald-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-2 border-stone-200 dark:border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-3xl bg-white border-2 border-b-4 border-stone-300 flex items-center justify-center text-3xl shadow-sm">
+            <div className="w-16 h-16 rounded-3xl bg-white dark:bg-slate-800 border-2 border-b-4 border-stone-300 dark:border-slate-700 flex items-center justify-center text-3xl shadow-sm shrink-0">
               {currentMember ? currentMember.avatar : '🏡'}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-black text-stone-900 tracking-tight">
-                  {currentMember ? `Hi, ${currentMember.name}!` : `Hello, ${familyName}!`}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl font-black text-stone-900 dark:text-white tracking-tight">
+                  Hallo {displayGreetingName}!
                 </h2>
                 <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#FFC800] text-stone-900 border-b-2 border-[#E5A500]">
-                  {format(new Date(), 'EEEE')}
+                  {format(new Date(), 'EEEE', { locale: de })}
                 </span>
               </div>
-              <p className="text-xs font-bold text-stone-500 mt-0.5">
+              <p className="text-xs font-bold text-stone-500 dark:text-slate-400 mt-0.5">
                 {todayAppointments.length === 0
-                  ? 'No events today • Open family time!'
-                  : `${todayAppointments.length} appointment${todayAppointments.length > 1 ? 's' : ''} on today’s schedule.`}
+                  ? 'Heute keine Termine • Zeit für die Familie!'
+                  : todayAppointments.length === 1
+                    ? '1 Termin auf dem heutigen Plan.'
+                    : `${todayAppointments.length} Termine auf dem heutigen Plan.`}
               </p>
             </div>
           </div>
@@ -118,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-2xl self-start md:self-auto"
           >
             <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-            <span>Schedule Appointment</span>
+            <span>Termin planen</span>
           </button>
         </div>
 
@@ -127,70 +137,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           
           <div
             onClick={() => onNavigate('calendar')}
-            className="cursor-pointer bg-white p-3.5 rounded-2xl border-2 border-b-4 border-blue-200 hover:border-blue-400 transition-all text-center"
+            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-blue-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-700 transition-all text-center"
           >
             <span className="text-xl">📅</span>
-            <p className="text-lg font-black text-stone-900 mt-1">{todayAppointments.length}</p>
-            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wide">Today's Events</p>
+            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">{todayAppointments.length}</p>
+            <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Termine heute</p>
           </div>
 
           <div
             onClick={() => onNavigate('meals')}
-            className="cursor-pointer bg-white p-3.5 rounded-2xl border-2 border-b-4 border-teal-200 hover:border-teal-400 transition-all text-center"
+            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-teal-200 dark:border-teal-900/60 hover:border-teal-400 dark:hover:border-teal-700 transition-all text-center"
           >
             <span className="text-xl">🍲</span>
-            <p className="text-sm font-black text-stone-900 truncate mt-1">
-              {todayMeal?.dinner?.title || 'Tap to plan'}
+            <p className="text-sm font-black text-stone-900 dark:text-white truncate mt-1">
+              {todayMeal?.dinner?.title || 'Tippen zum Planen'}
             </p>
-            <p className="text-[11px] font-bold text-teal-600 uppercase tracking-wide truncate">
-              {dinnerChef ? `Chef: ${dinnerChef.name}` : 'Tonight’s Dinner'}
+            <p className="text-[11px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wide truncate">
+              {dinnerChef ? `Koch: ${dinnerChef.name}` : 'Abendessen'}
             </p>
           </div>
 
           <div
             onClick={() => onNavigate('lists')}
-            className="cursor-pointer bg-white p-3.5 rounded-2xl border-2 border-b-4 border-amber-200 hover:border-amber-400 transition-all text-center"
+            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-amber-200 dark:border-amber-900/60 hover:border-amber-400 dark:hover:border-amber-700 transition-all text-center"
           >
             <span className="text-xl">⭐</span>
-            <p className="text-lg font-black text-stone-900 mt-1">
+            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">
               {completedChoresCount}/{relevantChores.length}
             </p>
-            <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wide">Chores Done</p>
+            <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Aufgaben erledigt</p>
           </div>
 
           <div
             onClick={() => onNavigate('lists')}
-            className="cursor-pointer bg-white p-3.5 rounded-2xl border-2 border-b-4 border-emerald-200 hover:border-emerald-400 transition-all text-center"
+            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-emerald-200 dark:border-emerald-900/60 hover:border-emerald-400 dark:hover:border-emerald-700 transition-all text-center"
           >
             <span className="text-xl">🛒</span>
-            <p className="text-lg font-black text-stone-900 mt-1">
+            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">
               {groceries.filter((g) => !g.checked).length}
             </p>
-            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">Groceries Needed</p>
+            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Einkäufe nötig</p>
           </div>
 
         </div>
       </div>
 
       {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) */}
-      <div className="duo-card p-5 bg-white border-2 border-purple-200">
-        <div className="flex items-center justify-between mb-3">
+      <div className="duo-card p-5 bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/50">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xl">🧸</span>
             <div>
-              <h3 className="font-extrabold text-stone-900 text-sm">
-                Kids Vital Details & Clothes Sizes
+              <h3 className="font-extrabold text-stone-900 dark:text-white text-sm">
+                Wichtige Kinder-Infos & Kleidergrößen
               </h3>
-              <p className="text-[11px] font-semibold text-stone-400">
-                Instantly check shoe sizes, pediatrician phone numbers, and school details
+              <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400">
+                Schuhgrößen, Kinderarzt-Telefon und Schuldetails sofort griffbereit
               </p>
             </div>
           </div>
           <button
             onClick={() => onNavigate('members')}
-            className="text-xs font-black text-purple-600 hover:text-purple-800 underline"
+            className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline"
           >
-            View All Family Info →
+            Alle Familien-Infos ansehen →
           </button>
         </div>
 
@@ -199,30 +209,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div
               key={kid.id}
               onClick={() => setSelectedChildForModal(kid)}
-              className="cursor-pointer p-3.5 rounded-2xl border-2 border-b-4 border-stone-200 bg-stone-50/50 hover:bg-purple-50/40 hover:border-purple-300 transition-all flex items-center justify-between"
+              className="cursor-pointer p-3.5 rounded-2xl border-2 border-b-4 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/60 hover:bg-purple-50/40 dark:hover:bg-purple-950/30 hover:border-purple-300 dark:hover:border-purple-700 transition-all flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{kid.avatar}</span>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <strong className="text-xs font-black text-stone-900">{kid.name}</strong>
-                    <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-md">
+                    <strong className="text-xs font-black text-stone-900 dark:text-white">{kid.name}</strong>
+                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-md">
                       {kid.role}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] text-stone-600 font-semibold mt-1">
+                  <div className="flex items-center gap-3 text-[11px] text-stone-600 dark:text-slate-300 font-semibold mt-1">
                     <span className="flex items-center gap-1">
-                      <Shirt className="w-3 h-3 text-stone-400" />
-                      <span>{kid.childDetails?.clothingSize || 'Sizes'}</span>
+                      <Shirt className="w-3 h-3 text-stone-400 dark:text-slate-400" />
+                      <span>{kid.childDetails?.clothingSize || 'Größe'}</span>
                     </span>
                     <span>•</span>
-                    <span>👟 {kid.childDetails?.shoeSize || 'Shoes'}</span>
+                    <span>👟 {kid.childDetails?.shoeSize || 'Schuhe'}</span>
                   </div>
                 </div>
               </div>
 
               <button className="duo-btn duo-btn-white px-2.5 py-1 text-[11px] font-black rounded-xl">
-                Open Card
+                Karte öffnen
               </button>
             </div>
           ))}
@@ -236,16 +246,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="lg:col-span-7 space-y-6">
           
           {/* Today's Schedule Card */}
-          <div className="duo-card p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center font-black">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-stone-900">Today’s Appointments</h3>
-                  <p className="text-xs font-semibold text-stone-400">
-                    Coordinated schedule for {currentMember ? currentMember.name : 'the whole family'}
+                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutige Termine</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">
+                    Gemeinsamer Plan für {currentMember ? currentMember.name : 'die ganze Familie'}
                   </p>
                 </div>
               </div>
@@ -253,23 +263,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 onClick={() => onNavigate('calendar')}
                 className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
               >
-                <span>Full Calendar</span>
+                <span>Kalender</span>
                 <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </button>
             </div>
 
             {todayAppointments.length === 0 ? (
-              <div className="text-center py-8 bg-stone-50 rounded-2xl border-2 border-dashed border-stone-200">
+              <div className="text-center py-8 bg-stone-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-stone-200 dark:border-slate-700">
                 <span className="text-3xl mb-1 block">🏖️</span>
-                <p className="text-sm font-extrabold text-stone-700">All clear today!</p>
-                <p className="text-xs font-semibold text-stone-400 mt-0.5">
-                  No appointments scheduled for today.
+                <p className="text-sm font-extrabold text-stone-700 dark:text-slate-200">Heute alles frei!</p>
+                <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 mt-0.5">
+                  Keine Termine für heute eingetragen.
                 </p>
                 <button
                   onClick={onOpenAddAppointment}
-                  className="mt-3 text-xs font-black text-rose-600 hover:underline"
+                  className="mt-3 text-xs font-black text-rose-600 dark:text-rose-400 hover:underline"
                 >
-                  + Add an event for today
+                  + Termin für heute hinzufügen
                 </button>
               </div>
             ) : (
@@ -279,25 +289,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   return (
                     <div
                       key={app.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border-2 border-b-4 border-stone-200 bg-stone-50/50 hover:bg-stone-50 transition-all"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border-2 border-b-4 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/60 hover:bg-stone-50 dark:hover:bg-slate-800 transition-all gap-3"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="px-3 py-1.5 rounded-xl bg-white border-2 border-stone-200 shadow-2xs text-xs font-black text-stone-800 flex items-center gap-1.5 shrink-0">
+                        <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-700 shadow-2xs text-xs font-black text-stone-800 dark:text-slate-100 flex items-center gap-1.5 shrink-0">
                           <Clock className="w-3.5 h-3.5 text-blue-500" />
                           {app.time}
                         </div>
                         <div className="space-y-0.5">
-                          <h4 className="text-sm font-black text-stone-900">
+                          <h4 className="text-sm font-black text-stone-900 dark:text-white">
                             {app.title}
                           </h4>
                           {app.location && (
-                            <p className="text-xs font-semibold text-stone-500 flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-stone-400" />
+                            <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-stone-400 dark:text-slate-500" />
                               <span>{app.location}</span>
                             </p>
                           )}
                           {app.notes && (
-                            <p className="text-xs text-stone-600 bg-white px-2 py-0.5 rounded-lg border border-stone-200 inline-block mt-1 font-medium">
+                            <p className="text-xs text-stone-600 dark:text-slate-300 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 inline-block mt-1 font-medium">
                               {app.notes}
                             </p>
                           )}
@@ -305,13 +315,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
 
                       {/* Attendee Avatars */}
-                      <div className="flex items-center gap-1.5 mt-2 sm:mt-0 self-end sm:self-center">
+                      <div className="flex items-center gap-1.5 self-end sm:self-center">
                         <div className="flex -space-x-1.5">
                           {assignedMembers.map((m) => (
                             <div
                               key={m.id}
                               title={`${m.name} (${m.role})`}
-                              className="w-8 h-8 rounded-full bg-white border-2 border-stone-200 shadow-xs flex items-center justify-center text-sm"
+                              className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-sm"
                             >
                               <span>{m.avatar}</span>
                             </div>
@@ -326,84 +336,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Tonight's Dinner Card */}
-          <div className="duo-card p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-2xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center font-black">
                   <Utensils className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-stone-900">Tonight’s Dinner</h3>
-                  <p className="text-xs font-semibold text-stone-400">Weekly meal plan coordination</p>
+                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutiges Abendessen</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">Gemeinsame Wochenplanung</p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate('meals')}
                 className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
               >
-                <span>Meal Planner</span>
+                <span>Essensplan</span>
                 <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </button>
             </div>
 
             {todayMeal?.dinner?.title ? (
-              <div className="flex flex-col sm:flex-row gap-4 bg-teal-50/50 rounded-2xl border-2 border-teal-200 p-4">
+              <div className="flex flex-col sm:flex-row gap-4 bg-teal-50/50 dark:bg-teal-950/30 rounded-2xl border-2 border-teal-200 dark:border-teal-900/60 p-4">
                 {dinnerRecipe?.imageUrl ? (
                   <img
                     src={dinnerRecipe.imageUrl}
                     alt={todayMeal.dinner.title}
-                    className="w-full sm:w-32 h-28 object-cover rounded-2xl shadow-xs border-2 border-white"
+                    className="w-full sm:w-32 h-28 object-cover rounded-2xl shadow-xs border-2 border-white dark:border-slate-800"
                   />
                 ) : (
-                  <div className="w-full sm:w-32 h-28 rounded-2xl bg-teal-100 flex items-center justify-center text-3xl">
+                  <div className="w-full sm:w-32 h-28 rounded-2xl bg-teal-100 dark:bg-teal-950/80 flex items-center justify-center text-3xl">
                     🍲
                   </div>
                 )}
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-teal-200 text-teal-900">
-                        Dinner
+                      <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-teal-200 dark:bg-teal-900/60 text-teal-900 dark:text-teal-200">
+                        Abendessen
                       </span>
                       {dinnerChef && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white text-stone-700 border border-stone-200 flex items-center gap-1">
-                          <span>Chef:</span>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-slate-700 flex items-center gap-1">
+                          <span>Koch:</span>
                           <span>{dinnerChef.avatar}</span>
                           <span className="font-black">{dinnerChef.name}</span>
                         </span>
                       )}
                     </div>
-                    <h4 className="text-base font-black text-stone-900">{todayMeal.dinner.title}</h4>
+                    <h4 className="text-base font-black text-stone-900 dark:text-white">{todayMeal.dinner.title}</h4>
                     {dinnerRecipe?.notes && (
-                      <p className="text-xs text-stone-600 mt-1 font-medium line-clamp-2">
+                      <p className="text-xs text-stone-600 dark:text-slate-300 mt-1 font-medium line-clamp-2">
                         {dinnerRecipe.notes}
                       </p>
                     )}
                   </div>
 
                   {dinnerRecipe && (
-                    <div className="mt-3 pt-2 border-t border-teal-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-stone-500">
-                        {dinnerRecipe.ingredients.length} ingredients
+                    <div className="mt-3 pt-2 border-t border-teal-100 dark:border-teal-900/40 flex items-center justify-between">
+                      <span className="text-xs font-bold text-stone-500 dark:text-slate-400">
+                        {dinnerRecipe.ingredients.length} Zutaten
                       </span>
                       <button
                         onClick={() => addRecipeIngredientsToGrocery(dinnerRecipe)}
                         className="duo-btn duo-btn-green px-3 py-1 text-xs font-black rounded-xl"
                       >
-                        + Send to Groceries
+                        + Zur Einkaufsliste
                       </button>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="text-center py-6 bg-stone-50 rounded-2xl border-2 border-dashed border-stone-200">
-                <p className="text-xs font-bold text-stone-600">Tonight’s dinner isn’t planned yet!</p>
+              <div className="text-center py-6 bg-stone-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-stone-200 dark:border-slate-700">
+                <p className="text-xs font-bold text-stone-600 dark:text-slate-300">Heutiges Abendessen ist noch nicht geplant!</p>
                 <button
                   onClick={() => onNavigate('meals')}
-                  className="mt-2 text-xs font-black text-teal-600 underline"
+                  className="mt-2 text-xs font-black text-teal-600 dark:text-teal-400 underline"
                 >
-                  Pick a recipe from the planner
+                  Rezept aus dem Planer wählen
                 </button>
               </div>
             )}
@@ -415,22 +425,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="lg:col-span-5 space-y-6">
 
           {/* Quick Chores */}
-          <div className="duo-card p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center font-black">
                   <span>⭐</span>
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-stone-900">Today’s Chores</h3>
-                  <p className="text-xs font-semibold text-stone-400">Earn stars for household help!</p>
+                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutige Aufgaben</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">Sterne sammeln für Mithilfe!</p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate('lists')}
                 className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
               >
-                <span>All Chores</span>
+                <span>Alle Aufgaben</span>
               </button>
             </div>
 
@@ -443,33 +453,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onClick={() => toggleChore(chore.id)}
                     className={`cursor-pointer flex items-center justify-between p-3 rounded-2xl border-2 transition-all ${
                       chore.completed
-                        ? 'bg-amber-50/40 border-amber-200 opacity-60'
-                        : 'bg-white border-b-4 border-stone-200 hover:border-amber-300'
+                        ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-60'
+                        : 'bg-white dark:bg-slate-800/80 border-b-4 border-stone-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       {chore.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
                       ) : (
-                        <Circle className="w-5 h-5 text-stone-300 hover:text-amber-500 shrink-0" />
+                        <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
                       )}
                       <div>
                         <p
                           className={`text-xs font-extrabold ${
-                            chore.completed ? 'line-through text-stone-400' : 'text-stone-800'
+                            chore.completed ? 'line-through text-stone-400 dark:text-slate-500' : 'text-stone-800 dark:text-white'
                           }`}
                         >
                           {chore.title}
                         </p>
                         {assigned && currentMemberId === 'all' && (
-                          <span className="text-[10px] text-stone-500 font-bold flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-stone-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5">
                             <span>{assigned.avatar}</span>
                             <span>{assigned.name}</span>
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">
+                    <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg">
                       ⭐ +{chore.stars}
                     </span>
                   </div>
@@ -479,22 +489,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Family Notice Board */}
-          <div className="duo-card p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center font-black">
                   <Pin className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-stone-900">Family Notice Board</h3>
-                  <p className="text-xs font-semibold text-stone-400">Wi-Fi, bus routines & alerts</p>
+                  <h3 className="font-extrabold text-stone-900 dark:text-white">Schwarzes Brett</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">WLAN, Buspläne & Notizen</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddNoteModal(true)}
                 className="duo-btn duo-btn-rose px-3 py-1.5 text-xs font-black rounded-xl"
               >
-                + Pin Note
+                + Notiz anheften
               </button>
             </div>
 
@@ -502,10 +512,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {notes.map((note) => {
                 const author = members.find((m) => m.id === note.authorMemberId);
                 const tagStyles = {
-                  wifi: 'bg-sky-50 border-sky-300 text-sky-950',
-                  urgent: 'bg-rose-50 border-rose-300 text-rose-950',
-                  fun: 'bg-amber-50 border-amber-300 text-amber-950',
-                  info: 'bg-stone-50 border-stone-300 text-stone-950',
+                  wifi: 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-200',
+                  urgent: 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200',
+                  fun: 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200',
+                  info: 'bg-stone-50 dark:bg-slate-800 border-stone-300 dark:border-slate-700 text-stone-950 dark:text-slate-200',
                 };
                 return (
                   <div
@@ -516,9 +526,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <div className="flex items-center gap-1.5 font-black text-xs">
-                        {note.tag === 'wifi' && <Wifi className="w-3.5 h-3.5 text-sky-600" />}
-                        {note.tag === 'urgent' && <AlertCircle className="w-3.5 h-3.5 text-rose-600" />}
-                        {note.tag === 'fun' && <PartyPopper className="w-3.5 h-3.5 text-amber-600" />}
+                        {note.tag === 'wifi' && <Wifi className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
+                        {note.tag === 'urgent' && <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
+                        {note.tag === 'fun' && <PartyPopper className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
                         <span>{note.title}</span>
                       </div>
                       <button
@@ -531,8 +541,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <p className="text-xs font-medium whitespace-pre-line leading-relaxed">
                       {note.content}
                     </p>
-                    <div className="mt-2 flex items-center justify-between text-[10px] text-stone-400 font-semibold">
-                      <span>From {author ? author.name : 'Family'}</span>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-stone-400 dark:text-slate-400 font-semibold">
+                      <span>Von {author ? author.name : 'Familie'}</span>
                       <span>{note.createdAt}</span>
                     </div>
                   </div>
@@ -556,50 +566,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Add Note Modal */}
       {showAddNoteModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 mb-2">Pin a Notice</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-2">Notiz anheften</h3>
             <form onSubmit={handleAddNote} className="space-y-4">
               <div>
-                <label className="block text-xs font-extrabold text-stone-600 uppercase mb-1">Title</label>
+                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">Titel</label>
                 <input
                   type="text"
-                  placeholder="e.g. Babysitter Phone, Wi-Fi Password"
+                  placeholder="z.B. Babysitter-Telefon, WLAN-Passwort"
                   value={noteTitle}
                   onChange={(e) => setNoteTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-stone-600 uppercase mb-1">Type</label>
+                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">Kategorie</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {(['info', 'urgent', 'wifi', 'fun'] as const).map((t) => (
+                  {([
+                    { tag: 'info', label: 'Info' },
+                    { tag: 'urgent', label: 'Wichtig' },
+                    { tag: 'wifi', label: 'WLAN' },
+                    { tag: 'fun', label: 'Spaß' },
+                  ] as const).map(({ tag, label }) => (
                     <button
-                      key={t}
+                      key={tag}
                       type="button"
-                      onClick={() => setNoteTag(t)}
-                      className={`duo-btn py-1.5 text-xs font-black capitalize rounded-xl ${
-                        noteTag === t
+                      onClick={() => setNoteTag(tag)}
+                      className={`duo-btn py-1.5 text-xs font-black rounded-xl ${
+                        noteTag === tag
                           ? 'duo-btn-rose'
                           : 'duo-btn-white'
                       }`}
                     >
-                      {t}
+                      {label}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-stone-600 uppercase mb-1">Details</label>
+                <label className="block text-xs font-extrabold text-stone-600 dark:text-slate-300 uppercase mb-1">Details</label>
                 <textarea
                   rows={3}
-                  placeholder="Write the message or details here..."
+                  placeholder="Nachricht oder Notiz hier eingeben..."
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                   required
                 />
               </div>
@@ -610,13 +625,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onClick={() => setShowAddNoteModal(false)}
                   className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
                 >
-                  Cancel
+                  Abbrechen
                 </button>
                 <button
                   type="submit"
                   className="duo-btn duo-btn-rose px-5 py-2 text-xs font-black rounded-xl"
                 >
-                  Pin Note
+                  Notiz anheften
                 </button>
               </div>
             </form>

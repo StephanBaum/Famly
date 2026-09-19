@@ -16,7 +16,7 @@ interface GuestGalleryViewerProps {
 }
 
 export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery, onClose }) => {
-  const { members, addGuestReaction } = useFamily();
+  const { members, addGuestReaction, familyName } = useFamily();
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null);
 
   // Guest comment form state
@@ -32,7 +32,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
     if (!guestMessage.trim()) return;
     addGuestReaction(
       gallery.id,
-      guestName.trim() || 'Relative',
+      guestName.trim() || 'Verwandte',
       guestMessage.trim(),
       selectedEmoji
     );
@@ -43,6 +43,8 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
 
   const currentPhoto = activePhotoIdx !== null ? gallery.photos[activePhotoIdx] : null;
 
+  const displayFamily = familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`;
+
   return (
     <div className="fixed inset-0 z-50 bg-[#0F172A] text-white flex flex-col overflow-y-auto">
       
@@ -52,9 +54,9 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
           <span className="text-2xl">🏡</span>
           <div>
             <h1 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-2">
-              <span>Miller Family Memories</span>
+              <span>{displayFamily} • Momente</span>
               <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Guest View
+                Gast-Ansicht
               </span>
             </h1>
             <p className="text-xs text-slate-400 truncate max-w-xs sm:max-w-md">
@@ -68,7 +70,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black transition-colors"
         >
           <X className="w-4 h-4" />
-          <span>Exit Guest View</span>
+          <span>Gast-Ansicht schließen</span>
         </button>
       </header>
 
@@ -91,7 +93,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
               <Calendar className="w-3.5 h-3.5" />
               <span>{gallery.date}</span>
               <span>•</span>
-              <span>📸 {gallery.photos.length} shared photos</span>
+              <span>📸 {gallery.photos.length} geteilte Fotos</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black text-white leading-tight">
               {gallery.title}
@@ -106,10 +108,10 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-white flex items-center gap-2">
-              <span>All Moments ({gallery.photos.length})</span>
+              <span>Alle Momente ({gallery.photos.length})</span>
             </h3>
             <span className="text-xs text-slate-400 font-bold">
-              Tap any photo to expand full screen
+              Tippen für Vollbild-Ansicht
             </span>
           </div>
 
@@ -125,11 +127,11 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
                   <div className="relative aspect-4/3 overflow-hidden bg-slate-950">
                     <img
                       src={photo.imageUrl}
-                      alt={photo.caption || 'Family photo'}
+                      alt={photo.caption || 'Familienfoto'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <span className="text-xs text-white font-bold">Click to view in full resolution</span>
+                      <span className="text-xs text-white font-bold">Klicken für Großansicht</span>
                     </div>
                   </div>
 
@@ -160,11 +162,11 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <h3 className="text-lg font-black text-white flex items-center gap-2">
-                <span>💬 Send Love Note to the Family</span>
+                <span>💬 Liebe Grüße an die Familie senden</span>
                 <span className="text-amber-400">❤️</span>
               </h3>
               <p className="text-xs text-slate-400">
-                Grandma, Grandpa or relatives can leave warm cheers and reactions right here!
+                Oma, Opa oder Verwandte können hier einen lieben Gruß oder ein Emoji hinterlassen!
               </p>
             </div>
           </div>
@@ -174,7 +176,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               <input
                 type="text"
-                placeholder="Your Name (e.g. Grandma Elena, Uncle Marc)..."
+                placeholder="Dein Name (z. B. Oma Elena, Onkel Markus)..."
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
                 className="px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
@@ -182,7 +184,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
               <div className="sm:col-span-2 flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Write a sweet message to the family..."
+                  placeholder="Eine liebe Nachricht an die Familie schreiben..."
                   value={guestMessage}
                   onChange={(e) => setGuestMessage(e.target.value)}
                   className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
@@ -193,14 +195,14 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
                   className="duo-btn duo-btn-green px-4 py-2.5 text-xs font-black rounded-xl shrink-0 flex items-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Send</span>
+                  <span>Senden</span>
                 </button>
               </div>
             </div>
 
             {/* Quick Emoji selection */}
             <div className="flex items-center gap-1.5 pt-1">
-              <span className="text-xs text-slate-400 font-bold mr-1">Reaction:</span>
+              <span className="text-xs text-slate-400 font-bold mr-1">Reaktion:</span>
               {EMOJI_OPTIONS.map((em) => (
                 <button
                   key={em}
@@ -220,7 +222,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
             {reactionSent && (
               <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-xs font-black text-emerald-300 flex items-center gap-2 animate-in fade-in">
                 <Check className="w-4 h-4 text-emerald-400" />
-                <span>Thank you! Your note has been delivered to the family album.</span>
+                <span>Vielen Dank! Dein Gruß wurde ins Familienalbum eingetragen.</span>
               </div>
             )}
           </form>
@@ -229,7 +231,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
           {gallery.guestReactions && gallery.guestReactions.length > 0 && (
             <div className="pt-4 border-t border-slate-800 space-y-3">
               <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">
-                Notes from Loved Ones ({gallery.guestReactions.length})
+                Grüße von Verwandten & Freunden ({gallery.guestReactions.length})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {gallery.guestReactions.map((reac) => (
@@ -290,7 +292,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
 
             <img
               src={currentPhoto.imageUrl}
-              alt={currentPhoto.caption || 'Expanded memory'}
+              alt={currentPhoto.caption || 'Erinnerung'}
               className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl mx-auto"
             />
 
@@ -313,7 +315,7 @@ export const GuestGalleryViewer: React.FC<GuestGalleryViewerProps> = ({ gallery,
               <p className="text-sm text-slate-200 font-semibold">{currentPhoto.caption}</p>
             )}
             <p className="text-xs text-slate-500 mt-1">
-              Captured on {currentPhoto.uploadedAt}
+              Aufgenommen am {currentPhoto.uploadedAt}
             </p>
           </div>
         </div>

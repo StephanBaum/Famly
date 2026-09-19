@@ -61,7 +61,7 @@ export const ListsAndChoresView: React.FC = () => {
     const targetStore = selectedStore !== 'all' ? selectedStore : newItemStore;
     addGrocery(newItemName.trim(), targetStore, newItemAmount.trim() || undefined);
     
-    setLearnedNotification(`Added to ${targetStore} • Famly will remember where to shop this!`);
+    setLearnedNotification(`Zu ${targetStore} hinzugefügt • Famly merkt sich das Geschäft!`);
     setTimeout(() => setLearnedNotification(null), 3000);
 
     setNewItemName('');
@@ -94,14 +94,14 @@ export const ListsAndChoresView: React.FC = () => {
 
   const handleStoreChange = (itemId: string, itemName: string, newStore: string) => {
     setItemStore(itemId, newStore);
-    setLearnedNotification(`Learned! Future "${itemName}" will now route to ${newStore} 🧠`);
+    setLearnedNotification(`Gelernt! "${itemName}" wird künftig ${newStore} zugeordnet 🧠`);
     setTimeout(() => setLearnedNotification(null), 3500);
   };
 
   const handleMoveToStaples = (itemId: string, itemName: string) => {
     toggleAlwaysInStock(itemName);
     deleteGrocery(itemId);
-    setLearnedNotification(`Marked "${itemName}" as Always in Stock at Home 🏠 (recipes won't auto-add it)`);
+    setLearnedNotification(`"${itemName}" als Vorrat markiert 🏠 (Rezepte fügen es nicht doppelt hinzu)`);
     setTimeout(() => setLearnedNotification(null), 4000);
   };
 
@@ -126,62 +126,62 @@ export const ListsAndChoresView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="duo-card p-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-2xl shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-black text-2xl shadow-sm">
             🛒
           </div>
           <div>
-            <h2 className="text-xl font-black text-stone-900">Store Shopping Runs & Chores</h2>
-            <p className="text-xs font-bold text-stone-400">
-              Separate shopping trips (Rewe for food, dm for cleaning) with auto-learning & home staples
+            <h2 className="text-xl font-black text-stone-900 dark:text-white">Einkauf & Aufgaben</h2>
+            <p className="text-xs font-bold text-stone-400 dark:text-slate-400">
+              Getrennte Einkäufe nach Geschäft mit Vorrats-Automatik & Aufgaben-Sternen
             </p>
           </div>
         </div>
 
         {/* Tab switch */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-stone-100 p-1.5 rounded-2xl border-2 border-stone-200">
+          <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1.5 rounded-2xl border-2 border-stone-200 dark:border-slate-700">
             <button
               onClick={() => setActiveTab('groceries')}
               className={`duo-btn px-4 py-2 text-xs font-extrabold rounded-xl transition-all ${
                 activeTab === 'groceries'
                   ? 'duo-btn-green'
-                  : 'text-stone-600 hover:text-stone-900'
+                  : 'text-stone-600 dark:text-slate-300 hover:text-stone-900'
               }`}
             >
               <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
-              <span>Shopping Lists ({groceries.filter((g) => !g.checked).length})</span>
+              <span>Einkaufsliste ({groceries.filter((g) => !g.checked).length})</span>
             </button>
             <button
               onClick={() => setActiveTab('chores')}
               className={`duo-btn px-4 py-2 text-xs font-extrabold rounded-xl transition-all ${
                 activeTab === 'chores'
                   ? 'duo-btn-amber'
-                  : 'text-stone-600 hover:text-stone-900'
+                  : 'text-stone-600 dark:text-slate-300 hover:text-stone-900'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              <span>Chores & Stars ({chores.length})</span>
+              <span>Aufgaben & Sterne ({chores.length})</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* GROCERIES (STORE-BASED) TAB */}
+      {/* GROCERIES TAB */}
       {activeTab === 'groceries' && (
         <div className="space-y-6">
           
           {/* Smart Learning Notification Toast */}
           {learnedNotification && (
-            <div className="duo-card bg-emerald-50 border-2 border-emerald-300 p-3.5 flex items-center justify-between text-xs font-extrabold text-emerald-900 animate-in fade-in slide-in-from-top-2">
+            <div className="duo-card bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-300 dark:border-emerald-700 p-3.5 flex items-center justify-between text-xs font-extrabold text-emerald-900 dark:text-emerald-200 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-emerald-600" />
+                <Brain className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>{learnedNotification}</span>
               </div>
               <button
                 onClick={() => setLearnedNotification(null)}
-                className="text-emerald-700 hover:text-emerald-900 font-black"
+                className="text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 font-black"
               >
                 ✕
               </button>
@@ -189,10 +189,10 @@ export const ListsAndChoresView: React.FC = () => {
           )}
 
           {/* STORE RUN SELECTOR PILLS */}
-          <div className="duo-card p-4 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="duo-card p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              <span className="text-xs font-black text-stone-400 uppercase tracking-wider mr-1">
-                Store Run:
+              <span className="text-xs font-black text-stone-400 dark:text-slate-400 uppercase tracking-wider mr-1">
+                Laden:
               </span>
 
               {/* All Stores button */}
@@ -204,10 +204,10 @@ export const ListsAndChoresView: React.FC = () => {
                     : 'duo-btn-white'
                 }`}
               >
-                <span>All Stores ({groceries.filter((g) => !g.checked).length})</span>
+                <span>Alle Läden ({groceries.filter((g) => !g.checked).length})</span>
               </button>
 
-              {/* Individual Store Pills (Rewe, dm, Bakery, Pharmacy, etc.) */}
+              {/* Individual Store Pills */}
               {stores.map((store) => {
                 const count = groceries.filter(
                   (g) => !g.checked && g.store.toLowerCase() === store.name.toLowerCase()
@@ -232,7 +232,7 @@ export const ListsAndChoresView: React.FC = () => {
                     <span>{store.name}</span>
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-white/30 text-white' : 'bg-stone-200 text-stone-700'
+                        isSelected ? 'bg-white/30 text-white' : 'bg-stone-200 dark:bg-slate-700 text-stone-700 dark:text-slate-200'
                       }`}
                     >
                       {count}
@@ -243,41 +243,41 @@ export const ListsAndChoresView: React.FC = () => {
 
               <button
                 onClick={() => setShowAddStoreModal(true)}
-                className="duo-btn duo-btn-white px-3 py-2 text-xs font-extrabold rounded-2xl text-stone-500"
-                title="Add a custom store (e.g. Aldi, Edeka, Bauhaus)"
+                className="duo-btn duo-btn-white px-3 py-2 text-xs font-extrabold rounded-2xl text-stone-500 dark:text-slate-300"
+                title="Eigenen Laden hinzufügen (z.B. Aldi, Edeka, Bauhaus)"
               >
-                + Add Store
+                + Laden
               </button>
             </div>
 
             {/* In-Stock Pantry Staples Drawer Button */}
             <button
               onClick={() => setShowStaplesDrawer(!showStaplesDrawer)}
-              className="duo-btn duo-btn-white px-3.5 py-2 rounded-2xl text-xs font-black text-stone-700 flex items-center gap-1.5 self-start md:self-auto shrink-0"
+              className="duo-btn duo-btn-white px-3.5 py-2 rounded-2xl text-xs font-black text-stone-700 dark:text-slate-200 flex items-center gap-1.5 self-start md:self-auto shrink-0"
             >
               <Home className="w-3.5 h-3.5 text-amber-500" />
-              <span>Pantry Staples ({alwaysInStock.length} in stock)</span>
+              <span>Vorräte ({alwaysInStock.length} da)</span>
             </button>
           </div>
 
           {/* "ALWAYS IN STOCK AT HOME" DRAWER */}
           {showStaplesDrawer && (
-            <div className="duo-card p-5 bg-amber-50/60 border-2 border-amber-300 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="duo-card p-5 bg-amber-50/60 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 animate-in fade-in zoom-in-95 space-y-4">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🧂</span>
-                    <h3 className="text-sm font-black text-stone-900">
-                      Always in Stock at Home (Excluded from Recipes)
+                    <h3 className="text-sm font-black text-stone-900 dark:text-white">
+                      Standard-Vorräte (bei Rezepten übersprungen)
                     </h3>
                   </div>
-                  <p className="text-xs font-semibold text-stone-600 mt-1">
-                    When recipes are sent to the grocery list, Famly automatically skips these items so you don't buy extra salt, pepper, tap water, or oil!
+                  <p className="text-xs font-semibold text-stone-600 dark:text-slate-300 mt-1">
+                    Wenn Rezepte zur Einkaufsliste hinzugefügt werden, überspringt Famly diese Artikel automatisch (z.B. Salz, Pfeffer, Öl, Mehl).
                   </p>
                 </div>
                 <button
                   onClick={() => setShowStaplesDrawer(false)}
-                  className="text-stone-400 hover:text-stone-700 font-black text-sm"
+                  className="text-stone-400 hover:text-stone-700 dark:hover:text-white font-black text-sm"
                 >
                   ✕
                 </button>
@@ -287,16 +287,16 @@ export const ListsAndChoresView: React.FC = () => {
               <form onSubmit={handleAddStaple} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Add item you always have at home (e.g. Soy Sauce, Black Tea, Sugar)..."
+                  placeholder="Artikel hinzufügen, den ihr immer im Haus habt (z.B. Sojasauce, Zucker)..."
                   value={newStapleName}
                   onChange={(e) => setNewStapleName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-stone-300 focus:outline-none bg-white"
+                  className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-stone-300 dark:border-slate-700 focus:outline-none bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                 />
                 <button
                   type="submit"
                   className="duo-btn duo-btn-amber px-4 py-1.5 text-xs font-black rounded-xl"
                 >
-                  + Add Staple
+                  + Vorrat
                 </button>
               </form>
 
@@ -305,14 +305,14 @@ export const ListsAndChoresView: React.FC = () => {
                 {alwaysInStock.map((staple) => (
                   <span
                     key={staple}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-xl border-2 border-amber-200 text-xs font-bold text-stone-800 shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-800 rounded-xl border-2 border-amber-200 dark:border-amber-700 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-2xs"
                   >
                     <span>✓ {staple}</span>
                     <button
                       type="button"
                       onClick={() => toggleAlwaysInStock(staple)}
                       className="text-stone-300 hover:text-rose-600 ml-1 font-black text-xs"
-                      title="Remove from always in stock"
+                      title="Entfernen"
                     >
                       ✕
                     </button>
@@ -322,38 +322,38 @@ export const ListsAndChoresView: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Add Bar - Simple, high-contrast, zero-stress */}
+          {/* Quick Add Bar */}
           <form
             onSubmit={handleAddGrocery}
-            className="duo-card p-4 sm:p-5 bg-white space-y-3"
+            className="duo-card p-4 sm:p-5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-3"
           >
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <input
                 type="text"
                 placeholder={
                   selectedStore === 'all'
-                    ? 'Add grocery item (e.g. Milk, Apples, Bread, Laundry)...'
-                    : `Add item to ${selectedStore}...`
+                    ? 'Artikel hinzufügen (z.B. Milch, Äpfel, Brot, Waschmittel)...'
+                    : `Artikel für ${selectedStore} hinzufügen...`
                 }
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                className="flex-1 px-4 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 focus:outline-none focus:border-emerald-500 bg-white placeholder-stone-400"
+                className="flex-1 px-4 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
                 required
               />
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Amount (e.g. 500g, 2x)"
+                  placeholder="Menge (z.B. 500g)"
                   value={newItemAmount}
                   onChange={(e) => setNewItemAmount(e.target.value)}
-                  className="w-32 sm:w-36 px-3.5 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 focus:outline-none focus:border-emerald-500 bg-white placeholder-stone-400"
+                  className="w-32 sm:w-36 px-3.5 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
                 />
                 
                 {selectedStore === 'all' && (
                   <select
                     value={newItemStore}
                     onChange={(e) => setNewItemStore(e.target.value)}
-                    className="w-28 sm:w-36 px-2.5 py-3 text-sm font-black rounded-2xl border-2 border-stone-200 bg-white focus:outline-none focus:border-emerald-500"
+                    className="w-28 sm:w-36 px-2.5 py-3 text-sm font-black rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   >
                     {stores.map((s) => (
                       <option key={s.id} value={s.name}>
@@ -367,25 +367,25 @@ export const ListsAndChoresView: React.FC = () => {
                   type="submit"
                   className="duo-btn duo-btn-green px-5 py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm"
                 >
-                  + Add
+                  + Neu
                 </button>
               </div>
             </div>
           </form>
 
-          {/* Cart Progress Bar (Satisfying shopping feedback) */}
+          {/* Cart Progress Bar */}
           {filteredGroceries.length > 0 && (
-            <div className="bg-white rounded-2xl p-3 border-2 border-stone-200 flex items-center justify-between gap-4">
+            <div className="duo-card bg-white dark:bg-slate-900 rounded-2xl p-3 border-2 border-stone-200 dark:border-slate-800 flex items-center justify-between gap-4">
               <div className="space-y-1 flex-1">
                 <div className="flex items-center justify-between text-xs font-black">
-                  <span className="text-stone-700">
-                    🛒 In your basket: {checkedGroceries.length} of {filteredGroceries.length} items
+                  <span className="text-stone-700 dark:text-slate-300">
+                    🛒 Im Korb: {checkedGroceries.length} von {filteredGroceries.length} Artikeln
                   </span>
-                  <span className="text-emerald-700">
-                    {Math.round((checkedGroceries.length / filteredGroceries.length) * 100)}% Done
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    {Math.round((checkedGroceries.length / filteredGroceries.length) * 100)}% Erledigt
                   </span>
                 </div>
-                <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-stone-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
                     style={{
@@ -399,9 +399,9 @@ export const ListsAndChoresView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => clearCheckedGroceries(selectedStore === 'all' ? undefined : selectedStore)}
-                  className="text-xs font-black text-rose-600 hover:text-rose-800 underline shrink-0 whitespace-nowrap"
+                  className="text-xs font-black text-rose-600 dark:text-rose-400 hover:text-rose-800 underline shrink-0 whitespace-nowrap"
                 >
-                  Clear Done
+                  Erledigte leeren
                 </button>
               )}
             </div>
@@ -411,13 +411,13 @@ export const ListsAndChoresView: React.FC = () => {
           <div className="space-y-4">
             
             {uncheckedGroceries.length === 0 ? (
-              <div className="duo-card p-8 sm:p-12 text-center bg-white space-y-2">
+              <div className="duo-card p-8 sm:p-12 text-center bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-2">
                 <span className="text-4xl block">🎉</span>
-                <h3 className="text-lg font-black text-stone-900">
-                  {selectedStore === 'all' ? 'All shopping done!' : `All set at ${selectedStore}!`}
+                <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                  {selectedStore === 'all' ? 'Alles eingekauft!' : `Bei ${selectedStore} alles erledigt!`}
                 </h3>
-                <p className="text-xs font-bold text-stone-400 max-w-sm mx-auto">
-                  No items left on your list. Enjoy your family time!
+                <p className="text-xs font-bold text-stone-400 dark:text-slate-400 max-w-sm mx-auto">
+                  Keine offenen Artikel auf der Liste. Genießt eure Familienzeit!
                 </p>
               </div>
             ) : (
@@ -429,23 +429,23 @@ export const ListsAndChoresView: React.FC = () => {
                     <div
                       key={item.id}
                       onClick={() => toggleGrocery(item.id)}
-                      className="cursor-pointer group duo-card p-3.5 sm:p-4 bg-white hover:border-emerald-400 transition-all flex items-center justify-between gap-3 shadow-xs active:scale-[0.99]"
+                      className="cursor-pointer group duo-card p-3.5 sm:p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex items-center justify-between gap-3 shadow-xs active:scale-[0.99]"
                     >
                       {/* Left: Big Checkbox + Name + Amount */}
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <div
-                          className="w-9 h-9 rounded-2xl border-2 border-stone-300 group-hover:border-emerald-500 bg-white flex items-center justify-center shrink-0 transition-colors shadow-2xs"
+                          className="w-9 h-9 rounded-2xl border-2 border-stone-300 dark:border-slate-700 group-hover:border-emerald-500 bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 transition-colors shadow-2xs"
                         >
                           <Check className="w-5 h-5 text-transparent group-hover:text-emerald-300 transition-colors" />
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-base sm:text-lg font-black text-stone-900 leading-snug">
+                            <span className="text-base sm:text-lg font-black text-stone-900 dark:text-white leading-snug">
                               {item.name}
                             </span>
                             {item.amount && (
-                              <span className="text-xs font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-300 shrink-0">
+                              <span className="text-xs font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 shrink-0">
                                 {item.amount}
                               </span>
                             )}
@@ -459,8 +459,8 @@ export const ListsAndChoresView: React.FC = () => {
                             <select
                               value={item.store}
                               onChange={(e) => handleStoreChange(item.id, item.name, e.target.value)}
-                              title="Move store"
-                              className="text-xs font-bold bg-stone-100 text-stone-700 px-2 py-0.5 rounded-lg border border-stone-200 focus:outline-none"
+                              title="Laden wechseln"
+                              className="text-xs font-bold bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 focus:outline-none"
                             >
                               {stores.map((s) => (
                                 <option key={s.id} value={s.name}>
@@ -472,16 +472,16 @@ export const ListsAndChoresView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleMoveToStaples(item.id, item.name)}
-                              title="Mark as always in stock at home"
+                              title="Als Vorrat zu Hause markieren"
                               className="text-stone-400 hover:text-amber-600 text-xs font-bold flex items-center gap-0.5 hover:underline"
                             >
                               <span>🏠</span>
-                              <span className="hidden sm:inline text-[11px]">Home staple</span>
+                              <span className="hidden sm:inline text-[11px]">Vorrat</span>
                             </button>
 
                             {addedBy && (
                               <span
-                                title={`Added by ${addedBy.name}`}
+                                title={`Hinzugefügt von ${addedBy.name}`}
                                 className="text-xs font-bold text-stone-400 ml-auto hidden sm:inline-flex items-center gap-1"
                               >
                                 <span>{addedBy.avatar}</span>
@@ -500,8 +500,8 @@ export const ListsAndChoresView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => deleteGrocery(item.id)}
-                          className="w-9 h-9 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors"
-                          title="Delete item"
+                          className="w-9 h-9 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+                          title="Löschen"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -512,19 +512,19 @@ export const ListsAndChoresView: React.FC = () => {
               </div>
             )}
 
-            {/* CHECKED OFF / IN BASKET ITEMS (Collapsible) */}
+            {/* CHECKED OFF / IN BASKET ITEMS */}
             {checkedGroceries.length > 0 && (
-              <div className="duo-card p-4 sm:p-5 bg-stone-50 border-2 border-stone-200/90 space-y-3 mt-6">
-                <div className="flex items-center justify-between border-b border-stone-200 pb-2">
-                  <span className="text-xs font-black text-stone-500 uppercase tracking-wider">
-                    ✓ Already in Basket ({checkedGroceries.length})
+              <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-900 border-2 border-stone-200/90 dark:border-slate-800 space-y-3 mt-6">
+                <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800 pb-2">
+                  <span className="text-xs font-black text-stone-500 dark:text-slate-400 uppercase tracking-wider">
+                    ✓ Im Einkaufswagen ({checkedGroceries.length})
                   </span>
                   <button
                     type="button"
                     onClick={() => clearCheckedGroceries(selectedStore === 'all' ? undefined : selectedStore)}
-                    className="text-xs font-black text-rose-600 hover:text-rose-800 underline"
+                    className="text-xs font-black text-rose-600 dark:text-rose-400 hover:text-rose-800 underline"
                   >
-                    Clear All Done
+                    Alle erledigten leeren
                   </button>
                 </div>
 
@@ -533,13 +533,13 @@ export const ListsAndChoresView: React.FC = () => {
                     <div
                       key={item.id}
                       onClick={() => toggleGrocery(item.id)}
-                      className="cursor-pointer flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-white/80 text-stone-400 hover:bg-white transition-colors text-xs"
+                      className="cursor-pointer flex items-center justify-between p-3 rounded-xl border border-stone-200 dark:border-slate-800 bg-white/80 dark:bg-slate-800/60 text-stone-400 hover:bg-white dark:hover:bg-slate-800 transition-colors text-xs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                         </div>
-                        <span className="line-through font-bold text-stone-500 truncate text-sm">
+                        <span className="line-through font-bold text-stone-500 dark:text-slate-400 truncate text-sm">
                           {item.name}
                         </span>
                         {item.amount && (
@@ -556,7 +556,7 @@ export const ListsAndChoresView: React.FC = () => {
                           deleteGrocery(item.id);
                         }}
                         className="text-stone-300 hover:text-rose-600 p-1 ml-2"
-                        title="Delete"
+                        title="Löschen"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -573,18 +573,18 @@ export const ListsAndChoresView: React.FC = () => {
       {/* CHORES TAB */}
       {activeTab === 'chores' && (
         <div className="space-y-6">
-          <div className="duo-card p-6 bg-gradient-to-r from-amber-50 via-rose-50 to-indigo-50 border-2 border-amber-200">
+          <div className="duo-card p-6 bg-gradient-to-r from-amber-50 via-rose-50 to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-2 border-amber-200 dark:border-slate-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
                   <Star className="w-6 h-6 text-amber-500 fill-amber-400" />
-                  <h3 className="text-lg font-black text-stone-900">
-                    Family Star Achievements
+                  <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                    Familien-Sterne & Belohnungen
                   </h3>
                 </div>
-                <p className="text-xs font-semibold text-stone-600 mt-0.5">
-                  Complete chores to collect stars! Family total:{' '}
-                  <strong className="text-amber-600 font-extrabold">{totalStarsEarned} Stars</strong>
+                <p className="text-xs font-semibold text-stone-600 dark:text-slate-300 mt-0.5">
+                  Aufgaben erledigen und Sterne sammeln! Gesamtstand der Familie:{' '}
+                  <strong className="text-amber-600 dark:text-amber-400 font-extrabold">{totalStarsEarned} Sterne</strong>
                 </p>
               </div>
 
@@ -593,7 +593,7 @@ export const ListsAndChoresView: React.FC = () => {
                 className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
               >
                 <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-                <span>Add Household Chore</span>
+                <span>+ Aufgabe</span>
               </button>
             </div>
 
@@ -607,16 +607,16 @@ export const ListsAndChoresView: React.FC = () => {
                 return (
                   <div
                     key={m.id}
-                    className="bg-white p-3 rounded-2xl border-2 border-stone-200 shadow-2xs flex items-center justify-between"
+                    className="bg-white dark:bg-slate-800 p-3 rounded-2xl border-2 border-stone-200 dark:border-slate-700 shadow-2xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{m.avatar}</span>
                       <div>
-                        <p className="text-xs font-black text-stone-800">{m.name}</p>
+                        <p className="text-xs font-black text-stone-800 dark:text-white">{m.name}</p>
                         <p className="text-[10px] text-stone-400 font-bold">{m.role}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">
+                    <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg">
                       ⭐ {memberStars}
                     </span>
                   </div>
@@ -626,13 +626,13 @@ export const ListsAndChoresView: React.FC = () => {
           </div>
 
           {/* Chores List */}
-          <div className="duo-card p-6 bg-white space-y-3">
+          <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-black text-stone-900">
-                Active Household Chores ({filteredChores.length})
+              <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                Aktive Aufgaben ({filteredChores.length})
               </h4>
-              <span className="text-xs text-stone-400 font-bold">
-                Showing for: {currentMemberId === 'all' ? 'All Family' : 'Selected Member'}
+              <span className="text-xs text-stone-400 dark:text-slate-400 font-bold">
+                Zeige für: {currentMemberId === 'all' ? 'Ganze Familie' : 'Ausgewähltes Mitglied'}
               </span>
             </div>
 
@@ -645,36 +645,36 @@ export const ListsAndChoresView: React.FC = () => {
                     onClick={() => toggleChore(chore.id)}
                     className={`cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
                       chore.completed
-                        ? 'bg-amber-50/20 border-amber-200 opacity-65'
-                        : 'bg-stone-50/40 border-b-4 border-stone-200 hover:bg-stone-50 hover:border-amber-300'
+                        ? 'bg-amber-50/20 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-65'
+                        : 'bg-stone-50/40 dark:bg-slate-800/60 border-b-4 border-stone-200 dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 hover:border-amber-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       {chore.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
                       ) : (
-                        <Circle className="w-5 h-5 text-stone-300 hover:text-amber-500 shrink-0" />
+                        <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
                       )}
 
                       <div>
                         <p
                           className={`text-sm font-black ${
                             chore.completed
-                              ? 'line-through text-stone-400'
-                              : 'text-stone-800'
+                              ? 'line-through text-stone-400 dark:text-slate-500'
+                              : 'text-stone-800 dark:text-white'
                           }`}
                         >
                           {chore.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 text-stone-600">
-                            {chore.frequency}
+                          <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300">
+                            {chore.frequency === 'daily' ? 'Täglich' : chore.frequency === 'weekly' ? 'Wöchentlich' : 'Einmalig'}
                           </span>
                           {assigned && (
-                            <span className="text-xs text-stone-500 flex items-center gap-1 font-bold">
-                              <span>Assigned to:</span>
+                            <span className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1 font-bold">
+                              <span>Zugewiesen an:</span>
                               <span>{assigned.avatar}</span>
-                              <span className="text-stone-700">{assigned.name}</span>
+                              <span className="text-stone-700 dark:text-slate-200">{assigned.name}</span>
                             </span>
                           )}
                         </div>
@@ -682,9 +682,9 @@ export const ListsAndChoresView: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 text-xs font-black border border-amber-300">
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 text-xs font-black border border-amber-300 dark:border-amber-700">
                         <span>⭐</span>
-                        <span>+{chore.stars} Stars</span>
+                        <span>+{chore.stars} Sterne</span>
                       </div>
 
                       <button
@@ -693,7 +693,7 @@ export const ListsAndChoresView: React.FC = () => {
                           deleteChore(chore.id);
                         }}
                         className="text-stone-300 hover:text-rose-500 p-1"
-                        title="Delete chore"
+                        title="Aufgabe löschen"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -708,21 +708,21 @@ export const ListsAndChoresView: React.FC = () => {
 
       {/* Add Custom Store Modal */}
       {showAddStoreModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border-2 border-stone-200 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 mb-2">Add a Shopping Store</h3>
-            <p className="text-xs font-semibold text-stone-500 mb-4">
-              Add a store run for your household (e.g. Aldi, Edeka, Bauhaus, Farmers Market).
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-2">Laden hinzufügen</h3>
+            <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 mb-4">
+              Füge ein Geschäft für eure Familie hinzu (z.B. Aldi, Edeka, Bauhaus, Wochenmarkt).
             </p>
             <form onSubmit={handleAddCustomStore} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-stone-600 uppercase mb-1">Store Name</label>
+                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">Name des Geschäfts</label>
                 <input
                   type="text"
-                  placeholder="e.g. Aldi, Edeka, Bauhaus"
+                  placeholder="z.B. Aldi, Edeka, Bauhaus"
                   value={newCustomStoreName}
                   onChange={(e) => setNewCustomStoreName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                   required
                 />
               </div>
@@ -733,13 +733,13 @@ export const ListsAndChoresView: React.FC = () => {
                   onClick={() => setShowAddStoreModal(false)}
                   className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
                 >
-                  Cancel
+                  Abbrechen
                 </button>
                 <button
                   type="submit"
                   className="duo-btn duo-btn-green px-5 py-2 text-xs font-black rounded-xl"
                 >
-                  Add Store
+                  Laden hinzufügen
                 </button>
               </div>
             </form>
@@ -749,32 +749,32 @@ export const ListsAndChoresView: React.FC = () => {
 
       {/* Add Chore Modal */}
       {isAddChoreOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-stone-900 mb-1">Add Household Task / Chore</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">Aufgabe im Haushalt anlegen</h3>
             <form onSubmit={handleAddChore} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-stone-600 uppercase mb-1">
-                  Chore Description
+                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                  Beschreibung
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Make bed, Empty dishwasher, Water tomato plants"
+                  placeholder="z.B. Bett machen, Spülmaschine ausräumen, Tomaten gießen"
                   value={choreTitle}
                   onChange={(e) => setChoreTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-stone-600 uppercase mb-1">
-                  Assign To
+                <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                  Zuweisen an
                 </label>
                 <select
                   value={choreAssignee}
                   onChange={(e) => setChoreAssignee(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
                 >
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -786,22 +786,22 @@ export const ListsAndChoresView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-stone-600 uppercase mb-1">
-                    Frequency
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Häufigkeit
                   </label>
                   <select
                     value={choreFrequency}
                     onChange={(e) => setChoreFrequency(e.target.value as Chore['frequency'])}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
                   >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="once">One-Time</option>
+                    <option value="daily">Täglich</option>
+                    <option value="weekly">Wöchentlich</option>
+                    <option value="once">Einmalig</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-stone-600 uppercase mb-1">
-                    Reward (Stars)
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Belohnung (Sterne)
                   </label>
                   <input
                     type="number"
@@ -809,24 +809,24 @@ export const ListsAndChoresView: React.FC = () => {
                     max="10"
                     value={choreStars}
                     onChange={(e) => setChoreStars(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddChoreOpen(false)}
                   className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
                 >
-                  Cancel
+                  Abbrechen
                 </button>
                 <button
                   type="submit"
                   className="duo-btn duo-btn-amber px-5 py-2 text-xs font-black rounded-xl"
                 >
-                  Create Chore
+                  Aufgabe anlegen
                 </button>
               </div>
             </form>

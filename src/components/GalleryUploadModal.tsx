@@ -15,14 +15,14 @@ interface GalleryUploadModalProps {
 }
 
 const PRESET_PHOTO_COLLECTION = [
-  { label: 'Mountain Hike', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Lake Sunset', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Cookie Baking', url: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Fresh Cookies', url: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Birthday Candles', url: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Party Balloons', url: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Soccer Match', url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Trophy Celebration', url: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Bergwanderung', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Sonnenuntergang am See', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Plätzchen backen', url: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Frische Kekse', url: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Geburtstagskerzen', url: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Luftballons', url: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Fußballspiel', url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Pokalsieger', url: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1000&q=80' },
 ];
 
 export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
@@ -105,7 +105,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
       createGallery(
         {
           title: newTitle.trim(),
-          description: newDescription.trim() || 'Family album',
+          description: newDescription.trim() || 'Familienalbum',
           date: albumDate,
           coverPhotoUrl: stagedPhotos[0].imageUrl,
           category: newCategory,
@@ -124,26 +124,26 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col text-stone-900 dark:text-slate-100">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl font-black shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 flex items-center justify-center text-xl font-black shadow-xs">
               📸
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-stone-900 leading-tight">
-                Add Photos to Family Moments
+              <h3 className="text-base sm:text-lg font-black text-stone-900 dark:text-white leading-tight">
+                Fotos zu Familien-Momenten hinzufügen
               </h3>
-              <p className="text-xs font-semibold text-stone-500">
-                Collaborate together on albums & shared memories
+              <p className="text-xs font-semibold text-stone-500 dark:text-slate-400">
+                Gemeinsam an Alben & Erinnerungen mitwirken
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center font-black transition-colors"
+            className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-600 dark:text-slate-400 flex items-center justify-center font-black transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -154,8 +154,8 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           
           {/* Target Mode: Add to Existing Album vs Create New Album */}
           <div>
-            <label className="block text-xs font-extrabold text-stone-700 uppercase tracking-wide mb-2">
-              Where should these photos go?
+            <label className="block text-xs font-extrabold text-stone-700 dark:text-slate-300 uppercase tracking-wide mb-2">
+              Wohin sollen die Fotos?
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -163,23 +163,23 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                 onClick={() => setMode('existing')}
                 className={`py-2 px-3 rounded-2xl border-2 font-black text-xs flex items-center justify-center gap-2 transition-all ${
                   mode === 'existing'
-                    ? 'bg-amber-50 text-amber-900 border-amber-300 shadow-xs'
-                    : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 shadow-xs'
+                    : 'bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-700'
                 }`}
               >
-                <span>Add to Existing Album</span>
+                <span>Zu bestehendem Album</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMode('new')}
                 className={`py-2 px-3 rounded-2xl border-2 font-black text-xs flex items-center justify-center gap-2 transition-all ${
                   mode === 'new'
-                    ? 'bg-amber-50 text-amber-900 border-amber-300 shadow-xs'
-                    : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 shadow-xs'
+                    : 'bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <FolderPlus className="w-4 h-4" />
-                <span>Create New Album</span>
+                <span>Neues Album anlegen</span>
               </button>
             </div>
           </div>
@@ -187,79 +187,79 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           {/* Existing Album Selector */}
           {mode === 'existing' ? (
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">
-                Select Family Album
+              <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                Familienalbum auswählen
               </label>
               <select
                 value={selectedGalleryId}
                 onChange={(e) => setSelectedGalleryId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border-2 border-stone-200 bg-white text-sm font-bold focus:outline-none focus:border-amber-400"
+                className="w-full px-3.5 py-2.5 rounded-xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm font-bold focus:outline-none focus:border-amber-400"
               >
                 {galleries.map((gal) => (
                   <option key={gal.id} value={gal.id}>
-                    {gal.title} ({gal.photos.length} photos)
+                    {gal.title} ({gal.photos.length} Fotos)
                   </option>
                 ))}
               </select>
             </div>
           ) : (
             /* New Album Fields */
-            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200 space-y-3">
+            <div className="p-4 bg-amber-50/50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-800 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Album Name *
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                  Album-Name *
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Grandma Elena's 75th Birthday, Weekend Lake Canoe..."
+                  placeholder="z. B. Omas 75. Geburtstag, Sommerurlaub an der Ostsee..."
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm font-bold focus:outline-none focus:border-amber-500 bg-white"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm font-bold focus:outline-none focus:border-amber-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                   required={mode === 'new'}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Category
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                    Kategorie
                   </label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs font-bold bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                   >
-                    <option value="everyday">Everyday Family Moments</option>
-                    <option value="vacation">Vacation & Trips</option>
-                    <option value="birthday">Birthdays & Parties</option>
-                    <option value="sports">Sports & Tournaments</option>
-                    <option value="milestones">Milestones & School</option>
-                    <option value="holidays">Holidays & Celebrations</option>
+                    <option value="everyday">Familien-Alltag</option>
+                    <option value="vacation">Urlaub & Reisen</option>
+                    <option value="birthday">Geburtstage & Feste</option>
+                    <option value="sports">Sport & Turniere</option>
+                    <option value="milestones">Meilensteine & Schule</option>
+                    <option value="holidays">Feiertage & Ausflüge</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Date
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                    Datum
                   </label>
                   <input
                     type="date"
                     value={albumDate}
                     onChange={(e) => setAlbumDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs font-bold bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Description / Story
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                  Beschreibung / Geschichte
                 </label>
                 <input
                   type="text"
-                  placeholder="Brief note about the day..."
+                  placeholder="Kurze Notiz zu diesem Tag..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs font-medium bg-white"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-medium bg-white dark:bg-slate-800 text-stone-900 dark:text-white"
                 />
               </div>
             </div>
@@ -267,8 +267,8 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
           {/* Contributor / Who is Uploading */}
           <div>
-            <label className="block text-xs font-extrabold text-stone-700 uppercase tracking-wide mb-1.5">
-              Who is adding these photos?
+            <label className="block text-xs font-extrabold text-stone-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+              Wer lädt diese Fotos hoch?
             </label>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {members.map((m) => {
@@ -280,8 +280,8 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                     onClick={() => setUploaderMemberId(m.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-xs font-black transition-all shrink-0 ${
                       isSelected
-                        ? 'bg-indigo-50 border-indigo-400 text-indigo-900 shadow-2xs'
-                        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-400 dark:border-indigo-600 text-indigo-900 dark:text-indigo-300 shadow-2xs'
+                        : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     <span>{m.avatar}</span>
@@ -295,26 +295,26 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           {/* Staged Photos Preview Strip */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-extrabold text-stone-700 uppercase tracking-wide">
-                Photos to Upload ({stagedPhotos.length})
+              <label className="block text-xs font-extrabold text-stone-700 dark:text-slate-300 uppercase tracking-wide">
+                Ausgewählte Fotos ({stagedPhotos.length})
               </label>
               {stagedPhotos.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setStagedPhotos([])}
-                  className="text-[11px] font-bold text-rose-600 hover:underline"
+                  className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline"
                 >
-                  Clear All
+                  Alle entfernen
                 </button>
               )}
             </div>
 
             {stagedPhotos.length === 0 ? (
-              <div className="p-6 rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/60 text-center space-y-1">
+              <div className="p-6 rounded-2xl border-2 border-dashed border-stone-200 dark:border-slate-700 bg-stone-50/60 dark:bg-slate-800/40 text-center space-y-1">
                 <span className="text-2xl block">🖼️</span>
-                <p className="text-xs font-bold text-stone-600">No photos selected yet</p>
-                <p className="text-[11px] text-stone-400">
-                  Pick from curated presets below, paste a link, or upload files from your device.
+                <p className="text-xs font-bold text-stone-600 dark:text-slate-300">Noch keine Fotos ausgewählt</p>
+                <p className="text-[11px] text-stone-400 dark:text-slate-500">
+                  Wähle aus den Vorlagen unten, füge einen Link ein oder lade Fotos von deinem Gerät hoch.
                 </p>
               </div>
             ) : (
@@ -322,7 +322,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                 {stagedPhotos.map((photo, idx) => (
                   <div
                     key={idx}
-                    className="relative rounded-xl overflow-hidden border border-stone-200 aspect-4/3 group"
+                    className="relative rounded-xl overflow-hidden border border-stone-200 dark:border-slate-700 aspect-4/3 group"
                   >
                     <img
                       src={photo.imageUrl}
@@ -351,9 +351,9 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
           {/* Quick Presets Picker */}
           <div>
-            <label className="block text-xs font-bold text-stone-600 mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 mb-1.5 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Tap to Add Preset Photos:</span>
+              <span>Foto-Vorlagen per Klick hinzufügen:</span>
             </label>
             <div className="flex flex-wrap gap-1.5">
               {PRESET_PHOTO_COLLECTION.map((pre, i) => (
@@ -361,7 +361,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                   key={i}
                   type="button"
                   onClick={() => handleAddStagedPhoto(pre.url, pre.label)}
-                  className="px-2.5 py-1 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 text-[11px] font-bold transition-colors"
+                  className="px-2.5 py-1 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-stone-700 dark:text-slate-300 hover:text-amber-900 dark:hover:text-amber-300 border border-stone-200 dark:border-slate-700 text-[11px] font-bold transition-colors"
                 >
                   + {pre.label}
                 </button>
@@ -370,41 +370,41 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           </div>
 
           {/* Custom URL & Caption or File upload */}
-          <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200 space-y-2">
+          <div className="p-3 bg-stone-50 dark:bg-slate-800/60 rounded-2xl border border-stone-200 dark:border-slate-700 space-y-2">
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <input
                 type="text"
-                placeholder="Paste photo image URL (https://...)..."
+                placeholder="Bild-URL einfügen (https://...)..."
                 value={customUrlInput}
                 onChange={(e) => setCustomUrlInput(e.target.value)}
-                className="flex-1 w-full px-3 py-1.5 rounded-xl border border-stone-300 text-xs bg-white focus:outline-none"
+                className="flex-1 w-full px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
               />
               <input
                 type="text"
-                placeholder="Caption (optional)"
+                placeholder="Bildunterschrift (optional)"
                 value={customCaptionInput}
                 onChange={(e) => setCustomCaptionInput(e.target.value)}
-                className="w-full sm:w-40 px-3 py-1.5 rounded-xl border border-stone-300 text-xs bg-white focus:outline-none"
+                className="w-full sm:w-40 px-3 py-1.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => handleAddStagedPhoto(customUrlInput, customCaptionInput)}
                 disabled={!customUrlInput.trim()}
-                className="w-full sm:w-auto px-4 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold disabled:opacity-40 shrink-0"
+                className="w-full sm:w-auto px-4 py-1.5 rounded-xl bg-stone-800 dark:bg-emerald-600 hover:bg-stone-900 dark:hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-40 shrink-0"
               >
-                + Add
+                + Hinzufügen
               </button>
             </div>
 
             <div className="flex items-center justify-between pt-1 text-xs">
-              <span className="text-[11px] text-stone-500 font-medium">Or choose from phone gallery:</span>
+              <span className="text-[11px] text-stone-500 dark:text-slate-400 font-medium">Oder vom Smartphone / PC auswählen:</span>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-black text-indigo-600 hover:underline flex items-center gap-1"
+                className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>Upload device files</span>
+                <span>Fotos hochladen</span>
               </button>
               <input
                 ref={fileInputRef}
@@ -418,20 +418,20 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2 shrink-0">
+          <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-600 hover:bg-stone-100"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-600 dark:text-slate-400 hover:bg-stone-100 dark:hover:bg-slate-800"
             >
-              Cancel
+              Abbrechen
             </button>
             <button
               type="submit"
               disabled={stagedPhotos.length === 0}
               className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl shadow-xs disabled:opacity-50"
             >
-              <span>Upload {stagedPhotos.length} Photos to Album</span>
+              <span>{stagedPhotos.length} {stagedPhotos.length === 1 ? 'Foto' : 'Fotos'} im Album speichern</span>
             </button>
           </div>
 

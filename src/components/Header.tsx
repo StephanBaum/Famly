@@ -50,9 +50,12 @@ export const Header: React.FC<HeaderProps> = ({
                 Famly
               </h1>
               {familyName && (
-                <span className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  {familyName}
-                </span>
+                <>
+                  <span className="text-stone-300 dark:text-slate-600 font-bold">•</span>
+                  <span className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`}
+                  </span>
+                </>
               )}
             </div>
           </div>
@@ -87,20 +90,20 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() =>
                     setCurrentMemberId(currentMemberId === 'all' ? loggedInMember.id : 'all')
                   }
-                  title="Toggle between your personal items and whole family"
+                  title="Zwischen persönlicher Ansicht und der ganzen Familie wechseln"
                   className={`duo-btn px-2 py-1 text-[11px] font-extrabold rounded-xl ${
                     currentMemberId === 'all'
                       ? 'duo-btn-white text-stone-700 dark:text-slate-200'
                       : 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600'
                   }`}
                 >
-                  {currentMemberId === 'all' ? 'All' : 'My View'}
+                  {currentMemberId === 'all' ? 'Alle' : 'Meine Ansicht'}
                 </button>
 
                 {/* Switch Profile / Log Out */}
                 <button
                   onClick={logout}
-                  title="Switch family member / Log out"
+                  title="Familienmitglied wechseln / Abmelden"
                   className="p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -111,20 +114,20 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Settings & Data Button */}
             <button
               onClick={onOpenSettings}
-              title="Settings & Data Management"
+              title="Einstellungen & Datenverwaltung"
               className="p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5"
             >
               <Settings className="w-4 h-4 text-stone-700 dark:text-slate-300" />
-              <span className="hidden md:inline text-xs font-bold text-stone-700 dark:text-slate-300">Settings</span>
+              <span className="hidden md:inline text-xs font-bold text-stone-700 dark:text-slate-300">Einstellungen</span>
             </button>
 
             {/* Quick Add Button */}
             <button
               onClick={onQuickAdd}
-              className="duo-btn duo-btn-green px-3 sm:px-4 py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap"
+              className="duo-btn duo-btn-green px-3 sm:px-4 py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1"
             >
-              <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-              <span>Quick Add</span>
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>+ Neu</span>
             </button>
 
           </div>
@@ -145,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Home className="w-3.5 h-3.5 mr-1.5" />
-              <span>Today Hub</span>
+              <span>Heute</span>
             </button>
 
             <button
@@ -157,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-              <span>Calendar</span>
+              <span>Kalender</span>
             </button>
 
             <button
@@ -169,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Utensils className="w-3.5 h-3.5 mr-1.5" />
-              <span>Meal Planner</span>
+              <span>Essensplan</span>
             </button>
 
             <button
@@ -181,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Camera className="w-3.5 h-3.5 mr-1.5" />
-              <span>Moments</span>
+              <span>Momente</span>
             </button>
 
             <button
@@ -193,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
-              <span>Groceries & Chores</span>
+              <span>Einkauf & Aufgaben</span>
             </button>
 
             <button
@@ -205,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Users className="w-3.5 h-3.5 mr-1.5" />
-              <span>Kids & Family Info</span>
+              <span>Familie & Kinder</span>
             </button>
 
           </nav>

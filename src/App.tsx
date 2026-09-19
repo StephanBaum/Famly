@@ -81,9 +81,9 @@ const MainAppContent: React.FC = () => {
 
       {/* Footer (Hidden on small mobile screens to keep space clean) */}
       <footer className="hidden sm:block border-t-2 border-stone-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 py-6 mt-12 text-center text-xs text-stone-400 dark:text-slate-500 transition-colors">
-        <p className="font-extrabold text-stone-600 dark:text-slate-300">Famly 🏡 Family Hub & Coordinator</p>
+        <p className="font-extrabold text-stone-600 dark:text-slate-300">Famly 🏡 Familien-Hub & Organisation</p>
         <p className="mt-1 font-semibold">
-          Designed for 3–6 family members • Mobile-first, private & local.
+          Entwickelt für Familien • Mobil-optimiert, privat & lokal.
         </p>
       </footer>
 

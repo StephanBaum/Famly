@@ -220,7 +220,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Family Identity
   const [familyName, setFamilyNameState] = useState<string>(() =>
-    getStoredOrDefault<string>(STORAGE_KEYS.FAMILY_NAME, 'Miller Family')
+    getStoredOrDefault<string>(STORAGE_KEYS.FAMILY_NAME, 'Familie Baum')
   );
 
   useEffect(() => {
@@ -825,7 +825,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStores(INITIAL_STORES);
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
     setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
-    setFamilyNameState('Miller Family');
+    setFamilyNameState('Familie Baum');
     setLoggedInMemberId(null);
   };
 

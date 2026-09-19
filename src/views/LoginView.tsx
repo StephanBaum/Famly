@@ -30,7 +30,7 @@ export const LoginView: React.FC = () => {
       if (nextPin.length === 4 && selectedMember) {
         const result = login(selectedMember.id, nextPin);
         if (!result.success) {
-          setErrorMessage(result.message || 'Incorrect PIN');
+          setErrorMessage(result.message || 'Falscher PIN');
           setTimeout(() => setPinInput(''), 600);
         }
       }
@@ -43,7 +43,7 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FA] flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-[#F7F9FA] dark:bg-[#0c1222] flex flex-col justify-center items-center p-4 sm:p-6 font-sans transition-colors">
       <div className="max-w-md w-full text-center space-y-6">
         
         {/* Brand Header */}
@@ -51,9 +51,9 @@ export const LoginView: React.FC = () => {
           <div className="w-16 h-16 rounded-3xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-3xl mx-auto shadow-md">
             🏡
           </div>
-          <h1 className="text-3xl font-black text-stone-900 tracking-tight">Famly</h1>
-          <p className="text-sm font-extrabold text-stone-400">
-            Who is coordinating on this device?
+          <h1 className="text-3xl font-black text-stone-900 dark:text-white tracking-tight">Famly</h1>
+          <p className="text-sm font-extrabold text-stone-400 dark:text-slate-400">
+            Wer nutzt Famly gerade?
           </p>
         </div>
 
@@ -76,14 +76,14 @@ export const LoginView: React.FC = () => {
                   {member.avatar}
                 </div>
                 <div className="text-center">
-                  <strong className="block text-sm font-black text-stone-900">
+                  <strong className="block text-sm font-black text-stone-900 dark:text-white">
                     {member.name}
                   </strong>
-                  <span className="text-[11px] font-bold text-stone-400">
+                  <span className="text-[11px] font-bold text-stone-400 dark:text-slate-400">
                     {member.role}
                   </span>
                   {member.pin && (
-                    <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                    <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-full">
                       <Lock className="w-2.5 h-2.5" /> PIN
                     </span>
                   )}
@@ -92,14 +92,14 @@ export const LoginView: React.FC = () => {
             ))}
           </div>
         ) : (
-          /* PIN KEYPAD SCREEN FOR PROTECTED PROFILES (e.g. Parents) */
-          <div className="duo-card p-6 bg-white space-y-5 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b-2 border-stone-100 pb-3">
+          /* PIN KEYPAD SCREEN FOR PROTECTED PROFILES */
+          <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b-2 border-stone-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{selectedMember.avatar}</span>
                 <div className="text-left">
-                  <h2 className="text-base font-black text-stone-900">{selectedMember.name}</h2>
-                  <p className="text-xs font-bold text-stone-400">{selectedMember.role}</p>
+                  <h2 className="text-base font-black text-stone-900 dark:text-white">{selectedMember.name}</h2>
+                  <p className="text-xs font-bold text-stone-400 dark:text-slate-400">{selectedMember.role}</p>
                 </div>
               </div>
 
@@ -111,13 +111,13 @@ export const LoginView: React.FC = () => {
                 }}
                 className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-black rounded-xl"
               >
-                Change
+                Wechseln
               </button>
             </div>
 
             <div>
-              <p className="text-xs font-extrabold text-stone-600 mb-3">
-                Enter 4-digit Passcode
+              <p className="text-xs font-extrabold text-stone-600 dark:text-slate-300 mb-3">
+                4-stelligen PIN eingeben
               </p>
 
               {/* 4 PIN Dots */}
@@ -130,7 +130,7 @@ export const LoginView: React.FC = () => {
                       className={`w-4 h-4 rounded-full border-2 transition-all ${
                         isFilled
                           ? 'bg-emerald-500 border-emerald-600 scale-110'
-                          : 'border-stone-300 bg-stone-100'
+                          : 'border-stone-300 dark:border-slate-700 bg-stone-100 dark:bg-slate-800'
                       }`}
                     />
                   );
@@ -138,13 +138,13 @@ export const LoginView: React.FC = () => {
               </div>
 
               {errorMessage && (
-                <p className="text-xs font-black text-rose-600 mt-2 animate-bounce">
+                <p className="text-xs font-black text-rose-600 dark:text-rose-400 mt-2 animate-bounce">
                   {errorMessage}
                 </p>
               )}
 
-              <p className="text-[11px] font-bold text-stone-400 mt-1">
-                Demo parent PIN is <strong className="text-stone-700">1234</strong>
+              <p className="text-[11px] font-bold text-stone-400 dark:text-slate-500 mt-1">
+                Demo Eltern-PIN ist <strong className="text-stone-700 dark:text-slate-300">1234</strong>
               </p>
             </div>
 
@@ -182,10 +182,10 @@ export const LoginView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => login(selectedMember.id, selectedMember.pin)}
-                className="text-xs font-black text-emerald-600 hover:text-emerald-800 underline flex items-center justify-center gap-1 mx-auto"
+                className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 underline flex items-center justify-center gap-1 mx-auto"
               >
                 <Sparkles className="w-3 h-3" />
-                <span>Quick log in without PIN (Demo Mode)</span>
+                <span>Schnell-Login ohne PIN (Demo-Modus)</span>
               </button>
             </div>
           </div>
