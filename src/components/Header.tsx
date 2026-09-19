@@ -45,16 +45,15 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0 animate-pop-in">
               🏡
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-base sm:text-lg font-black text-stone-900 dark:text-white tracking-tight">Famly</h1>
-                <span className="hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight">
+                Famly
+              </h1>
+              {familyName && (
+                <span className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {familyName}
                 </span>
-              </div>
-              <p className="text-[10px] sm:text-[11px] font-bold text-stone-400 dark:text-slate-400 hidden sm:block">
-                Happy household coordinator
-              </p>
+              )}
             </div>
           </div>
 
