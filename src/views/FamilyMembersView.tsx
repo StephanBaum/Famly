@@ -293,6 +293,27 @@ export const FamilyMembersView: React.FC = () => {
         })}
       </div>
 
+      {members.length === 0 && (
+        <div className="p-12 text-center duo-card bg-white dark:bg-slate-900 border-2 border-dashed border-stone-200 dark:border-slate-800 space-y-3">
+          <div className="w-16 h-16 rounded-3xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 mx-auto flex items-center justify-center text-3xl shadow-xs">
+            👨‍👩‍👧‍👦
+          </div>
+          <h4 className="text-base font-black text-stone-900 dark:text-white">
+            Noch keine Familienmitglieder angelegt
+          </h4>
+          <p className="text-xs text-stone-500 dark:text-slate-400 max-w-md mx-auto">
+            Füge Eltern, Kinder oder Großeltern hinzu, um Aufgaben, Termine und Vorlieben individuell zuzuordnen.
+          </p>
+          <button
+            onClick={openAddModal}
+            className="duo-btn duo-btn-purple px-5 py-2.5 text-xs font-black rounded-xl inline-flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>+ Erstes Mitglied hinzufügen</span>
+          </button>
+        </div>
+      )}
+
       {/* Child Details Modal */}
       {selectedDetailsMember && (
         <ChildDetailsModal

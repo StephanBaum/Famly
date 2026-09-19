@@ -229,13 +229,38 @@ export const PhotoStreamView: React.FC = () => {
             })}
           </div>
 
-          {filteredGalleries.length === 0 && (
-            <div className="p-12 text-center duo-card bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800">
-              <span className="text-3xl block mb-2">📸</span>
-              <h4 className="text-sm font-black text-stone-800 dark:text-white">Keine Alben in dieser Kategorie</h4>
-              <p className="text-xs text-stone-400 dark:text-slate-400 mt-1">Tippe auf "+ Neues Album / Upload", um eines anzulegen!</p>
+          {galleries.length === 0 ? (
+            <div className="p-12 text-center duo-card bg-white dark:bg-slate-900 border-2 border-dashed border-stone-200 dark:border-slate-800 space-y-3">
+              <div className="w-16 h-16 rounded-3xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 mx-auto flex items-center justify-center text-3xl shadow-xs">
+                📸
+              </div>
+              <h4 className="text-base font-black text-stone-900 dark:text-white">
+                Noch keine Familienalben vorhanden
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-slate-400 max-w-md mx-auto">
+                Erstelle euer erstes gemeinsames Fotoalbum für schöne Alltagsmomente, Ausflüge oder Feste.
+              </p>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl inline-flex items-center gap-1.5 shadow-xs"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ Erstes Album anlegen</span>
+              </button>
             </div>
-          )}
+          ) : filteredGalleries.length === 0 ? (
+            <div className="p-10 text-center duo-card bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-2">
+              <span className="text-3xl block mb-1">🔍</span>
+              <h4 className="text-sm font-black text-stone-800 dark:text-white">Keine Alben in dieser Kategorie</h4>
+              <p className="text-xs text-stone-400 dark:text-slate-400">In dieser Kategorie wurden noch keine Fotos abgelegt.</p>
+              <button
+                onClick={() => setCategoryFilter('all')}
+                className="duo-btn duo-btn-white px-3.5 py-1.5 text-xs font-bold rounded-xl mt-2"
+              >
+                Alle Alben anzeigen
+              </button>
+            </div>
+          ) : null}
 
         </div>
       ) : (
