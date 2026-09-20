@@ -96,7 +96,7 @@ export const FamilyMembersView: React.FC = () => {
           className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl"
         >
           <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-          <span>+ Mitglied hinzufügen</span>
+          <span>Mitglied hinzufügen</span>
         </button>
       </div>
 
@@ -348,7 +348,7 @@ export const FamilyMembersView: React.FC = () => {
             className="duo-btn duo-btn-purple px-5 py-2.5 text-xs font-black rounded-xl inline-flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>+ Erstes Mitglied hinzufügen</span>
+            <span>Erstes Mitglied hinzufügen</span>
           </button>
         </div>
       )}

@@ -187,23 +187,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) - Render only if kids exist */}
       {kids.length > 0 && (
         <div className="duo-card p-5 bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/50">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🧸</span>
-              <div>
-                <h3 className="font-extrabold text-stone-900 dark:text-white text-sm">
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xl shrink-0">🧸</span>
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-stone-900 dark:text-white text-sm truncate">
                   Wichtige Kinder-Infos & Kleidergrößen
                 </h3>
-                <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400">
+                <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400 truncate">
                   Schuhgrößen, Kinderarzt-Telefon und Schuldetails sofort griffbereit
                 </p>
               </div>
             </div>
             <button
               onClick={() => onNavigate('members')}
-              className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline"
+              className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline shrink-0 whitespace-nowrap"
             >
-              Familienmitglieder verwalten →
+              <span className="hidden sm:inline">Familienmitglieder verwalten →</span>
+              <span className="sm:hidden">Verwalten →</span>
             </button>
           </div>
 
@@ -276,21 +277,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           
           {/* Today's Schedule Card */}
           <div className="duo-card p-6 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center font-black">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center font-black shrink-0">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutige Termine</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutige Termine</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">
                     Gemeinsamer Plan für {currentMember ? currentMember.name : 'die ganze Familie'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate('calendar')}
-                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
+                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl shrink-0 whitespace-nowrap"
               >
                 <span>Kalender</span>
                 <ChevronRight className="w-3.5 h-3.5 ml-1" />
@@ -366,19 +367,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Tonight's Dinner Card */}
           <div className="duo-card p-6 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center font-black">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center font-black shrink-0">
                   <Utensils className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutiges Abendessen</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">Gemeinsame Wochenplanung</p>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutiges Abendessen</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">Gemeinsame Wochenplanung</p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate('meals')}
-                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
+                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl shrink-0 whitespace-nowrap"
               >
                 <span>Essensplan</span>
                 <ChevronRight className="w-3.5 h-3.5 ml-1" />
@@ -455,19 +456,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Quick Chores */}
           <div className="duo-card p-6 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center font-black">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center font-black shrink-0">
                   <span>⭐</span>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-stone-900 dark:text-white">Heutige Aufgaben</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">Sterne sammeln für Mithilfe!</p>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutige Aufgaben</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">Sterne sammeln für Mithilfe!</p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate('lists')}
-                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl"
+                className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl shrink-0 whitespace-nowrap"
               >
                 <span>Alle Aufgaben</span>
               </button>
@@ -532,21 +533,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Family Notice Board */}
           <div className="duo-card p-6 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center font-black">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center font-black shrink-0">
                   <Pin className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-stone-900 dark:text-white">Schwarzes Brett</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">WLAN, Buspläne & Notizen</p>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Schwarzes Brett</h3>
+                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">WLAN, Buspläne & Notizen</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddNoteModal(true)}
-                className="duo-btn duo-btn-rose px-3 py-1.5 text-xs font-black rounded-xl"
+                className="duo-btn duo-btn-rose px-3 py-1.5 text-xs font-black rounded-xl shrink-0 whitespace-nowrap flex items-center gap-1"
               >
-                + Notiz anheften
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="hidden sm:inline">Notiz anheften</span>
+                <span className="sm:hidden">Notiz</span>
               </button>
             </div>
 

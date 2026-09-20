@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="duo-btn duo-btn-green px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1 shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span className="hidden xs:inline">+ Neu</span>
+              <span className="hidden xs:inline">Neu</span>
             </button>
 
           </div>

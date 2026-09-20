@@ -189,7 +189,7 @@ export const MealPlannerView: React.FC = () => {
             className="duo-btn duo-btn-green px-3.5 py-2 text-xs font-black rounded-2xl flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
           >
             <Sparkles className="w-4 h-4 fill-white stroke-[2.5]" />
-            <span>+ Rezept</span>
+            <span>Rezept hinzufügen</span>
           </button>
         </div>
       </div>
@@ -757,7 +757,7 @@ export const MealPlannerView: React.FC = () => {
                           className="text-[10px] font-black text-teal-700 dark:text-teal-300 hover:text-teal-900 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shadow-2xs active:translate-y-0.5 transition-all"
                         >
                           <ShoppingCart className="w-3 h-3" />
-                          <span>+ Einkauf</span>
+                          <span>Auf Liste</span>
                         </button>
                       </div>
                     )}
@@ -1160,7 +1160,7 @@ export const MealPlannerView: React.FC = () => {
                         <div className="w-10 h-10 rounded-2xl bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                           <Plus className="w-5 h-5" />
                         </div>
-                        <span className="text-xs font-bold text-teal-900 dark:text-teal-200">+ Rezept importieren</span>
+                        <span className="text-xs font-bold text-teal-900 dark:text-teal-200">Rezept importieren</span>
                         <span className="text-[10px] text-teal-600 dark:text-teal-400 mt-0.5">Link, Foto oder Text</span>
                       </button>
                     </div>

@@ -223,7 +223,7 @@ export const CalendarView: React.FC = () => {
             className="sm:hidden duo-btn duo-btn-blue px-3 py-1.5 text-xs font-black rounded-xl shadow-xs shrink-0 flex items-center gap-1 whitespace-nowrap"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span>+ Termin</span>
+            <span>Termin</span>
           </button>
         </div>
 
@@ -278,7 +278,7 @@ export const CalendarView: React.FC = () => {
             className="hidden sm:flex duo-btn duo-btn-blue px-3.5 py-2 text-xs font-black rounded-xl shadow-xs items-center whitespace-nowrap"
           >
             <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-            <span>+ Termin</span>
+            <span>Termin</span>
           </button>
         </div>
       </div>

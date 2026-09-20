@@ -717,7 +717,7 @@ export const ListsAndChoresView: React.FC = () => {
                     className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
                   >
                     <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-                    <span>+ Aufgabe</span>
+                    <span>Aufgabe</span>
                   </button>
                 ) : (
                   <button
@@ -725,7 +725,7 @@ export const ListsAndChoresView: React.FC = () => {
                     className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
                   >
                     <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-                    <span>+ Belohnung</span>
+                    <span>Belohnung</span>
                   </button>
                 )}
               </div>
@@ -913,7 +913,7 @@ export const ListsAndChoresView: React.FC = () => {
                     className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm self-start sm:self-auto"
                   >
                     <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-                    <span>+ Eigene Belohnung</span>
+                    <span>Eigene Belohnung</span>
                   </button>
                 </div>
 

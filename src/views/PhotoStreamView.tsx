@@ -93,7 +93,7 @@ export const PhotoStreamView: React.FC = () => {
             className="duo-btn duo-btn-green px-4 py-2 text-xs font-black rounded-xl shadow-xs flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>{selectedGalleryId ? '+ Fotos hinzufügen' : '+ Neues Album / Upload'}</span>
+            <span>{selectedGalleryId ? 'Fotos hinzufügen' : 'Neues Album / Upload'}</span>
           </button>
         </div>
       </div>
@@ -245,7 +245,7 @@ export const PhotoStreamView: React.FC = () => {
                 className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl inline-flex items-center gap-1.5 shadow-xs"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
-                <span>+ Erstes Album anlegen</span>
+                <span>Erstes Album anlegen</span>
               </button>
             </div>
           ) : filteredGalleries.length === 0 ? (
@@ -296,7 +296,7 @@ export const PhotoStreamView: React.FC = () => {
                   className="duo-btn duo-btn-green px-4 py-2 text-xs font-black rounded-xl flex items-center gap-1.5"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>+ Fotos hinzufügen</span>
+                  <span>Fotos hinzufügen</span>
                 </button>
 
                 <button
