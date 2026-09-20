@@ -18,7 +18,6 @@ interface DayFocusCardProps {
     currentChefId?: string
   ) => void;
   onSelectRecipe: (recipe: Recipe) => void;
-  onSyncRecipe: (recipe: Recipe) => void;
   onToggleFavorite: (recipeId: string) => void;
   onQuickSetSlot?: (
     slot: 'breakfast' | 'lunch' | 'dinner',
@@ -35,7 +34,6 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
   members,
   onOpenEditSlot,
   onSelectRecipe,
-  onSyncRecipe,
   onToggleFavorite,
   onQuickSetSlot,
 }) => {
@@ -227,14 +225,10 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
               </div>
 
               {dinnerRecipe && (
-                <button
-                  type="button"
-                  onClick={() => onSyncRecipe(dinnerRecipe)}
-                  className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl shadow-xs flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-4 h-4 stroke-[2.5]" />
-                  <span>Zutaten zur Einkaufsliste</span>
-                </button>
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-black shadow-2xs">
+                  <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+                  <span>Zutaten auf Einkaufsliste synchronisiert ✓</span>
+                </div>
               )}
             </div>
           </div>

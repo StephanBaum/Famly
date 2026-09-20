@@ -44,7 +44,6 @@ interface SlotEditModalProps {
   ) => void;
   onToggleFavorite: (recipeId: string) => void;
   onOpenImportModal: () => void;
-  onSyncRecipeDirect: (recipe: Recipe, targetDate: string) => void;
 }
 
 const CUSTOM_DISH_SUGGESTIONS = [
@@ -67,7 +66,6 @@ export const SlotEditModal: React.FC<SlotEditModalProps> = ({
   onClearSlot,
   onToggleFavorite,
   onOpenImportModal,
-  onSyncRecipeDirect,
 }) => {
   if (!editingSlot) return null;
 
@@ -395,14 +393,10 @@ export const SlotEditModal: React.FC<SlotEditModalProps> = ({
                             </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => onSyncRecipeDirect(sel, editingSlot.date)}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl duo-btn duo-btn-green text-xs font-bold w-full sm:w-auto justify-center"
-                        >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>Zutaten zur Liste</span>
-                        </button>
+                        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-black border border-emerald-300 dark:border-emerald-700/80 shadow-2xs">
+                          <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Wird beim Speichern automatisch synchronisiert 🛒</span>
+                        </div>
                       </div>
                     );
                   })()}
@@ -531,10 +525,10 @@ export const SlotEditModal: React.FC<SlotEditModalProps> = ({
               <button
                 type="submit"
                 disabled={!title.trim()}
-                className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl disabled:opacity-50"
+                className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl disabled:opacity-50 flex items-center gap-1.5"
               >
-                <span>Speichern</span>
-                <span className="ml-1">✨</span>
+                <span>{recipeId ? 'Speichern & Zutaten synchronisieren' : 'Speichern'}</span>
+                <span>✨</span>
               </button>
             </div>
           </form>

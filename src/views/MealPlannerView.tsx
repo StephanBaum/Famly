@@ -87,9 +87,7 @@ export const MealPlannerView: React.FC = () => {
   };
 
   const handleApplyAutoPlan = (
-    assignments: Array<{ date: string; recipe: Recipe }>,
-    syncGroceries: boolean,
-    groceriesToSync?: Array<{ date: string; recipe: Recipe }>
+    assignments: Array<{ date: string; recipe: Recipe }>
   ) => {
     assignments.forEach(({ date, recipe }) => {
       // If recipe is not already in the family recipes library, persist it
@@ -102,21 +100,17 @@ export const MealPlannerView: React.FC = () => {
       });
     });
 
-    if (syncGroceries) {
-      // Self-Cleaning: Clear old unbought groceries for the affected dates first to prevent duplicates
-      const targetDates = assignments.map((a) => a.date);
-      clearGroceriesForDates(targetDates);
+    // Self-Cleaning: Clear old unbought groceries for the affected dates first to prevent duplicates
+    const targetDates = assignments.map((a) => a.date);
+    clearGroceriesForDates(targetDates);
 
-      const itemsToSync = groceriesToSync || assignments;
-      const syncRes = addMultipleRecipesToGrocery(
-        itemsToSync.map((item) => ({ recipe: item.recipe, date: item.date }))
-      );
-      setSyncFeedback(
-        `Wochenplan gezaubert! ${assignments.length} Tage belegt & ${syncRes.addedCount} frische Zutaten (~${syncRes.estimatedTotalCost} €) auf die Einkaufsliste gesetzt! 🪄🛒`
-      );
-    } else {
-      setSyncFeedback(`Wochenplan gezaubert! ${assignments.length} Tage abwechslungsreich belegt! 🪄`);
-    }
+    // Automatic grocery synchronization for all planned meals
+    const syncRes = addMultipleRecipesToGrocery(
+      assignments.map((item) => ({ recipe: item.recipe, date: item.date }))
+    );
+    setSyncFeedback(
+      `Wochenplan gezaubert! ${assignments.length} Tage belegt & ${syncRes.addedCount} Zutaten (~${syncRes.estimatedTotalCost} €) automatisch auf die Einkaufsliste synchronisiert! 🪄🛒`
+    );
     setTimeout(() => setSyncFeedback(null), 5000);
   };
 
@@ -126,16 +120,35 @@ export const MealPlannerView: React.FC = () => {
     data: { title: string; recipeId?: string; chefId?: string },
     oldRecipeId?: string
   ) => {
-    // If recipe changed or was replaced, self-clean the previous meal's unbought groceries
+    // 1. If old recipe was replaced or removed, self-clean the previous meal's unbought groceries
     if (oldRecipeId && oldRecipeId !== data.recipeId) {
-      const removed = removeGroceriesForMeal(date, { recipeId: oldRecipeId, slot });
-      if (removed > 0) {
-        setSyncFeedback(`Mahlzeit geändert: ${removed} vorherige Zutaten von der Einkaufsliste bereinigt 🧹`);
-        setTimeout(() => setSyncFeedback(null), 4000);
-      }
+      removeGroceriesForMeal(date, { recipeId: oldRecipeId, slot });
     }
+
+    // 2. Set the meal slot
     setMealSlot(date, slot, data);
+
+    // 3. If a new recipe was chosen, automatically add and sync its ingredients to groceries!
+    if (data.recipeId) {
+      const newRecipe = recipes.find((r) => r.id === data.recipeId);
+      if (newRecipe) {
+        addRecipeIngredientsToGrocery(newRecipe, date);
+        setSyncFeedback(
+          oldRecipeId && oldRecipeId !== data.recipeId
+            ? `Gericht getauscht: Zutaten für "${newRecipe.title}" automatisch auf die Einkaufsliste synchronisiert! 🛒✨`
+            : `"${newRecipe.title}" eingetragen – Zutaten automatisch auf die Einkaufsliste synchronisiert! 🛒✨`
+        );
+      } else {
+        setSyncFeedback(`Mahlzeit aktualisiert! ✨`);
+      }
+    } else if (oldRecipeId) {
+      setSyncFeedback(`Mahlzeit geändert & alte Zutaten von der Einkaufsliste bereinigt 🧹`);
+    } else {
+      setSyncFeedback(`Mahlzeit aktualisiert! ✨`);
+    }
+
     setEditingSlot(null);
+    setTimeout(() => setSyncFeedback(null), 4000);
   };
 
   const handleClearSlot = (
@@ -417,7 +430,6 @@ export const MealPlannerView: React.FC = () => {
                   });
                 }}
                 onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
-                onSyncRecipe={handleSyncRecipe}
                 onToggleFavorite={toggleFavoriteRecipe}
                 onQuickSetSlot={(slot, title, oldRecipeId) =>
                   handleQuickSetSlot(dateStr, slot, title, oldRecipeId)
@@ -444,7 +456,6 @@ export const MealPlannerView: React.FC = () => {
                 });
               }}
               onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
-              onSyncRecipe={handleSyncRecipe}
               onToggleFavorite={toggleFavoriteRecipe}
             />
           )}
@@ -474,11 +485,6 @@ export const MealPlannerView: React.FC = () => {
         onClearSlot={handleClearSlot}
         onToggleFavorite={toggleFavoriteRecipe}
         onOpenImportModal={() => setIsImportModalOpen(true)}
-        onSyncRecipeDirect={(recipe, targetDate) => {
-          addRecipeIngredientsToGrocery(recipe, targetDate);
-          setSyncFeedback(`Zutaten für "${recipe.title}" auf die Einkaufsliste gesetzt! 🛒`);
-          setTimeout(() => setSyncFeedback(null), 4000);
-        }}
       />
 
       <RecipeDetailModal

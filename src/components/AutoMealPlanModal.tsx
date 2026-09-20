@@ -23,11 +23,7 @@ interface AutoMealPlanModalProps {
   weekDays: Date[];
   currentMealPlans: MealPlanDay[];
   recipes: Recipe[];
-  onApplyPlan: (
-    assignments: Array<{ date: string; recipe: Recipe }>,
-    syncGroceries: boolean,
-    groceriesToSync?: Array<{ date: string; recipe: Recipe }>
-  ) => void;
+  onApplyPlan: (assignments: Array<{ date: string; recipe: Recipe }>) => void;
   onToggleFavorite: (recipeId: string) => void;
 }
 
@@ -61,8 +57,6 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
   const [sourceMode, setSourceMode] = useState<PlanSourceMode>('mix');
   const [themeFilter, setThemeFilter] = useState<PlanThemeFilter>('all');
   const [onlyEmptyDays, setOnlyEmptyDays] = useState<boolean>(false);
-  const [syncToGroceries, setSyncToGroceries] = useState<boolean>(true);
-  const [syncScope, setSyncScope] = useState<'all' | 'first4days'>('all');
   const [showGroceryPreview, setShowGroceryPreview] = useState<boolean>(false);
 
   const [assignments, setAssignments] = useState<PlannedDayAssignment[]>([]);
@@ -513,14 +507,13 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
     });
   };
 
-  // Consolidated ingredients & budget calculations (dynamically adjusted for syncScope)
+  // Consolidated ingredients & budget calculations across all assignments
   const { consolidatedIngredients, totalEstimatedCost, totalTimeSaved, relevantCount } = useMemo(() => {
-    const relevantAssignments = syncScope === 'first4days' ? assignments.slice(0, 4) : assignments;
     const map = new Map<string, { name: string; amounts: string[]; category?: string }>();
     let totalCost = 0;
     let timeSaved = 0;
 
-    relevantAssignments.forEach((a) => {
+    assignments.forEach((a) => {
       totalCost += a.recipe.estimatedCost || 13.5;
       if (a.synergyConnection?.type === 'use-leftovers') {
         timeSaved += a.synergyConnection.timeSaved || 15;
@@ -560,9 +553,9 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       consolidatedIngredients: Array.from(map.values()),
       totalEstimatedCost: Math.round(totalCost * 10) / 10,
       totalTimeSaved: timeSaved,
-      relevantCount: relevantAssignments.length,
+      relevantCount: assignments.length,
     };
-  }, [assignments, syncScope]);
+  }, [assignments]);
 
   useEffect(() => {
     if (isOpen) {
@@ -577,8 +570,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       date: a.dateStr,
       recipe: a.recipe,
     }));
-    const groceriesToSync = syncScope === 'first4days' ? toApply.slice(0, 4) : toApply;
-    onApplyPlan(toApply, syncToGroceries, groceriesToSync);
+    onApplyPlan(toApply);
     try {
       confetti({
         particleCount: 90,
@@ -865,46 +857,10 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
           </div>
 
           {/* Footer actions */}
-          <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full md:w-auto">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={syncToGroceries}
-                  onChange={(e) => setSyncToGroceries(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>Zutaten auf Einkaufsliste (~{Math.round(totalEstimatedCost)} €)</span>
-              </label>
-
-              {syncToGroceries && (
-                <div className="flex items-center bg-emerald-100/70 dark:bg-emerald-950/80 p-0.5 rounded-xl border border-emerald-300 dark:border-emerald-700/80 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setSyncScope('all')}
-                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all ${
-                      syncScope === 'all'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white'
-                    }`}
-                  >
-                    Alle {assignments.length} Tage
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSyncScope('first4days')}
-                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all flex items-center gap-1 ${
-                      syncScope === 'first4days'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white'
-                    }`}
-                  >
-                    <span>⚡ Nur 3–4 Tage</span>
-                    <span className="text-[10px] opacity-85">(Frische)</span>
-                  </button>
-                </div>
-              )}
+          <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3.5 py-2 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+              <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+              <span>Zutaten werden automatisch auf die Einkaufsliste synchronisiert (~{Math.round(totalEstimatedCost)} €)</span>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

@@ -19,7 +19,6 @@ interface WeeklyGridViewProps {
     currentChefId?: string
   ) => void;
   onSelectRecipe: (recipe: Recipe) => void;
-  onSyncRecipe: (recipe: Recipe) => void;
   onToggleFavorite: (recipeId: string) => void;
 }
 
@@ -31,7 +30,6 @@ export const WeeklyGridView: React.FC<WeeklyGridViewProps> = ({
   members,
   onOpenEditSlot,
   onSelectRecipe,
-  onSyncRecipe,
   onToggleFavorite,
 }) => {
   const isMultiWeek = weekDays.length > 7;
@@ -262,15 +260,13 @@ export const WeeklyGridView: React.FC<WeeklyGridViewProps> = ({
                 >
                   Rezept
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onSyncRecipe(dinnerRecipe)}
-                  title="Zutaten zur Einkaufsliste hinzufügen"
-                  className="text-[10px] font-black text-teal-700 dark:text-teal-300 hover:text-teal-900 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shadow-2xs active:translate-y-0.5 transition-all"
+                <span
+                  title="Zutaten sind automatisch auf der Einkaufsliste synchronisiert"
+                  className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800"
                 >
-                  <ShoppingCart className="w-3 h-3" />
-                  <span>Auf Liste</span>
-                </button>
+                  <ShoppingCart className="w-3 h-3 text-emerald-600" />
+                  <span>Auf Liste ✓</span>
+                </span>
               </div>
             )}
       </div>
