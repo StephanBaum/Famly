@@ -113,7 +113,14 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
           { name: 'Lachsfilet (frisch)', amount: '600g', category: 'meat' },
           { name: 'Frischer Brokkoli', amount: '500g', category: 'produce' },
           { name: 'Jasminreis', amount: '500g', category: 'pantry' },
-          { name: 'Sojasauce & Honig', amount: 'je 2 EL', category: 'pantry' },
+          { name: 'Sojasauce', amount: '2 EL', category: 'pantry' },
+          { name: 'Bio-Honig', amount: '2 EL', category: 'pantry' },
+        ],
+        instructions: [
+          'Jasminreis in leichtem Salzwasser aufkochen und 12 Minuten quellen lassen.',
+          'Lachs mit Sojasauce und Honig marinieren.',
+          'Brokkoli 4 Minuten dämpfen.',
+          'Lachs von jeder Seite 3 Minuten scharf anbraten und mit Reis und Brokkoli servieren.',
         ],
       };
     }
@@ -128,10 +135,16 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
         estimatedCost: 15.0,
         imageUrl: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=600&q=80',
         ingredients: [
-          { name: 'Rindfleisch / Gulasch', amount: '600g', category: 'meat' },
+          { name: 'Rindergulasch (gewürfelt)', amount: '600g', category: 'meat' },
           { name: 'Festkochende Kartoffeln', amount: '1kg', category: 'produce' },
           { name: 'Bundmöhren', amount: '500g', category: 'produce' },
           { name: 'Rinderbrühe', amount: '500ml', category: 'pantry' },
+        ],
+        instructions: [
+          'Fleisch scharf anbraten, Möhren und Zwiebeln zugeben.',
+          'Mit Rinderbrühe ablöschen und 35 Minuten schmoren.',
+          'Kartoffeln zugeben und 15 Minuten weich köcheln.',
+          'Heiß abschmecken und servieren.',
         ],
       };
     }
@@ -146,11 +159,17 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
         estimatedCost: 11.5,
         imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
         ingredients: [
-          { name: 'Bunter Quinoa oder Reis', amount: '300g', category: 'pantry' },
+          { name: 'Basmatireis', amount: '300g', category: 'pantry' },
           { name: 'Reife Avocados', amount: '2 Stück', category: 'produce' },
           { name: 'Kichererbsen (Dose)', amount: '1 Dose (400g)', category: 'pantry' },
           { name: 'Feta-Käse', amount: '200g', category: 'dairy' },
           { name: 'Kirschtomaten', amount: '250g', category: 'produce' },
+        ],
+        instructions: [
+          'Reis garen und leicht abkühlen lassen.',
+          'Kichererbsen in der Pfanne mit etwas Olivenöl anrösten.',
+          'Tomaten halbieren, Avocado in Scheiben fächern.',
+          'Alles in Bowls anrichten und mit Feta toppen.',
         ],
       };
     }
@@ -165,10 +184,17 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       estimatedCost: 9.0,
       imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80',
       ingredients: [
-        { name: 'Pasta (Spaghetti oder Penne)', amount: '500g', category: 'pantry' },
-        { name: 'Kirschtomaten & Basilikum', amount: '250g / 1 Bund', category: 'produce' },
+        { name: 'Spaghetti', amount: '500g', category: 'pantry' },
+        { name: 'Kirschtomaten', amount: '250g', category: 'produce' },
+        { name: 'Frisches Basilikum', amount: '1 Bund', category: 'produce' },
         { name: 'Parmesankäse', amount: '100g', category: 'dairy' },
         { name: 'Natives Olivenöl extra', amount: '3 EL', category: 'pantry' },
+      ],
+      instructions: [
+        'Spaghetti in Salzwasser al dente kochen.',
+        'Kirschtomaten in Olivenöl anschwenken.',
+        'Heiße Nudeln, Basilikum und Parmesan unterheben.',
+        'Mit Salz und Pfeffer abschmecken.',
       ],
     };
   };
@@ -250,12 +276,13 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
     return scoredCandidates[randomIndex] || available[0] || allAvailableRecipes[0];
   };
 
-  // Generate the full 7-day plan with smart Batch-Prep Synergies
+  // Generate the full plan with guaranteed, smart Batch-Prep Synergies
   const generatePlan = () => {
     const chosenIds = new Set<string>();
     const proteinCounts = new Map<string, number>();
-    const newAssignments: PlannedDayAssignment[] = [];
+    const newAssignments: (PlannedDayAssignment | null)[] = new Array(weekDays.length).fill(null);
 
+    // 1. Lock in already planned days if onlyEmptyDays is set
     for (let dayIdx = 0; dayIdx < weekDays.length; dayIdx++) {
       const day = weekDays[dayIdx];
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -271,52 +298,68 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
         const prot = fullRecipe.mainProtein || 'vegetarian';
         proteinCounts.set(prot, (proteinCounts.get(prot) || 0) + 1);
 
-        newAssignments.push({
+        newAssignments[dayIdx] = {
           dateStr,
           dayName: format(day, 'EEEE', { locale: de }),
           formattedDate: format(day, 'd. MMMM', { locale: de }),
           recipe: fullRecipe,
           isAlreadyPlanned: true,
-        });
-        continue;
+        };
       }
+    }
 
-      // Check if previous day had a cook-extra recipe and can pair with a leftover-utilizing partner
-      const prevAssignment = dayIdx > 0 ? newAssignments[dayIdx - 1] : undefined;
-      let matchedSynergyRecipe: Recipe | undefined;
-
-      if (
-        prevAssignment &&
-        prevAssignment.recipe.synergyRole === 'cook-extra' &&
-        prevAssignment.recipe.synergyBase
-      ) {
-        const base = prevAssignment.recipe.synergyBase;
-        // Look for matching use-leftovers recipe in the catalog that is not yet picked
-        matchedSynergyRecipe = allAvailableRecipes.find(
-          (r) =>
-            r.synergyBase === base &&
-            r.synergyRole === 'use-leftovers' &&
-            !chosenIds.has(r.id)
-        );
+    // 2. Actively schedule intentional synergy pairs!
+    // In a 7-day schedule: guarantee 1-2 pairs (e.g. Days 1->2 and Days 4->5).
+    // In a 14-day schedule: guarantee 2-3 pairs (e.g. Days 1->2, Days 4->5, Days 8->9).
+    const candidatePairSlots: number[] = [];
+    for (let i = 0; i < weekDays.length - 1; i++) {
+      if (!newAssignments[i] && !newAssignments[i + 1]) {
+        candidatePairSlots.push(i);
       }
+    }
 
-      const lastProtein = prevAssignment?.recipe?.mainProtein;
-      const recipe =
-        matchedSynergyRecipe ||
-        pickCandidate(sourceMode, themeFilter, chosenIds, lastProtein, proteinCounts);
+    const targetPairsCount = weekDays.length > 7 ? 3 : (weekDays.length >= 5 ? 2 : 1);
+    const synergyBases: Array<'rice' | 'potatoes' | 'chicken' | 'pasta' | 'veggies'> = [
+      'rice',
+      'potatoes',
+      'chicken',
+      'pasta',
+      'veggies',
+    ];
+    // Shuffle synergy bases to keep each generation varied
+    const shuffledBases = [...synergyBases].sort(() => 0.5 - Math.random());
 
-      chosenIds.add(recipe.id);
-      const prot = recipe.mainProtein || 'vegetarian';
-      proteinCounts.set(prot, (proteinCounts.get(prot) || 0) + 1);
+    let pairsPlaced = 0;
+    for (const slotIdx of candidatePairSlots) {
+      if (pairsPlaced >= targetPairsCount) break;
+      if (newAssignments[slotIdx] || newAssignments[slotIdx + 1]) continue;
 
-      // Record synergy connection if paired
-      let synergyConnection: PlannedDayAssignment['synergyConnection'] = undefined;
-      if (
-        matchedSynergyRecipe &&
-        prevAssignment &&
-        prevAssignment.recipe.synergyBase
-      ) {
-        const base = prevAssignment.recipe.synergyBase;
+      const base = shuffledBases[pairsPlaced % shuffledBases.length];
+
+      const cookExtraPool = allAvailableRecipes.filter(
+        (r) => r.synergyBase === base && r.synergyRole === 'cook-extra' && !chosenIds.has(r.id)
+      );
+      const useLeftoversPool = allAvailableRecipes.filter(
+        (r) => r.synergyBase === base && r.synergyRole === 'use-leftovers' && !chosenIds.has(r.id)
+      );
+
+      if (cookExtraPool.length > 0 && useLeftoversPool.length > 0) {
+        const cookExtraRecipe = cookExtraPool[Math.floor(Math.random() * cookExtraPool.length)];
+        const useLeftoversRecipe = useLeftoversPool[Math.floor(Math.random() * useLeftoversPool.length)];
+
+        chosenIds.add(cookExtraRecipe.id);
+        chosenIds.add(useLeftoversRecipe.id);
+
+        const prot1 = cookExtraRecipe.mainProtein || 'vegetarian';
+        const prot2 = useLeftoversRecipe.mainProtein || 'vegetarian';
+        proteinCounts.set(prot1, (proteinCounts.get(prot1) || 0) + 1);
+        proteinCounts.set(prot2, (proteinCounts.get(prot2) || 0) + 1);
+
+        const day1 = weekDays[slotIdx];
+        const day2 = weekDays[slotIdx + 1];
+        const day1Name = format(day1, 'EEEE', { locale: de });
+        const day2Name = format(day2, 'EEEE', { locale: de });
+
         const baseName =
           base === 'rice'
             ? 'Reis'
@@ -324,40 +367,71 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
             ? 'Kartoffeln'
             : base === 'chicken'
             ? 'Hähnchen'
-            : 'Süßkartoffeln';
+            : base === 'pasta'
+            ? 'Nudeln'
+            : 'Süßkartoffeln / Gemüse';
 
-        synergyConnection = {
-          type: 'use-leftovers',
-          partnerDayName: prevAssignment.dayName,
-          baseName,
-          tip: recipe.synergyTip || `Nutzt den gekochten ${baseName} von gestern!`,
-          timeSaved: recipe.timeSavedMinutes || 15,
+        newAssignments[slotIdx] = {
+          dateStr: format(day1, 'yyyy-MM-dd'),
+          dayName: day1Name,
+          formattedDate: format(day1, 'd. MMMM', { locale: de }),
+          recipe: cookExtraRecipe,
+          isAlreadyPlanned: false,
+          synergyConnection: {
+            type: 'cook-extra',
+            partnerDayName: day2Name,
+            baseName,
+            tip: cookExtraRecipe.synergyTip || `Koche heute extra ${baseName} für morgen!`,
+            timeSaved: useLeftoversRecipe.timeSavedMinutes || 15,
+          },
         };
 
-        // Also annotate previous day
-        prevAssignment.synergyConnection = {
-          type: 'cook-extra',
-          partnerDayName: format(day, 'EEEE', { locale: de }),
-          baseName,
-          tip: prevAssignment.recipe.synergyTip || `Koche heute doppelt ${baseName} für morgen!`,
-          timeSaved: recipe.timeSavedMinutes || 15,
+        newAssignments[slotIdx + 1] = {
+          dateStr: format(day2, 'yyyy-MM-dd'),
+          dayName: day2Name,
+          formattedDate: format(day2, 'd. MMMM', { locale: de }),
+          recipe: useLeftoversRecipe,
+          isAlreadyPlanned: false,
+          synergyConnection: {
+            type: 'use-leftovers',
+            partnerDayName: day1Name,
+            baseName,
+            tip: useLeftoversRecipe.synergyTip || `Nutzt den gekochten ${baseName} von gestern!`,
+            timeSaved: useLeftoversRecipe.timeSavedMinutes || 15,
+          },
         };
+
+        pairsPlaced++;
       }
+    }
 
-      newAssignments.push({
+    // 3. Fill all remaining open days
+    for (let dayIdx = 0; dayIdx < weekDays.length; dayIdx++) {
+      if (newAssignments[dayIdx]) continue;
+
+      const day = weekDays[dayIdx];
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const prevAssignment = dayIdx > 0 ? newAssignments[dayIdx - 1] : undefined;
+      const lastProtein = prevAssignment?.recipe?.mainProtein;
+
+      const recipe = pickCandidate(sourceMode, themeFilter, chosenIds, lastProtein, proteinCounts);
+      chosenIds.add(recipe.id);
+      const prot = recipe.mainProtein || 'vegetarian';
+      proteinCounts.set(prot, (proteinCounts.get(prot) || 0) + 1);
+
+      newAssignments[dayIdx] = {
         dateStr,
         dayName: format(day, 'EEEE', { locale: de }),
         formattedDate: format(day, 'd. MMMM', { locale: de }),
         recipe,
         isAlreadyPlanned: false,
-        synergyConnection,
-      });
+      };
     }
 
-    setAssignments(newAssignments);
+    setAssignments(newAssignments as PlannedDayAssignment[]);
   };
 
-  // Single-day shuffle: replace one day's recipe while preserving zero duplicates
+  // Single-day shuffle: replace one day's recipe while preserving zero duplicates and checking synergy
   const handleShuffleSingleDay = (index: number) => {
     setAssignments((prev) => {
       const current = prev[index];
@@ -366,27 +440,87 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       const otherIds = new Set(prev.filter((_, i) => i !== index).map((a) => a.recipe.id));
       otherIds.add(current.recipe.id); // exclude current to get a brand-new distinct one
 
-      const prevProtein = index > 0 ? prev[index - 1]?.recipe.mainProtein : undefined;
-      const newRecipe = pickCandidate(sourceMode, themeFilter, otherIds, prevProtein);
+      const prevAssignment = index > 0 ? prev[index - 1] : undefined;
+      const nextAssignment = index < prev.length - 1 ? prev[index + 1] : undefined;
+
+      let synergyPartner: Recipe | undefined;
+      let synergyConn: PlannedDayAssignment['synergyConnection'] = undefined;
+
+      // If previous day has cook-extra, prioritize matching use-leftovers!
+      if (prevAssignment?.recipe.synergyRole === 'cook-extra' && prevAssignment.recipe.synergyBase) {
+        const base = prevAssignment.recipe.synergyBase;
+        synergyPartner = allAvailableRecipes.find(
+          (r) => r.synergyBase === base && r.synergyRole === 'use-leftovers' && !otherIds.has(r.id)
+        );
+        if (synergyPartner) {
+          const baseName =
+            base === 'rice'
+              ? 'Reis'
+              : base === 'potatoes'
+              ? 'Kartoffeln'
+              : base === 'chicken'
+              ? 'Hähnchen'
+              : base === 'pasta'
+              ? 'Nudeln'
+              : 'Süßkartoffeln / Gemüse';
+          synergyConn = {
+            type: 'use-leftovers',
+            partnerDayName: prevAssignment.dayName,
+            baseName,
+            tip: synergyPartner.synergyTip || `Nutzt den gekochten ${baseName} von gestern!`,
+            timeSaved: synergyPartner.timeSavedMinutes || 15,
+          };
+        }
+      } else if (nextAssignment?.recipe.synergyRole === 'use-leftovers' && nextAssignment.recipe.synergyBase) {
+        // If next day is use-leftovers, prioritize cook-extra for this day!
+        const base = nextAssignment.recipe.synergyBase;
+        synergyPartner = allAvailableRecipes.find(
+          (r) => r.synergyBase === base && r.synergyRole === 'cook-extra' && !otherIds.has(r.id)
+        );
+        if (synergyPartner) {
+          const baseName =
+            base === 'rice'
+              ? 'Reis'
+              : base === 'potatoes'
+              ? 'Kartoffeln'
+              : base === 'chicken'
+              ? 'Hähnchen'
+              : base === 'pasta'
+              ? 'Nudeln'
+              : 'Süßkartoffeln / Gemüse';
+          synergyConn = {
+            type: 'cook-extra',
+            partnerDayName: nextAssignment.dayName,
+            baseName,
+            tip: synergyPartner.synergyTip || `Koche heute doppelt ${baseName} für morgen vor!`,
+            timeSaved: synergyPartner.timeSavedMinutes || 15,
+          };
+        }
+      }
+
+      const prevProtein = prevAssignment?.recipe.mainProtein;
+      const newRecipe =
+        synergyPartner || pickCandidate(sourceMode, themeFilter, otherIds, prevProtein);
 
       const updated = [...prev];
       updated[index] = {
         ...current,
         recipe: newRecipe,
         isAlreadyPlanned: false,
-        synergyConnection: undefined,
+        synergyConnection: synergyConn,
       };
       return updated;
     });
   };
 
-  // Consolidated ingredients & budget calculations
-  const { consolidatedIngredients, totalEstimatedCost, totalTimeSaved } = useMemo(() => {
+  // Consolidated ingredients & budget calculations (dynamically adjusted for syncScope)
+  const { consolidatedIngredients, totalEstimatedCost, totalTimeSaved, relevantCount } = useMemo(() => {
+    const relevantAssignments = syncScope === 'first4days' ? assignments.slice(0, 4) : assignments;
     const map = new Map<string, { name: string; amounts: string[]; category?: string }>();
     let totalCost = 0;
     let timeSaved = 0;
 
-    assignments.forEach((a) => {
+    relevantAssignments.forEach((a) => {
       totalCost += a.recipe.estimatedCost || 13.5;
       if (a.synergyConnection?.type === 'use-leftovers') {
         timeSaved += a.synergyConnection.timeSaved || 15;
@@ -426,8 +560,9 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       consolidatedIngredients: Array.from(map.values()),
       totalEstimatedCost: Math.round(totalCost * 10) / 10,
       totalTimeSaved: timeSaved,
+      relevantCount: relevantAssignments.length,
     };
-  }, [assignments]);
+  }, [assignments, syncScope]);
 
   useEffect(() => {
     if (isOpen) {
@@ -672,7 +807,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                       Wocheneinkauf & Budget-Schätzung
                     </h5>
                     <p className="text-[11px] font-semibold text-emerald-800/80 dark:text-emerald-300/80">
-                      {consolidatedIngredients.length} zusammengeführte Zutaten für 7 Familien-Abendessen
+                      {consolidatedIngredients.length} zusammengeführte Zutaten für {relevantCount} Familien-Abendessen
                     </p>
                   </div>
                 </div>
@@ -731,7 +866,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
 
           {/* Footer actions */}
           <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full md:w-auto">
               <label className="flex items-center gap-2 cursor-pointer text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 shrink-0">
                 <input
                   type="checkbox"
@@ -744,15 +879,31 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
               </label>
 
               {syncToGroceries && (
-                <select
-                  value={syncScope}
-                  onChange={(e) => setSyncScope(e.target.value as 'all' | 'first4days')}
-                  className="text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 px-2.5 py-1.5 rounded-xl cursor-pointer"
-                  title="Wähle, ob alle Tage oder nur die ersten Tage sofort eingekauft werden sollen"
-                >
-                  <option value="all">Alle {assignments.length} Tage (inkl. Frische-Hinweise)</option>
-                  <option value="first4days">Nur nächste 3–4 Tage (Frische-Einkauf)</option>
-                </select>
+                <div className="flex items-center bg-emerald-100/70 dark:bg-emerald-950/80 p-0.5 rounded-xl border border-emerald-300 dark:border-emerald-700/80 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSyncScope('all')}
+                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all ${
+                      syncScope === 'all'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white'
+                    }`}
+                  >
+                    Alle {assignments.length} Tage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSyncScope('first4days')}
+                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all flex items-center gap-1 ${
+                      syncScope === 'first4days'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>⚡ Nur 3–4 Tage</span>
+                    <span className="text-[10px] opacity-85">(Frische)</span>
+                  </button>
+                </div>
               )}
             </div>
 

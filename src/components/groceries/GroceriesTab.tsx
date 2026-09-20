@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GroceryItem, StoreDefinition, FamilyMember } from '../../types';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -117,6 +117,59 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   const uncheckedGroceries = filteredGroceries.filter((g) => !g.checked);
   const checkedGroceries = filteredGroceries.filter((g) => g.checked);
 
+  // Chronological Date Sorting:
+  // 1. Manually added items (no targetDate) stay on top! (User: 'when we manually add things they should also stay on top')
+  // 2. Upcoming meals sorted chronologically (today, tomorrow, day+2, day+3...)
+  // 3. For items on the same day: perishable items first!
+  const getSortScore = (item: GroceryItem): { priority: number; dateStr: string } => {
+    if (!item.targetDate) {
+      return { priority: 0, dateStr: '' };
+    }
+    const daysUntil = getDaysUntil(item.targetDate);
+    if (daysUntil === null) {
+      return { priority: 0, dateStr: '' };
+    }
+    if (daysUntil <= 0) {
+      return { priority: 1, dateStr: item.targetDate };
+    }
+    return { priority: 10 + daysUntil, dateStr: item.targetDate };
+  };
+
+  const sortedUncheckedGroceries = useMemo(() => {
+    return [...uncheckedGroceries].sort((a, b) => {
+      const aScore = getSortScore(a);
+      const bScore = getSortScore(b);
+
+      if (aScore.priority !== bScore.priority) {
+        return aScore.priority - bScore.priority;
+      }
+
+      if (aScore.dateStr !== bScore.dateStr) {
+        return aScore.dateStr.localeCompare(bScore.dateStr);
+      }
+
+      if (a.isPerishable && !b.isPerishable) return -1;
+      if (!a.isPerishable && b.isPerishable) return 1;
+
+      return a.name.localeCompare(b.name, 'de');
+    });
+  }, [uncheckedGroceries]);
+
+  // Section cues: immediate (manual + next 3 days) vs future (4+ days ahead)
+  const immediateItems = useMemo(() => {
+    return sortedUncheckedGroceries.filter((item: GroceryItem) => {
+      const days = getDaysUntil(item.targetDate);
+      return days === null || days <= 3;
+    });
+  }, [sortedUncheckedGroceries]);
+
+  const futureItems = useMemo(() => {
+    return sortedUncheckedGroceries.filter((item: GroceryItem) => {
+      const days = getDaysUntil(item.targetDate);
+      return days !== null && days > 3;
+    });
+  }, [sortedUncheckedGroceries]);
+
   // Mathematically accurate progress calculation
   const totalItems = filteredGroceries.length;
   const completedItems = checkedGroceries.length;
@@ -157,6 +210,154 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
     if (!lastToggledItem) return;
     onToggleGrocery(lastToggledItem.id);
     setLastToggledItem(null);
+  };
+
+  const formatDateBadge = (targetDate?: string) => {
+    if (!targetDate) return null;
+    try {
+      const parts = targetDate.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return format(d, 'EEE d.M.', { locale: de });
+      }
+    } catch {
+      // fallback
+    }
+    return targetDate;
+  };
+
+  const renderGroceryRow = (item: GroceryItem) => {
+    const addedBy = members.find((m) => m.id === item.addedByMemberId);
+    const daysUntil = getDaysUntil(item.targetDate);
+    const dateFormatted = formatDateBadge(item.targetDate);
+
+    return (
+      <div
+        key={item.id}
+        onClick={() => handleCheckItem(item.id, item.name)}
+        className="cursor-pointer group duo-card p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex items-center justify-between gap-3 shadow-xs active:scale-[0.99]"
+      >
+        {/* Left: Checkbox */}
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border-2 border-stone-300 dark:border-slate-700 group-hover:border-emerald-500 bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 transition-colors shadow-2xs">
+          <Check className="w-4 h-4 sm:w-5 sm:h-5 text-transparent group-hover:text-emerald-400 transition-colors" />
+        </div>
+
+        {/* Middle: Item Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white truncate">
+              {item.name}
+            </span>
+            {item.amount && (
+              <span className="text-[11px] sm:text-xs font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 shrink-0">
+                {item.amount}
+              </span>
+            )}
+
+            {/* Freshness Alert or Planned Date Badge */}
+            {(() => {
+              if (!item.targetDate) {
+                return (
+                  <span
+                    title="Manuell hinzugefügt (sofort einkaufen)"
+                    className="text-[10px] sm:text-[11px] font-black bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-stone-200 dark:border-slate-700 shrink-0 flex items-center gap-1"
+                  >
+                    <span>⚡ Sofort</span>
+                  </span>
+                );
+              }
+
+              if (item.isPerishable && daysUntil !== null && daysUntil > 3) {
+                return (
+                  <span
+                    title={`Geplant für ${item.targetDate}: Leicht verderblich – erst kurz vor dem Kochen kaufen!`}
+                    className="text-[10px] sm:text-[11px] font-black bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-200 px-2 py-0.5 rounded-md border border-rose-300 dark:border-rose-700 shrink-0 flex items-center gap-1"
+                  >
+                    <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                    <span>Erst {dateFormatted} (Frische!)</span>
+                  </span>
+                );
+              }
+
+              return (
+                <span className="text-[10px] sm:text-[11px] font-bold bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-200 px-1.5 py-0.5 rounded-md border border-teal-200 dark:border-teal-800 shrink-0 flex items-center gap-1">
+                  <Calendar className="w-2.5 h-2.5 text-teal-600" />
+                  <span>
+                    {daysUntil === 0
+                      ? '🔥 Heute'
+                      : daysUntil === 1
+                      ? '🗓️ Morgen'
+                      : dateFormatted}
+                  </span>
+                </span>
+              );
+            })()}
+          </div>
+
+          <div
+            className="flex items-center gap-2 mt-1 flex-wrap"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <select
+              value={item.store}
+              onChange={(e) => onStoreChange(item.id, item.name, e.target.value)}
+              title="Laden wechseln"
+              className="text-[11px] sm:text-xs font-bold bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 focus:outline-none cursor-pointer"
+            >
+              {stores.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.icon} {s.name}
+                </option>
+              ))}
+            </select>
+
+            {item.recipeTitle && (
+              <span
+                title={`Aus Rezept: ${item.recipeTitle}`}
+                className="text-[11px] font-medium text-stone-400 dark:text-slate-500 truncate max-w-[130px] sm:max-w-[200px]"
+              >
+                🍽️ {item.recipeTitle}
+              </span>
+            )}
+
+            {addedBy && (
+              <span
+                title={`Hinzugefügt von ${addedBy.name}`}
+                className="text-[11px] font-semibold text-stone-400 dark:text-slate-500 flex items-center gap-1"
+              >
+                <span>{addedBy.avatar}</span>
+                <span className="truncate max-w-[80px] sm:max-w-none">{addedBy.name}</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right Actions: Staple + Delete */}
+        <div
+          className="flex items-center gap-1 sm:gap-1.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => onMoveToStaples(item.id, item.name)}
+            title="Als Vorrat zu Hause markieren"
+            className="px-2 py-1.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-stone-500 hover:text-amber-700 dark:hover:text-amber-300 text-xs font-bold flex items-center gap-1 transition-colors"
+          >
+            <span>🏠</span>
+            <span className="hidden sm:inline text-[11px]">Vorrat</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDeleteGrocery(item.id)}
+            className="w-8 h-8 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+            title="Löschen"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -431,7 +632,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
 
       {/* ACTIVE UNCHECKED GROCERY ITEMS */}
       <div className="space-y-3">
-        {uncheckedGroceries.length === 0 ? (
+        {sortedUncheckedGroceries.length === 0 ? (
           <div className="duo-card p-8 sm:p-12 text-center bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-2">
             <span className="text-4xl block">🎉</span>
             <h3 className="text-lg font-black text-stone-900 dark:text-white">
@@ -443,127 +644,43 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                 : 'Keine offenen Artikel auf der Liste. Genießt eure Familienzeit!'}
             </p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {uncheckedGroceries.map((item) => {
-              const addedBy = members.find((m) => m.id === item.addedByMemberId);
+        ) : timeframeFilter === 'all' && futureItems.length > 0 && immediateItems.length > 0 ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1 pt-1">
+                <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⚡</span> Sofort & Nächste Tage ({immediateItems.length})
+                </span>
+                <span className="text-[11px] font-bold text-stone-400 dark:text-slate-500">
+                  Manuelle Einträge & zeitnahe Mahlzeiten
+                </span>
+              </div>
+              {immediateItems.map(renderGroceryRow)}
+            </div>
 
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleCheckItem(item.id, item.name)}
-                  className="cursor-pointer group duo-card p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex items-center justify-between gap-3 shadow-xs active:scale-[0.99]"
-                >
-                  {/* Left: Checkbox */}
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border-2 border-stone-300 dark:border-slate-700 group-hover:border-emerald-500 bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 transition-colors shadow-2xs">
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-transparent group-hover:text-emerald-400 transition-colors" />
-                  </div>
-
-                  {/* Middle: Item Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white truncate">
-                        {item.name}
-                      </span>
-                      {item.amount && (
-                        <span className="text-[11px] sm:text-xs font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 shrink-0">
-                          {item.amount}
-                        </span>
-                      )}
-
-                      {/* Freshness Alert or Planned Date Badge */}
-                      {(() => {
-                        const daysUntil = getDaysUntil(item.targetDate);
-                        if (item.isPerishable && daysUntil !== null && daysUntil > 3) {
-                          return (
-                            <span
-                              title={`Geplant für ${item.targetDate}: Leicht verderblich – erst kurz vor dem Kochen kaufen!`}
-                              className="text-[10px] sm:text-[11px] font-black bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-200 px-2 py-0.5 rounded-md border border-rose-300 dark:border-rose-700 shrink-0 flex items-center gap-1"
-                            >
-                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                              <span>Erst {format(new Date(item.targetDate!), 'EEE d.M.', { locale: de })} (Frische!)</span>
-                            </span>
-                          );
-                        }
-                        if (item.targetDate) {
-                          return (
-                            <span className="text-[10px] sm:text-[11px] font-bold bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-200 px-1.5 py-0.5 rounded-md border border-teal-200 dark:border-teal-800 shrink-0 flex items-center gap-1">
-                              <Calendar className="w-2.5 h-2.5 text-teal-600" />
-                              <span>{daysUntil === 0 ? 'Heute' : daysUntil === 1 ? 'Morgen' : format(new Date(item.targetDate), 'EEE d.M.', { locale: de })}</span>
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
+            <div className="pt-2 pb-1 space-y-2">
+              <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-2 border-dashed border-amber-300/80 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base shrink-0">🗓️</span>
+                  <div>
+                    <div className="text-xs font-black text-amber-950 dark:text-amber-200">
+                      Für spätere Tage & Folgewoche ({futureItems.length})
                     </div>
-
-                    <div
-                      className="flex items-center gap-2 mt-1 flex-wrap"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <select
-                        value={item.store}
-                        onChange={(e) => onStoreChange(item.id, item.name, e.target.value)}
-                        title="Laden wechseln"
-                        className="text-[11px] sm:text-xs font-bold bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 focus:outline-none cursor-pointer"
-                      >
-                        {stores.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.icon} {s.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      {item.recipeTitle && (
-                        <span
-                          title={`Aus Rezept: ${item.recipeTitle}`}
-                          className="text-[11px] font-medium text-stone-400 dark:text-slate-500 truncate max-w-[130px] sm:max-w-[200px]"
-                        >
-                          🍽️ {item.recipeTitle}
-                        </span>
-                      )}
-
-                      {addedBy && (
-                        <span
-                          title={`Hinzugefügt von ${addedBy.name}`}
-                          className="text-[11px] font-semibold text-stone-400 dark:text-slate-500 flex items-center gap-1"
-                        >
-                          <span>{addedBy.avatar}</span>
-                          <span className="truncate max-w-[80px] sm:max-w-none">{addedBy.name}</span>
-                        </span>
-                      )}
+                    <div className="text-[11px] font-medium text-amber-800/80 dark:text-amber-300/80">
+                      💡 Frische Zutaten (Fleisch, Fisch) erst kurz vor der Zubereitung kaufen
                     </div>
-                  </div>
-
-                  {/* Right Actions: Staple + Delete */}
-                  <div
-                    className="flex items-center gap-1 sm:gap-1.5 shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onMoveToStaples(item.id, item.name)}
-                      title="Als Vorrat zu Hause markieren"
-                      className="px-2 py-1.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-stone-500 hover:text-amber-700 dark:hover:text-amber-300 text-xs font-bold flex items-center gap-1 transition-colors"
-                    >
-                      <span>🏠</span>
-                      <span className="hidden sm:inline text-[11px]">Vorrat</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onDeleteGrocery(item.id)}
-                      className="w-8 h-8 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
-                      title="Löschen"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+              {futureItems.map(renderGroceryRow)}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sortedUncheckedGroceries.map(renderGroceryRow)}
           </div>
         )}
+      </div>
 
         {/* CHECKED OFF / COMPLETED SECTION (Collapsible) */}
         {checkedGroceries.length > 0 && (
@@ -631,7 +748,6 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
             )}
           </div>
         )}
-      </div>
     </div>
   );
 };
