@@ -15,6 +15,7 @@ import {
   Gift,
   Trash2,
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 export const ListsAndChoresView: React.FC = () => {
   const {
@@ -83,6 +84,7 @@ export const ListsAndChoresView: React.FC = () => {
   const [choreAssignees, setChoreAssignees] = useState<string[]>([]);
   const [choreFrequency, setChoreFrequency] = useState<Chore['frequency']>('once');
   const [choreStars, setChoreStars] = useState(3);
+  const [choreDueDate, setChoreDueDate] = useState<string>('');
 
   const openAddChore = () => {
     setEditingChoreId(null);
@@ -90,6 +92,7 @@ export const ListsAndChoresView: React.FC = () => {
     setChoreAssignees([]); // Default: Offen für alle (Wer zuerst kommt)
     setChoreFrequency('once');
     setChoreStars(3);
+    setChoreDueDate(format(new Date(), 'yyyy-MM-dd'));
     setIsAddChoreOpen(true);
   };
 
@@ -105,6 +108,7 @@ export const ListsAndChoresView: React.FC = () => {
     setChoreAssignees(existingAssignees);
     setChoreFrequency(chore.frequency);
     setChoreStars(chore.stars);
+    setChoreDueDate(chore.dueDate || '');
     setIsAddChoreOpen(true);
   };
 
@@ -118,6 +122,7 @@ export const ListsAndChoresView: React.FC = () => {
         assignedMemberIds: choreAssignees,
         frequency: choreFrequency,
         stars: Number(choreStars),
+        dueDate: choreDueDate || undefined,
       });
     } else {
       addChore(
@@ -125,11 +130,13 @@ export const ListsAndChoresView: React.FC = () => {
         choreAssignees[0] || '',
         choreFrequency,
         Number(choreStars),
-        choreAssignees
+        choreAssignees,
+        choreDueDate || undefined
       );
     }
     setChoreTitle('');
     setChoreAssignees([]);
+    setChoreDueDate('');
     setEditingChoreId(null);
     setIsAddChoreOpen(false);
   };
@@ -518,6 +525,21 @@ export const ListsAndChoresView: React.FC = () => {
                       : choreAssignees.length === 1
                       ? `🎯 Feste Zuweisung an ${members.find((m) => m.id === choreAssignees[0])?.name || 'Mitglied'}`
                       : `🤝 Team-Aufgabe für ${choreAssignees.map((id) => members.find((m) => m.id === id)?.name).filter(Boolean).join(' & ')} (Wer sie zuerst erledigt, erhält die Sterne)`}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    📅 Kalender-Datum / Fälligkeit (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={choreDueDate}
+                    onChange={(e) => setChoreDueDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                  />
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                    Erscheint an diesem Tag direkt im Familienkalender.
                   </p>
                 </div>
 

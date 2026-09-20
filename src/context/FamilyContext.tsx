@@ -145,7 +145,7 @@ export interface FamilyContextType {
   isItemInStock: (name: string) => boolean;
 
   chores: Chore[];
-  addChore: (title: string, assignedMemberId: string, frequency: Chore['frequency'], stars: number, assignedMemberIds?: string[]) => void;
+  addChore: (title: string, assignedMemberId: string, frequency: Chore['frequency'], stars: number, assignedMemberIds?: string[], dueDate?: string) => void;
   updateChore: (id: string, updates: Partial<Omit<Chore, 'id'>>) => void;
   toggleChore: (id: string, completingMemberId?: string) => void;
   deleteChore: (id: string) => void;
@@ -1274,7 +1274,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     assignedMemberId: string,
     frequency: Chore['frequency'],
     stars: number,
-    assignedMemberIds?: string[]
+    assignedMemberIds?: string[],
+    dueDate?: string
   ) => {
     const ids = assignedMemberIds && assignedMemberIds.length > 0
       ? assignedMemberIds
@@ -1288,6 +1289,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       frequency,
       completed: false,
       stars: Math.max(1, Number(stars) || 1),
+      dueDate: dueDate ? dueDate.trim() : undefined,
     };
     setChores((prev) => [newChore, ...prev]);
     syncChoreToCloud(newChore);

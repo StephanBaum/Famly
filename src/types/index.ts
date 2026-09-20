@@ -184,6 +184,56 @@ export const isChoreRelevantForMember = (chore: Chore, memberId: string | 'all')
   return ids.includes(memberId);
 };
 
+export const isChoreOnDate = (chore: Chore, dateInput: Date | string): boolean => {
+  const dateObj = typeof dateInput === 'string' ? new Date(dateInput + 'T00:00:00') : dateInput;
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // 1. Explicit dueDate
+  if (chore.dueDate) {
+    if (chore.dueDate === dateStr) return true;
+
+    // Recurring chores with a dueDate repeat on that weekday
+    if (chore.frequency === 'weekly') {
+      const dueDay = new Date(chore.dueDate + 'T00:00:00').getDay();
+      return dateObj.getDay() === dueDay;
+    }
+    if (chore.frequency === '2x_weekly') {
+      const dueDay = new Date(chore.dueDate + 'T00:00:00').getDay();
+      const secondDay = (dueDay + 3) % 7;
+      return dateObj.getDay() === dueDay || dateObj.getDay() === secondDay;
+    }
+    if (chore.frequency === 'daily') {
+      return true;
+    }
+    return false;
+  }
+
+  // 2. Frequency without explicit dueDate
+  if (chore.frequency === 'daily') {
+    return true;
+  }
+  if (chore.frequency === 'weekly') {
+    // Default weekly to Saturday (day 6) if no dueDate
+    return dateObj.getDay() === 6;
+  }
+  if (chore.frequency === '2x_weekly') {
+    // Default 2x_weekly to Tuesday (day 2) and Friday (day 5)
+    return dateObj.getDay() === 2 || dateObj.getDay() === 5;
+  }
+  if (chore.frequency === 'once') {
+    // If no dueDate, show on today so it is not lost
+    return dateStr === todayStr;
+  }
+
+  return false;
+};
+
 export interface PinnedNote {
   id: string;
   title: string;
