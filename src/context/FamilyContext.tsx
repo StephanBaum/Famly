@@ -69,6 +69,7 @@ interface FamilyContextType {
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Recipe;
   updateRecipe: (id: string, updates: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
+  toggleFavoriteRecipe: (id: string) => void;
 
   mealPlans: MealPlanDay[];
   setMealSlot: (
@@ -563,6 +564,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
         return modified ? newDay : day;
       })
+    );
+  };
+
+  const toggleFavoriteRecipe = (id: string) => {
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, isFavorite: !r.isFavorite } : r))
     );
   };
 
@@ -1298,6 +1305,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addRecipe,
         updateRecipe,
         deleteRecipe,
+        toggleFavoriteRecipe,
         mealPlans,
         setMealSlot,
         addRecipeIngredientsToGrocery,

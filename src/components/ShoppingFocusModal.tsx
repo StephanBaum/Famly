@@ -111,8 +111,8 @@ export const ShoppingFocusModal: React.FC<ShoppingFocusModalProps> = ({
             </div>
           </div>
 
-          {/* Store Filter Tabs */}
-          <div className="max-w-2xl mx-auto mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* Store Filter Tabs (wraps cleanly) */}
+          <div className="max-w-2xl mx-auto mt-3 flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveStore('all')}

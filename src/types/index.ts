@@ -75,6 +75,8 @@ export interface Recipe {
   tags?: string[];
   sourceUrl?: string;
   sourceType?: 'link' | 'photo' | 'describe' | 'manual';
+  isFavorite?: boolean;
+  theme?: 'healthy' | 'fresh' | 'warming' | 'quick' | 'kids';
 }
 
 export interface MealPlanDay {

@@ -139,7 +139,9 @@ export const INITIAL_RECIPES: Recipe[] = [
     prepTime: '20 Min.',
     servings: 5,
     category: 'quick',
-    imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281057?auto=format&fit=crop&w=600&q=80',
+    theme: 'fresh',
+    isFavorite: true,
+    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80',
     notes: 'Super schnelles Abendessen unter der Woche. Leo liebt extra viel Parmesan darauf!',
     ingredients: [
       { name: 'Fettuccine oder Tagliatelle', amount: '500g', category: 'pantry' },
@@ -157,6 +159,8 @@ export const INITIAL_RECIPES: Recipe[] = [
     prepTime: '30 Min.',
     servings: 5,
     category: 'family-favorite',
+    theme: 'kids',
+    isFavorite: true,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=600&q=80',
     notes: 'Taco-Dienstag Tradition! Alle Zutaten auf den Tisch stellen zum Selberbelegen.',
     ingredients: [
@@ -175,6 +179,8 @@ export const INITIAL_RECIPES: Recipe[] = [
     prepTime: '50 Min.',
     servings: 6,
     category: 'comfort',
+    theme: 'warming',
+    isFavorite: false,
     imageUrl: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=600&q=80',
     notes: 'Perfektes Sonntagsessen für die ganze Familie mit knuspriger Blätterteighaube.',
     ingredients: [
@@ -192,6 +198,8 @@ export const INITIAL_RECIPES: Recipe[] = [
     prepTime: '25 Min.',
     servings: 5,
     category: 'family-favorite',
+    theme: 'kids',
+    isFavorite: true,
     imageUrl: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=600&q=80',
     notes: 'Freitagabend ist Pizza-Abend! Mia legt gern Smileys mit Basilikumblättern.',
     ingredients: [
@@ -208,6 +216,8 @@ export const INITIAL_RECIPES: Recipe[] = [
     prepTime: '20 Min.',
     servings: 5,
     category: 'baking',
+    theme: 'kids',
+    isFavorite: false,
     imageUrl: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=600&q=80',
     notes: 'Wochenend-Frühstück mit echtem Ahornsirup und frischen Beeren.',
     ingredients: [

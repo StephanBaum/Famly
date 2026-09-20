@@ -102,8 +102,8 @@ export const PhotoStreamView: React.FC = () => {
       {!selectedGallery ? (
         <div className="space-y-5">
           
-          {/* Category Chips Bar */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* Category Chips Bar (wraps cleanly) */}
+          <div className="flex flex-wrap items-center gap-2">
             {categories.map((cat) => (
               <button
                 key={cat.id}

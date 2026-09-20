@@ -307,7 +307,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                 <label className="block text-xs font-extrabold text-stone-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
                   Wer lädt diese Fotos hoch?
                 </label>
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <div className="flex flex-wrap items-center gap-2">
                   {members.map((m) => {
                     const isSelected = uploaderMemberId === m.id;
                     return (
