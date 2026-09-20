@@ -18,7 +18,7 @@ import {
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
-import { FamilyMember } from '../types';
+import { FamilyMember, Chore, isChoreRelevantForMember } from '../types';
 import { ModalPortal } from '../components/ModalPortal';
 
 interface DashboardViewProps {
@@ -53,6 +53,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [noteTag, setNoteTag] = useState<'urgent' | 'info' | 'fun' | 'wifi'>('info');
   const [selectedChildForModal, setSelectedChildForModal] = useState<FamilyMember | null>(null);
   const [childModalInitialEdit, setChildModalInitialEdit] = useState<boolean>(false);
+  const [claimingChore, setClaimingChore] = useState<Chore | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -72,10 +73,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     : null;
 
   // Filter chores for member
-  const relevantChores = chores.filter((c) =>
-    currentMemberId === 'all' ? true : c.assignedMemberId === currentMemberId
-  );
+  const relevantChores = chores.filter((c) => isChoreRelevantForMember(c, currentMemberId));
   const completedChoresCount = relevantChores.filter((c) => c.completed).length;
+
+  const getEligibleClaimants = (chore: Chore): FamilyMember[] => {
+    if (chore.assignedMemberIds && chore.assignedMemberIds.length > 0) {
+      const matched = members.filter((m) => chore.assignedMemberIds!.includes(m.id));
+      if (matched.length > 0) return matched;
+    }
+    const kids = members.filter((m) => m.isChild);
+    return kids.length > 0 ? kids : members;
+  };
+
+  const handleDashboardChoreClick = (chore: Chore) => {
+    if (chore.completed) {
+      toggleChore(chore.id);
+      return;
+    }
+
+    if (currentMemberId !== 'all') {
+      toggleChore(chore.id, currentMemberId);
+      return;
+    }
+
+    const assignees =
+      chore.assignedMemberIds && chore.assignedMemberIds.length > 0
+        ? members.filter((m) => chore.assignedMemberIds!.includes(m.id))
+        : chore.assignedMemberId
+        ? members.filter((m) => m.id === chore.assignedMemberId)
+        : [];
+
+    if (assignees.length === 1) {
+      toggleChore(chore.id, assignees[0].id);
+    } else {
+      setClaimingChore(chore);
+    }
+  };
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -488,14 +521,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             ) : (
               <div className="space-y-2">
                 {relevantChores.slice(0, 4).map((chore) => {
-                  const assigned = members.find((m) => m.id === chore.assignedMemberId);
+                  const assignees =
+                    chore.assignedMemberIds && chore.assignedMemberIds.length > 0
+                      ? members.filter((m) => chore.assignedMemberIds!.includes(m.id))
+                      : chore.assignedMemberId
+                      ? members.filter((m) => m.id === chore.assignedMemberId)
+                      : [];
+                  const completedBy = members.find((m) => m.id === chore.completedByMemberId);
+
                   return (
                     <div
                       key={chore.id}
-                      onClick={() => toggleChore(chore.id)}
+                      onClick={() => handleDashboardChoreClick(chore)}
                       className={`cursor-pointer flex items-center justify-between p-3 rounded-2xl border-2 transition-all ${
                         chore.completed
-                          ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-60'
+                          ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-65'
                           : 'bg-white dark:bg-slate-800/80 border-b-4 border-stone-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
                       }`}
                     >
@@ -513,10 +553,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           >
                             {chore.title}
                           </p>
-                          {assigned && currentMemberId === 'all' && (
+
+                          {chore.completed ? (
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 mt-0.5">
+                              <span>✓ Erledigt von</span>
+                              {completedBy ? (
+                                <>
+                                  <span>{completedBy.avatar}</span>
+                                  <span className="font-extrabold">{completedBy.name}</span>
+                                </>
+                              ) : (
+                                <span>einem Familienmitglied</span>
+                              )}
+                            </span>
+                          ) : currentMemberId === 'all' && (
                             <span className="text-[10px] text-stone-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5">
-                              <span>{assigned.avatar}</span>
-                              <span>{assigned.name}</span>
+                              {assignees.length === 0 ? (
+                                <span className="text-teal-600 dark:text-teal-400">👥 Offen für alle</span>
+                              ) : assignees.length === 1 ? (
+                                <>
+                                  <span>{assignees[0].avatar}</span>
+                                  <span>{assignees[0].name}</span>
+                                </>
+                              ) : (
+                                <span className="text-indigo-600 dark:text-indigo-400">
+                                  👥 {assignees.map((a) => a.name).join(' & ')}
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>
@@ -709,6 +772,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </form>
           </div>
         </div>
+        </ModalPortal>
+      )}
+
+      {/* Claim Picker Modal for Open / Multi-Assignee Chores */}
+      {claimingChore && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 text-center">
+              <span className="text-4xl mb-2 block">🌟</span>
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1">
+                Wer hat es erledigt?
+              </h3>
+              <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 mb-4">
+                „{claimingChore.title}“ (+{claimingChore.stars} ⭐)
+              </p>
+
+              <div className="space-y-2 mb-4">
+                {getEligibleClaimants(claimingChore).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      toggleChore(claimingChore.id, m.id);
+                      setClaimingChore(null);
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 hover:bg-amber-50 hover:border-amber-300 dark:hover:bg-amber-950/40 dark:hover:border-amber-700 transition-all cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl">{m.avatar}</span>
+                      <div>
+                        <p className="text-sm font-black text-stone-900 dark:text-white">{m.name}</p>
+                        <p className="text-[10px] font-bold text-stone-400">{m.role}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-1 rounded-xl">
+                      +{claimingChore.stars} ⭐
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setClaimingChore(null)}
+                className="duo-btn duo-btn-white w-full py-2 text-xs font-bold rounded-xl"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
         </ModalPortal>
       )}
 

@@ -916,11 +916,11 @@ export const INITIAL_GROCERIES: GroceryItem[] = [
 ];
 
 export const INITIAL_CHORES: Chore[] = [
-  { id: 'c1', title: 'Familienhund Barnaby füttern & bürsten 🐕', assignedMemberId: 'm3', frequency: 'daily', completed: true, stars: 2 },
-  { id: 'c2', title: 'Geschirrspüler ausräumen & Tassen einräumen', assignedMemberId: 'm4', frequency: 'daily', completed: false, stars: 3 },
-  { id: 'c3', title: 'Altpapier & Bio-Tonne zur Straße bringen', assignedMemberId: 'm3', frequency: 'weekly', completed: false, stars: 4 },
-  { id: 'c4', title: 'Malsachen & Spielecke im Wohnzimmer aufräumen', assignedMemberId: 'm4', frequency: 'daily', completed: true, stars: 2 },
-  { id: 'c5', title: 'Tomatenpflanzen & Kräuterbeete im Garten gießen', assignedMemberId: 'm5', frequency: 'daily', completed: true, stars: 3 },
+  { id: 'c1', title: 'Familienhund Barnaby füttern & bürsten 🐕', assignedMemberId: 'm3', assignedMemberIds: ['m3'], completed: true, completedByMemberId: 'm3', stars: 2, frequency: 'daily' },
+  { id: 'c2', title: 'Geschirrspüler ausräumen & Tassen einräumen', assignedMemberId: '', assignedMemberIds: [], completed: false, stars: 3, frequency: 'daily' },
+  { id: 'c3', title: 'Altpapier & Bio-Tonne zur Straße bringen', assignedMemberId: 'm3', assignedMemberIds: ['m3', 'm4'], completed: false, stars: 4, frequency: 'weekly' },
+  { id: 'c4', title: 'Malsachen & Spielecke im Wohnzimmer aufräumen', assignedMemberId: 'm4', assignedMemberIds: ['m4'], completed: true, completedByMemberId: 'm4', stars: 2, frequency: 'daily' },
+  { id: 'c5', title: 'Tomatenpflanzen & Kräuterbeete im Garten gießen', assignedMemberId: 'm5', assignedMemberIds: ['m5'], completed: true, completedByMemberId: 'm5', stars: 3, frequency: 'daily' },
 ];
 
 export const INITIAL_NOTES: PinnedNote[] = [

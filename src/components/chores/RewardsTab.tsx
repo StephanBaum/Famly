@@ -16,7 +16,8 @@ interface RewardsTabProps {
   onDeleteClaim: (claimId: string) => void;
   onOpenAddReward: () => void;
   rewardError: string | null;
-  chores: Array<{ assignedMemberId: string; completed: boolean; stars: number }>;
+  chores: Array<{ assignedMemberId?: string; completed: boolean; stars: number }>;
+  getMemberTotalEarnedStars?: (memberId: string) => number;
 }
 
 export const RewardsTab: React.FC<RewardsTabProps> = ({
@@ -34,6 +35,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({
   onOpenAddReward,
   rewardError,
   chores,
+  getMemberTotalEarnedStars,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in">
@@ -64,9 +66,11 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({
           {eligibleRewardMembers.map((m) => {
             const balance = getMemberStarBalance(m.id);
             const isSelected = selectedChildForReward === m.id;
-            const totalEarned = chores
-              .filter((c) => c.assignedMemberId === m.id && c.completed)
-              .reduce((sum, c) => sum + c.stars, 0);
+            const totalEarned = getMemberTotalEarnedStars
+              ? getMemberTotalEarnedStars(m.id)
+              : chores
+                  .filter((c) => c.assignedMemberId === m.id && c.completed)
+                  .reduce((sum, c) => sum + c.stars, 0);
             const spent = rewardClaims
               .filter((c) => c.memberId === m.id)
               .reduce((sum, c) => sum + c.starsSpent, 0);

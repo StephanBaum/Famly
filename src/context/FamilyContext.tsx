@@ -145,9 +145,9 @@ export interface FamilyContextType {
   isItemInStock: (name: string) => boolean;
 
   chores: Chore[];
-  addChore: (title: string, assignedMemberId: string, frequency: Chore['frequency'], stars: number) => void;
+  addChore: (title: string, assignedMemberId: string, frequency: Chore['frequency'], stars: number, assignedMemberIds?: string[]) => void;
   updateChore: (id: string, updates: Partial<Omit<Chore, 'id'>>) => void;
-  toggleChore: (id: string) => void;
+  toggleChore: (id: string, completingMemberId?: string) => void;
   deleteChore: (id: string) => void;
 
   // Rewards & Gamification
@@ -159,6 +159,8 @@ export interface FamilyContextType {
   approveClaim: (claimId: string) => void;
   deleteClaim: (claimId: string) => void;
   getMemberStarBalance: (memberId: string) => number;
+  getMemberTotalEarnedStars: (memberId: string) => number;
+  addMemberStars: (memberId: string, amount: number) => void;
 
   notes: PinnedNote[];
   addNote: (title: string, content: string, tag: PinnedNote['tag'], isPinned?: boolean) => void;
@@ -210,6 +212,7 @@ const STORAGE_KEYS = {
   REWARD_CLAIMS: 'famly_reward_claims_v2',
   THEME: 'famly_theme_mode',
   FAMILY_NAME: 'famly_family_name',
+  EARNED_STARS: 'famly_earned_stars_v2',
 };
 
 export const INITIAL_REWARDS: Reward[] = [
@@ -330,6 +333,25 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     getStoredOrDefault(STORAGE_KEYS.REWARD_CLAIMS, [])
   );
 
+  // Permanent Star Bank / Ledger - stars earned by children are NEVER wiped on chore deletion!
+  const [earnedStars, setEarnedStars] = useState<Record<string, number>>(() => {
+    const stored = getStoredOrDefault<Record<string, number> | null>(STORAGE_KEYS.EARNED_STARS, null);
+    if (stored !== null) return stored;
+
+    // Backward compatibility & migration: seed from completed chores
+    const initialMap: Record<string, number> = {};
+    const existingChores = getStoredOrDefault<Chore[] | null>(STORAGE_KEYS.CHORES, null) || INITIAL_CHORES;
+    existingChores.forEach((c) => {
+      if (c.completed) {
+        const who = c.completedByMemberId || c.assignedMemberId || (c.assignedMemberIds && c.assignedMemberIds[0]);
+        if (who && who !== 'all') {
+          initialMap[who] = (initialMap[who] || 0) + (c.stars || 0);
+        }
+      }
+    });
+    return initialMap;
+  });
+
   // Stores & Learning states
   const [stores, setStores] = useState<StoreDefinition[]>(() =>
     getStoredOrDefault(STORAGE_KEYS.STORES, INITIAL_STORES)
@@ -424,6 +446,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.REWARD_CLAIMS, JSON.stringify(rewardClaims));
   }, [rewardClaims]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.EARNED_STARS, JSON.stringify(earnedStars));
+  }, [earnedStars]);
 
   // Supabase Realtime Live-Sync Subscription
   useEffect(() => {
@@ -1247,15 +1273,21 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     title: string,
     assignedMemberId: string,
     frequency: Chore['frequency'],
-    stars: number
+    stars: number,
+    assignedMemberIds?: string[]
   ) => {
+    const ids = assignedMemberIds && assignedMemberIds.length > 0
+      ? assignedMemberIds
+      : (assignedMemberId && assignedMemberId !== 'all' && assignedMemberId !== 'anyone' ? [assignedMemberId] : []);
+
     const newChore: Chore = {
       id: `c_${Date.now()}`,
-      title,
-      assignedMemberId,
+      title: title.trim(),
+      assignedMemberId: ids[0] || '',
+      assignedMemberIds: ids,
       frequency,
       completed: false,
-      stars,
+      stars: Math.max(1, Number(stars) || 1),
     };
     setChores((prev) => [newChore, ...prev]);
     syncChoreToCloud(newChore);
@@ -1266,6 +1298,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map((chore) => {
         if (chore.id === id) {
           const updated = { ...chore, ...updates };
+          if (updates.assignedMemberIds !== undefined && updates.assignedMemberId === undefined) {
+            updated.assignedMemberId = updates.assignedMemberIds[0] || '';
+          }
           syncChoreToCloud(updated);
           return updated;
         }
@@ -1274,11 +1309,17 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
-  const toggleChore = (id: string) => {
+  const toggleChore = (id: string, completingMemberId?: string) => {
     setChores((prev) =>
       prev.map((chore) => {
         if (chore.id === id) {
           const newCompleted = !chore.completed;
+          const assignedId = chore.assignedMemberId || (chore.assignedMemberIds && chore.assignedMemberIds.length === 1 ? chore.assignedMemberIds[0] : undefined);
+          const activeOrProvided = completingMemberId || (currentMemberId !== 'all' ? currentMemberId : undefined);
+          const beneficiaryId = newCompleted
+            ? (activeOrProvided || chore.completedByMemberId || assignedId)
+            : (chore.completedByMemberId || assignedId);
+
           if (newCompleted) {
             confetti({
               particleCount: 60,
@@ -1286,8 +1327,28 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               origin: { y: 0.6 },
               colors: ['#F59E0B', '#10B981', '#6366F1', '#EC4899'],
             });
+            if (beneficiaryId) {
+              setEarnedStars((s) => ({
+                ...s,
+                [beneficiaryId]: (s[beneficiaryId] || 0) + (chore.stars || 0),
+              }));
+            }
+          } else {
+            // Uncompleting a chore reverts the earned stars for whoever completed it
+            if (beneficiaryId) {
+              setEarnedStars((s) => ({
+                ...s,
+                [beneficiaryId]: Math.max(0, (s[beneficiaryId] || 0) - (chore.stars || 0)),
+              }));
+            }
           }
-          const updated = { ...chore, completed: newCompleted };
+
+          const updated: Chore = {
+            ...chore,
+            completed: newCompleted,
+            completedByMemberId: newCompleted ? beneficiaryId : undefined,
+            completedAt: newCompleted ? new Date().toISOString() : undefined,
+          };
           syncChoreToCloud(updated);
           return updated;
         }
@@ -1299,6 +1360,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteChore = (id: string) => {
     setChores((prev) => prev.filter((chore) => chore.id !== id));
     deleteChoreFromCloud(id);
+    // Important: Earned stars are NEVER deleted! Once banked, stars belong to the child permanently.
   };
 
   // Rewards & Gamification
@@ -1324,16 +1386,25 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setRewards((prev) => prev.filter((r) => r.id !== id));
   };
 
+  const getMemberTotalEarnedStars = (memberId: string): number => {
+    return earnedStars[memberId] || 0;
+  };
+
   const getMemberStarBalance = (memberId: string): number => {
-    const totalEarned = chores
-      .filter((c) => c.assignedMemberId === memberId && c.completed)
-      .reduce((acc, c) => acc + (c.stars || 0), 0);
+    const totalEarned = getMemberTotalEarnedStars(memberId);
 
     const totalSpent = rewardClaims
       .filter((cl) => cl.memberId === memberId && cl.status !== 'rejected')
       .reduce((acc, cl) => acc + (cl.starsSpent || 0), 0);
 
     return Math.max(0, totalEarned - totalSpent);
+  };
+
+  const addMemberStars = (memberId: string, amount: number) => {
+    setEarnedStars((prev) => ({
+      ...prev,
+      [memberId]: Math.max(0, (prev[memberId] || 0) + amount),
+    }));
   };
 
   const claimReward = (rewardId: string, memberId: string): boolean => {
@@ -1408,6 +1479,16 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGalleries(INITIAL_GALLERIES);
     setGroceries(INITIAL_GROCERIES);
     setChores(INITIAL_CHORES);
+    const demoStars: Record<string, number> = {};
+    INITIAL_CHORES.forEach((c) => {
+      if (c.completed) {
+        const who = c.completedByMemberId || c.assignedMemberId || (c.assignedMemberIds && c.assignedMemberIds[0]);
+        if (who) {
+          demoStars[who] = (demoStars[who] || 0) + (c.stars || 0);
+        }
+      }
+    });
+    setEarnedStars(demoStars);
     setNotes(INITIAL_NOTES);
     setStores(INITIAL_STORES);
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
@@ -1459,6 +1540,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGalleries([]);
     setGroceries([]);
     setChores([]);
+    setEarnedStars({});
     setNotes([]);
     setRewards(INITIAL_REWARDS);
     setRewardClaims([]);
@@ -1494,6 +1576,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGalleries([]);
     setGroceries([]);
     setChores([]);
+    setEarnedStars({});
     setNotes([]);
     setRewards(INITIAL_REWARDS);
     setRewardClaims([]);
@@ -1513,6 +1596,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       galleries,
       groceries,
       chores,
+      earnedStars,
       notes,
       stores,
       storeLearningMap,
@@ -1555,6 +1639,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       if (Array.isArray(data.chores)) {
         setChores(data.chores);
+      }
+      if (data.earnedStars && typeof data.earnedStars === 'object') {
+        setEarnedStars(data.earnedStars);
       }
       if (Array.isArray(data.notes)) {
         setNotes(data.notes);
@@ -1650,6 +1737,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         approveClaim,
         deleteClaim,
         getMemberStarBalance,
+        getMemberTotalEarnedStars,
+        addMemberStars,
         notes,
         addNote,
         deleteNote,

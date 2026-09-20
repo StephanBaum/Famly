@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
-import { Chore } from '../types';
+import { Chore, isChoreRelevantForMember } from '../types';
 import { ModalPortal } from '../components/ModalPortal';
 import { ShoppingFocusModal } from '../components/ShoppingFocusModal';
 import { VoiceInputModal } from '../components/VoiceInputModal';
@@ -44,6 +44,7 @@ export const ListsAndChoresView: React.FC = () => {
     approveClaim,
     deleteClaim,
     getMemberStarBalance,
+    getMemberTotalEarnedStars,
     currentMemberId,
   } = useFamily();
 
@@ -79,14 +80,14 @@ export const ListsAndChoresView: React.FC = () => {
   const [editingChoreId, setEditingChoreId] = useState<string | null>(null);
   const [choreToDelete, setChoreToDelete] = useState<Chore | null>(null);
   const [choreTitle, setChoreTitle] = useState('');
-  const [choreAssignee, setChoreAssignee] = useState(members[2]?.id || members[0]?.id || 'm1');
+  const [choreAssignees, setChoreAssignees] = useState<string[]>([]);
   const [choreFrequency, setChoreFrequency] = useState<Chore['frequency']>('once');
   const [choreStars, setChoreStars] = useState(3);
 
   const openAddChore = () => {
     setEditingChoreId(null);
     setChoreTitle('');
-    setChoreAssignee(members[2]?.id || members[0]?.id || 'm1');
+    setChoreAssignees([]); // Default: Offen für alle (Wer zuerst kommt)
     setChoreFrequency('once');
     setChoreStars(3);
     setIsAddChoreOpen(true);
@@ -95,7 +96,13 @@ export const ListsAndChoresView: React.FC = () => {
   const openEditChore = (chore: Chore) => {
     setEditingChoreId(chore.id);
     setChoreTitle(chore.title);
-    setChoreAssignee(chore.assignedMemberId);
+    const existingAssignees =
+      chore.assignedMemberIds && chore.assignedMemberIds.length > 0
+        ? chore.assignedMemberIds
+        : chore.assignedMemberId
+        ? [chore.assignedMemberId]
+        : [];
+    setChoreAssignees(existingAssignees);
     setChoreFrequency(chore.frequency);
     setChoreStars(chore.stars);
     setIsAddChoreOpen(true);
@@ -107,14 +114,22 @@ export const ListsAndChoresView: React.FC = () => {
     if (editingChoreId) {
       updateChore(editingChoreId, {
         title: choreTitle.trim(),
-        assignedMemberId: choreAssignee,
+        assignedMemberId: choreAssignees[0] || '',
+        assignedMemberIds: choreAssignees,
         frequency: choreFrequency,
         stars: Number(choreStars),
       });
     } else {
-      addChore(choreTitle.trim(), choreAssignee, choreFrequency, Number(choreStars));
+      addChore(
+        choreTitle.trim(),
+        choreAssignees[0] || '',
+        choreFrequency,
+        Number(choreStars),
+        choreAssignees
+      );
     }
     setChoreTitle('');
+    setChoreAssignees([]);
     setEditingChoreId(null);
     setIsAddChoreOpen(false);
   };
@@ -176,9 +191,7 @@ export const ListsAndChoresView: React.FC = () => {
   };
 
   // Filter chores for current active member
-  const filteredChores = chores.filter((c) =>
-    currentMemberId === 'all' ? true : c.assignedMemberId === currentMemberId
-  );
+  const filteredChores = chores.filter((c) => isChoreRelevantForMember(c, currentMemberId));
 
   return (
     <div className="space-y-6">
@@ -296,9 +309,7 @@ export const ListsAndChoresView: React.FC = () => {
             {/* Member Star Counts */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
               {members.map((m) => {
-                const memberStars = chores
-                  .filter((c) => c.assignedMemberId === m.id && c.completed)
-                  .reduce((sum, c) => sum + c.stars, 0);
+                const memberStars = getMemberTotalEarnedStars(m.id);
                 const available = getMemberStarBalance(m.id);
 
                 return (
@@ -387,6 +398,7 @@ export const ListsAndChoresView: React.FC = () => {
               onOpenAddReward={() => setIsAddRewardOpen(true)}
               rewardError={rewardError}
               chores={chores}
+              getMemberTotalEarnedStars={getMemberTotalEarnedStars}
             />
           )}
         </div>
@@ -459,20 +471,54 @@ export const ListsAndChoresView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
-                    Zuweisen an
-                  </label>
-                  <select
-                    value={choreAssignee}
-                    onChange={(e) => setChoreAssignee(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
-                  >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.avatar} {m.name} ({m.role})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase">
+                      Zuweisen an
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setChoreAssignees([])}
+                      className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition-all ${
+                        choreAssignees.length === 0
+                          ? 'bg-teal-500 text-white border-teal-600 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800 dark:text-slate-400 dark:hover:text-white border-stone-200 dark:border-slate-700'
+                      }`}
+                    >
+                      👥 Offen für alle (Wer zuerst kommt)
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {members.map((m) => {
+                      const isSelected = choreAssignees.includes(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setChoreAssignees((prev) =>
+                              prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                            );
+                          }}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-bold transition-all text-left ${
+                            isSelected
+                              ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-400 text-amber-900 dark:text-amber-200 shadow-2xs'
+                              : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:border-amber-300'
+                          }`}
+                        >
+                          <span className="text-base">{m.avatar}</span>
+                          <span className="truncate">{m.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-stone-400 dark:text-slate-400 font-semibold mt-1.5">
+                    {choreAssignees.length === 0
+                      ? '✨ Offen für alle: Wer die Aufgabe zuerst erledigt, erhält die ⭐ Sterne!'
+                      : choreAssignees.length === 1
+                      ? `🎯 Feste Zuweisung an ${members.find((m) => m.id === choreAssignees[0])?.name || 'Mitglied'}`
+                      : `🤝 Team-Aufgabe für ${choreAssignees.map((id) => members.find((m) => m.id === id)?.name).filter(Boolean).join(' & ')} (Wer sie zuerst erledigt, erhält die Sterne)`}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

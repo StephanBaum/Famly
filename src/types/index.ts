@@ -165,12 +165,24 @@ export type ChoreFrequency = 'once' | 'daily' | '2x_weekly' | 'weekly' | 'biweek
 export interface Chore {
   id: string;
   title: string;
-  assignedMemberId: string;
+  assignedMemberId?: string; // backwards compatibility / primary assignee
+  assignedMemberIds?: string[]; // Empty/undefined = "Wer zuerst kommt / Offen für alle"
+  completedByMemberId?: string; // Which member completed it and was credited the stars
+  completedAt?: string;
   frequency: ChoreFrequency;
   completed: boolean;
   stars: number;
   dueDate?: string;
 }
+
+export const isChoreRelevantForMember = (chore: Chore, memberId: string | 'all'): boolean => {
+  if (memberId === 'all') return true;
+  const ids = chore.assignedMemberIds && chore.assignedMemberIds.length > 0
+    ? chore.assignedMemberIds
+    : (chore.assignedMemberId ? [chore.assignedMemberId] : []);
+  if (ids.length === 0) return true; // Open to everyone / Wer zuerst kommt
+  return ids.includes(memberId);
+};
 
 export interface PinnedNote {
   id: string;
