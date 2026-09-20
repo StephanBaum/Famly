@@ -118,10 +118,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenSettings}
               title="Einstellungen & Datenverwaltung"
-              className="p-1.5 sm:p-2 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 shrink-0"
+              aria-label="Einstellungen"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center justify-center shrink-0"
             >
               <Settings className="w-4 h-4 text-stone-700 dark:text-slate-300" />
-              <span className="hidden md:inline text-xs font-bold text-stone-700 dark:text-slate-300">Einstellungen</span>
             </button>
 
             {/* Quick Add Button */}

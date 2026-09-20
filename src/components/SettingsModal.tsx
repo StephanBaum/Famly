@@ -230,11 +230,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <>
       <ModalPortal>
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in zoom-in-95 my-auto space-y-6 text-stone-900 dark:text-slate-100 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto scrollbar-none animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in zoom-in-95 my-auto text-stone-900 dark:text-slate-100 max-h-[90vh] flex flex-col overflow-hidden">
             
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-slate-800">
+            {/* Header (fixed at top, cleanly visible) */}
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-4 border-b border-stone-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl font-black shadow-xs">
                   ⚙️
@@ -256,7 +256,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
 
-            {/* Section 1: Appearance & Dark Mode Toggle */}
+            {/* Scrollable Content Body (clipped by rounded-3xl) */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 scrollbar-thin">
+              {/* Section 1: Appearance & Dark Mode Toggle */}
             <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -842,6 +844,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
+            </div>
           </div>
         </div>
       </ModalPortal>

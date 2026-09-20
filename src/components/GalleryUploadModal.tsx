@@ -156,10 +156,10 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col text-stone-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col text-stone-900 dark:text-slate-100 overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center justify-between p-5 sm:p-6 pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 flex items-center justify-center text-xl font-black shadow-xs">
                 📸
@@ -175,14 +175,14 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-600 dark:text-slate-400 flex items-center justify-center font-black transition-colors"
+              className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-600 dark:text-slate-400 flex items-center justify-center font-black transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Form Body */}
-          <form onSubmit={handleSubmit} className="overflow-y-auto py-4 space-y-5 flex-1 pr-1">
+          <form onSubmit={handleSubmit} className="overflow-y-auto scrollbar-thin p-5 sm:p-6 pt-4 space-y-5 flex-1">
             
             {/* Target Mode: Add to Existing Album vs Create New Album */}
             <div>

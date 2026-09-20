@@ -79,8 +79,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto">
         <div className="flex items-center justify-between mb-4 border-b border-stone-100 dark:border-slate-800 pb-3">
           <h3 className="text-lg font-black text-stone-900 dark:text-white">Schnell hinzufügen</h3>
           <button onClick={onClose} className="text-stone-400 hover:text-stone-600 dark:hover:text-white text-sm font-bold">

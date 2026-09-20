@@ -143,11 +143,11 @@ export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto scrollbar-none">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col my-auto overflow-hidden">
         
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800 pb-4 mb-4">
+        {/* Header (sticky at top) */}
+        <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800 p-4 sm:p-6 pb-4 shrink-0 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border-2 shadow-sm"
@@ -187,6 +187,8 @@ export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
           </div>
         </div>
 
+        {/* Scrollable Content Body */}
+        <div className="p-4 sm:p-6 pt-2 overflow-y-auto space-y-5 flex-1 scrollbar-thin">
         {isEditing ? (
           <form onSubmit={handleSave} className="space-y-5">
             
@@ -688,6 +690,7 @@ export const ChildDetailsModal: React.FC<ChildDetailsModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
     </ModalPortal>

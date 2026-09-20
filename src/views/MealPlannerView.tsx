@@ -211,9 +211,9 @@ export const MealPlannerView: React.FC = () => {
         <div className="space-y-4">
           
           {/* Day Strip & View Layout Toggle */}
-          <div className="duo-card bg-white dark:bg-slate-900 p-3 border-2 border-stone-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+          <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs overflow-hidden">
             {/* Day Pills Strip */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <div className="flex items-center gap-1.5 overflow-x-auto p-1 scrollbar-none w-full sm:w-auto">
               {weekDays.map((day, idx) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isToday = dateStr === todayDateStr;
@@ -226,7 +226,7 @@ export const MealPlannerView: React.FC = () => {
                       setSelectedDayIdx(idx);
                       setPlannerMode('focus');
                     }}
-                    className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border-2 transition-all shrink-0 ${
+                    className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-1.5 rounded-xl border-2 transition-all shrink-0 ${
                       isSelected
                         ? 'bg-teal-600 text-white border-teal-700 shadow-xs scale-105'
                         : isToday

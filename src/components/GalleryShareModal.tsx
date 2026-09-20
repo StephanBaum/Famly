@@ -45,7 +45,7 @@ export const GalleryShareModal: React.FC<GalleryShareModalProps> = ({
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto space-y-5 text-stone-900 dark:text-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 my-auto space-y-5 text-stone-900 dark:text-slate-100 overflow-hidden">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-slate-800">

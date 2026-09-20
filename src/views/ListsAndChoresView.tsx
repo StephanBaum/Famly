@@ -453,20 +453,20 @@ export const ListsAndChoresView: React.FC = () => {
                 className="flex-1 px-4 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
                 required
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 <input
                   type="text"
                   placeholder="Menge (z.B. 500g)"
                   value={newItemAmount}
                   onChange={(e) => setNewItemAmount(e.target.value)}
-                  className="w-32 sm:w-36 px-3.5 py-3 text-base font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
+                  className="flex-1 sm:w-32 px-3 py-3 text-sm font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400 min-w-0"
                 />
                 
                 {selectedStore === 'all' && (
                   <select
                     value={newItemStore}
                     onChange={(e) => setNewItemStore(e.target.value)}
-                    className="w-28 sm:w-36 px-2.5 py-3 text-sm font-black rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    className="flex-1 sm:w-28 px-2.5 py-3 text-sm font-black rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500 min-w-0"
                   >
                     {stores.map((s) => (
                       <option key={s.id} value={s.name}>
@@ -479,7 +479,7 @@ export const ListsAndChoresView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsVoiceModalOpen(true)}
-                  className="duo-btn duo-btn-blue px-3.5 py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm flex items-center gap-1.5"
+                  className="duo-btn duo-btn-blue p-3 sm:px-3.5 sm:py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm flex items-center justify-center gap-1.5"
                   title="Per Spracheingabe diktieren (z.B. Milch, Äpfel, Kaffee)"
                 >
                   <Mic className="w-4 h-4" />
@@ -488,7 +488,7 @@ export const ListsAndChoresView: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="duo-btn duo-btn-green px-5 py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm"
+                  className="duo-btn duo-btn-green px-4 sm:px-5 py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm"
                 >
                   + Neu
                 </button>
@@ -544,7 +544,7 @@ export const ListsAndChoresView: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {uncheckedGroceries.map((item) => {
                   const addedBy = members.find((m) => m.id === item.addedByMemberId);
 
@@ -552,38 +552,33 @@ export const ListsAndChoresView: React.FC = () => {
                     <div
                       key={item.id}
                       onClick={() => toggleGrocery(item.id)}
-                      className="cursor-pointer group duo-card p-3.5 sm:p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex items-center justify-between gap-3 shadow-xs active:scale-[0.99]"
+                      className="cursor-pointer group duo-card p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex items-center justify-between gap-2.5 sm:gap-3 shadow-xs active:scale-[0.99]"
                     >
-                      {/* Left: Big Checkbox + Name + Amount */}
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Left: Checkbox + Name + Amount + Store badge */}
+                      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
                         <div
-                          className="w-9 h-9 rounded-2xl border-2 border-stone-300 dark:border-slate-700 group-hover:border-emerald-500 bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 transition-colors shadow-2xs"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border-2 border-stone-300 dark:border-slate-700 group-hover:border-emerald-500 bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 transition-colors shadow-2xs"
                         >
-                          <Check className="w-5 h-5 text-transparent group-hover:text-emerald-300 transition-colors" />
+                          <Check className="w-4 h-4 sm:w-5 sm:h-5 text-transparent group-hover:text-emerald-300 transition-colors" />
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-base sm:text-lg font-black text-stone-900 dark:text-white leading-snug">
-                              {item.name}
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0 flex-1">
+                          <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white leading-snug">
+                            {item.name}
+                          </span>
+                          {item.amount && (
+                            <span className="text-[11px] sm:text-xs font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 shrink-0">
+                              {item.amount}
                             </span>
-                            {item.amount && (
-                              <span className="text-xs font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 shrink-0">
-                                {item.amount}
-                              </span>
-                            )}
-                          </div>
+                          )}
 
-                          {/* Secondary tag line: Store pill + Added By */}
-                          <div
-                            className="flex items-center gap-2 mt-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          {/* Store Pill selector */}
+                          <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center shrink-0">
                             <select
                               value={item.store}
                               onChange={(e) => handleStoreChange(item.id, item.name, e.target.value)}
                               title="Laden wechseln"
-                              className="text-xs font-bold bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 focus:outline-none"
+                              className="text-[11px] sm:text-xs font-bold bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2 py-0.5 rounded-lg border border-stone-200 dark:border-slate-700 focus:outline-none"
                             >
                               {stores.map((s) => (
                                 <option key={s.id} value={s.name}>
@@ -591,39 +586,39 @@ export const ListsAndChoresView: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-
-                            <button
-                              type="button"
-                              onClick={() => handleMoveToStaples(item.id, item.name)}
-                              title="Als Vorrat zu Hause markieren"
-                              className="text-stone-400 hover:text-amber-600 text-xs font-bold flex items-center gap-0.5 hover:underline"
-                            >
-                              <span>🏠</span>
-                              <span className="hidden sm:inline text-[11px]">Vorrat</span>
-                            </button>
-
-                            {addedBy && (
-                              <span
-                                title={`Hinzugefügt von ${addedBy.name}`}
-                                className="text-xs font-bold text-stone-400 ml-auto hidden sm:inline-flex items-center gap-1"
-                              >
-                                <span>{addedBy.avatar}</span>
-                                <span>{addedBy.name}</span>
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Right: Quick Delete Button */}
+                      {/* Right: Vorrat + Author + Delete Button (all aligned on the same horizontal row!) */}
                       <div
-                        className="shrink-0 pl-1"
+                        className="flex items-center gap-1 sm:gap-1.5 shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           type="button"
+                          onClick={() => handleMoveToStaples(item.id, item.name)}
+                          title="Als Vorrat zu Hause markieren"
+                          className="text-stone-400 hover:text-amber-600 text-xs font-bold flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <span>🏠</span>
+                          <span className="hidden sm:inline text-[11px]">Vorrat</span>
+                        </button>
+
+                        {addedBy && (
+                          <span
+                            title={`Hinzugefügt von ${addedBy.name}`}
+                            className="text-xs font-bold text-stone-400 hidden md:inline-flex items-center gap-1 px-1"
+                          >
+                            <span>{addedBy.avatar}</span>
+                            <span>{addedBy.name}</span>
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
                           onClick={() => deleteGrocery(item.id)}
-                          className="w-9 h-9 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-stone-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
                           title="Löschen"
                         >
                           <Trash2 className="w-4 h-4" />

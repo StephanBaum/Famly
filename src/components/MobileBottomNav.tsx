@@ -22,7 +22,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-stone-200 dark:border-slate-800 px-1 py-1 flex items-center justify-between shadow-lg transition-colors w-full max-w-full overflow-hidden">
+    <nav
+      className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-stone-200 dark:border-slate-800 px-1 pt-1.5 flex items-center justify-between shadow-lg transition-colors w-full max-w-full overflow-hidden"
+      style={{ paddingBottom: 'calc(0.35rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (

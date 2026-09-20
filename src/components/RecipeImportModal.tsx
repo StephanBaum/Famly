@@ -262,11 +262,11 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto text-stone-900 dark:text-slate-100">
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto text-stone-900 dark:text-slate-100 overflow-hidden">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b-2 border-stone-100 dark:border-slate-800 pb-3.5 mb-4">
+        <div className="flex items-center justify-between border-b-2 border-stone-100 dark:border-slate-800 p-5 sm:p-6 pb-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center text-xl shadow-xs">
               <Sparkles className="w-6 h-6 fill-white" />
@@ -298,19 +298,21 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400 hover:bg-stone-200 dark:hover:bg-slate-700 hover:text-stone-800 dark:hover:text-white flex items-center justify-center font-black transition-colors"
+            className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400 hover:bg-stone-200 dark:hover:bg-slate-700 hover:text-stone-800 dark:hover:text-white flex items-center justify-center font-black transition-colors shrink-0"
           >
             ✕
           </button>
         </div>
 
-        {/* Success Feedback Banner */}
-        {saveFeedback && (
-          <div className="mb-4 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold text-xs flex items-center gap-2 animate-in fade-in">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0 stroke-[3]" />
-            <span>{saveFeedback}</span>
-          </div>
-        )}
+        {/* Scrollable Modal Body */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-5 sm:p-6 pt-4 space-y-4">
+          {/* Success Feedback Banner */}
+          {saveFeedback && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold text-xs flex items-center gap-2 animate-in fade-in">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0 stroke-[3]" />
+              <span>{saveFeedback}</span>
+            </div>
+          )}
 
         {/* LOADING / SCANNING ANIMATION STATE */}
         {isAnalyzing && (
@@ -1026,6 +1028,7 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
     </ModalPortal>
