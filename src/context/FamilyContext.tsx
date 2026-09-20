@@ -41,6 +41,17 @@ import {
   INITIAL_STORE_LEARNING_MAP,
   INITIAL_ALWAYS_IN_STOCK,
 } from '../utils/initialData';
+import {
+  detectIsPerishable,
+  getHorizonBucket,
+  predictStoreForItem,
+  sanitizeAndDeduplicateGroceries,
+  removeGroceriesForMeal as removeMealGroceriesUtil,
+  clearGroceriesForDates as clearDatesGroceriesUtil,
+  cleanPastMealGroceries as cleanPastMealGroceriesUtil,
+} from '../utils/grocerySyncUtils';
+
+export { detectIsPerishable, sanitizeAndDeduplicateGroceries };
 
 export interface RecipeSyncResult {
   addedCount: number;
@@ -51,12 +62,12 @@ export interface RecipeSyncResult {
 export interface BatchRecipeSyncResult {
   addedCount: number;
   mergedCount: number;
-  estimatedTotalCost: number;
   skippedCount: number;
   skippedNames: string[];
+  estimatedTotalCost: number;
 }
 
-interface FamilyContextType {
+export interface FamilyContextType {
   members: FamilyMember[];
   loggedInMemberId: string | null;
   loggedInMember: FamilyMember | undefined;
@@ -71,7 +82,7 @@ interface FamilyContextType {
   deleteMember: (id: string) => void;
 
   appointments: Appointment[];
-  addAppointment: (appointment: Omit<Appointment, 'id'>) => void;
+  addAppointment: (app: Omit<Appointment, 'id'>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
   deleteAppointment: (id: string) => void;
 
@@ -91,6 +102,12 @@ interface FamilyContextType {
   addMultipleRecipesToGrocery: (
     recipes: Recipe[] | Array<{ recipe: Recipe; date?: string }>
   ) => BatchRecipeSyncResult;
+  removeGroceriesForMeal: (
+    date: string,
+    options?: { recipeTitle?: string; recipeId?: string; slot?: string }
+  ) => number;
+  clearGroceriesForDates: (dates: string[]) => number;
+  cleanPastMealGroceries: () => { removedCount: number; removedItems: GroceryItem[] };
 
   photos: PhotoMemory[];
   addPhoto: (photo: Omit<PhotoMemory, 'id' | 'likes'>) => void;
@@ -220,133 +237,7 @@ function getStoredOrDefault<T>(key: string, defaultValue: T): T {
   return defaultValue;
 }
 
-export function detectIsPerishable(name: string, _category?: GroceryCategory): boolean {
-  const n = (name || '').toLowerCase().trim();
-  if (!n) return false;
 
-  // Fresh fish & seafood (very short shelf-life)
-  if (
-    n.includes('lachs') ||
-    n.includes('fisch') ||
-    n.includes('forelle') ||
-    n.includes('garnele') ||
-    n.includes('seelachs') ||
-    n.includes('kabeljau') ||
-    n.includes('thunfisch') ||
-    n.includes('shrimp') ||
-    n.includes('meeresfrüchte')
-  ) {
-    return true;
-  }
-
-  // Fresh poultry & minced meat (must be eaten/cooked promptly)
-  if (
-    n.includes('hackfleisch') ||
-    n.includes('faschiertes') ||
-    n.includes('hähnchen') ||
-    n.includes('hühnchen') ||
-    n.includes('pute') ||
-    n.includes('rindfleisch') ||
-    n.includes('schweinefleisch') ||
-    n.includes('filet') ||
-    n.includes('steak') ||
-    n.includes('schnitzel')
-  ) {
-    return true;
-  }
-
-  // Delicate fresh berries & tender greens
-  if (
-    n.includes('himbeere') ||
-    n.includes('erdbeere') ||
-    n.includes('heidelbeere') ||
-    n.includes('blaubeere') ||
-    n.includes('feldsalat') ||
-    n.includes('rucola') ||
-    n.includes('blattsalat') ||
-    n.includes('kopfsalat') ||
-    n.includes('spinat (frisch)') ||
-    n.includes('babyspinat')
-  ) {
-    return true;
-  }
-
-  // Fresh delicate herbs
-  if (
-    n.includes('frischer koriander') ||
-    n.includes('frisches basilikum') ||
-    n.includes('frische minze')
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): GroceryItem[] {
-  if (!Array.isArray(rawItems)) return [];
-
-  const seenIds = new Set<string>();
-  const repairedItems: GroceryItem[] = rawItems
-    .filter((item) => item && typeof item === 'object' && item.name)
-    .map((item, idx) => {
-      let itemId = item.id;
-      if (!itemId || seenIds.has(itemId)) {
-        itemId = `g_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`;
-      }
-      seenIds.add(itemId);
-      const isPerishable =
-        typeof item.isPerishable === 'boolean'
-          ? item.isPerishable
-          : detectIsPerishable(item.name, item.category);
-
-      return {
-        ...item,
-        id: itemId,
-        name: (item.name || '').trim(),
-        store: (item.store || 'Rewe').trim(),
-        amount: item.amount ? String(item.amount).trim() : '',
-        checked: Boolean(item.checked),
-        targetDate: item.targetDate,
-        recipeTitle: item.recipeTitle,
-        isPerishable,
-      };
-    });
-
-  // Consolidate duplicate unchecked items that have identical store + name
-  const uncheckedMap = new Map<string, GroceryItem>();
-  const checkedItems: GroceryItem[] = [];
-
-  for (const item of repairedItems) {
-    if (item.checked) {
-      checkedItems.push(item);
-      continue;
-    }
-
-    const key = `${item.store.toLowerCase()}:::${item.name.toLowerCase()}`;
-    if (uncheckedMap.has(key)) {
-      const existing = uncheckedMap.get(key)!;
-      // Merge amounts if not already present
-      if (item.amount && (!existing.amount || !existing.amount.includes(item.amount))) {
-        existing.amount = existing.amount ? `${existing.amount} + ${item.amount}` : item.amount;
-      }
-      // Keep earliest targetDate
-      if (item.targetDate && (!existing.targetDate || item.targetDate < existing.targetDate)) {
-        existing.targetDate = item.targetDate;
-      }
-      if (!existing.recipeTitle && item.recipeTitle) {
-        existing.recipeTitle = item.recipeTitle;
-      }
-      if (item.isPerishable) {
-        existing.isPerishable = true;
-      }
-    } else {
-      uncheckedMap.set(key, { ...item });
-    }
-  }
-
-  return [...Array.from(uncheckedMap.values()), ...checkedItems];
-}
 
 export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
@@ -748,60 +639,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
-  // Helper to predict store from learned preferences or keywords
-  const predictStoreForItem = (name: string): string => {
-    const clean = name.toLowerCase().trim();
-    // Check direct learned mapping
-    if (storeLearningMap[clean]) {
-      return storeLearningMap[clean];
-    }
-    // Check partial learned mapping
-    for (const [key, storeName] of Object.entries(storeLearningMap)) {
-      if (clean.includes(key) || key.includes(clean)) {
-        return storeName;
-      }
-    }
-    // Keyword heuristics for typical German/European household runs
-    if (
-      clean.includes('pod') ||
-      clean.includes('detergent') ||
-      clean.includes('shampoo') ||
-      clean.includes('soap') ||
-      clean.includes('toothpaste') ||
-      clean.includes('paper towel') ||
-      clean.includes('toilet') ||
-      clean.includes('cleaning') ||
-      clean.includes('sponge') ||
-      clean.includes('wipes')
-    ) {
-      return 'dm';
-    }
-    if (
-      clean.includes('bread') ||
-      clean.includes('loaf') ||
-      clean.includes('croissant') ||
-      clean.includes('baguette') ||
-      clean.includes('brot') ||
-      clean.includes('brötchen') ||
-      clean.includes('semmel') ||
-      clean.includes('brezel')
-    ) {
-      return 'Bäcker';
-    }
-    if (
-      clean.includes('vitamin') ||
-      clean.includes('bandage') ||
-      clean.includes('aspirin') ||
-      clean.includes('medicine') ||
-      clean.includes('pflaster') ||
-      clean.includes('schmerzmittel') ||
-      clean.includes('apotheke')
-    ) {
-      return 'Apotheke';
-    }
-    return 'Rewe'; // Default supermarket
-  };
-
   const addRecipeIngredientsToGrocery = (recipe: Recipe, targetDate?: string): RecipeSyncResult => {
     const toAdd: GroceryItem[] = [];
     const skippedNames: string[] = [];
@@ -810,7 +647,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (isItemInStock(ing.name)) {
         skippedNames.push(ing.name);
       } else {
-        const assignedStore = predictStoreForItem(ing.name);
+        const assignedStore = predictStoreForItem(ing.name, storeLearningMap);
         toAdd.push({
           id: `g_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`,
           name: ing.name.trim(),
@@ -821,6 +658,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
           targetDate,
           recipeTitle: recipe.title,
+          recipeId: recipe.id,
+          mealSlot: 'dinner',
           isPerishable: detectIsPerishable(ing.name, ing.category),
         });
       }
@@ -834,7 +673,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             (g) =>
               !g.checked &&
               g.store.toLowerCase().trim() === newItem.store.toLowerCase().trim() &&
-              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim() &&
+              getHorizonBucket(g.targetDate, g.isPerishable) === getHorizonBucket(newItem.targetDate, newItem.isPerishable)
           );
           if (existingIdx >= 0) {
             const existing = next[existingIdx];
@@ -853,6 +693,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               amount: mergedAmount,
               targetDate: earliestDate,
               recipeTitle: existing.recipeTitle || newItem.recipeTitle,
+              recipeId: existing.recipeId || newItem.recipeId,
               isPerishable: existing.isPerishable || newItem.isPerishable,
             };
           } else {
@@ -895,6 +736,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         store: string;
         category?: GroceryCategory;
         recipeTitles: string[];
+        recipeIds: string[];
         targetDates: string[];
         isPerishable: boolean;
       }
@@ -921,14 +763,21 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         }
 
-        // Normalize key to merge identical items across days (e.g. "zwiebeln", "knoblauch")
-        const key = ing.name
+        const isPerishable = detectIsPerishable(ing.name, ing.category);
+        const horizonBucket = getHorizonBucket(date, isPerishable);
+        const assignedStore = predictStoreForItem(ing.name, storeLearningMap);
+
+        // Normalize base name
+        const cleanBase = ing.name
           .toLowerCase()
           .replace(/^(frische[rsn]?|bio-|reife[rsn]?|gekochtes?|festkochende)\s+/i, '')
           .replace(/\s*\([^)]*\)/g, '')
           .trim();
 
-        const isPerishable = detectIsPerishable(ing.name, ing.category);
+        // Key incorporates horizonBucket:
+        // - Pantry non-perishables share 'pantry_all' and combine across all weeks
+        // - Fresh perishables have distinct horizon buckets per week and stay separate!
+        const key = `${cleanBase}:::${assignedStore.toLowerCase()}:::${horizonBucket}`;
 
         if (consolidatedMap.has(key)) {
           mergedCount++;
@@ -938,6 +787,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           if (!existing.recipeTitles.includes(recipe.title)) {
             existing.recipeTitles.push(recipe.title);
+          }
+          if (!existing.recipeIds.includes(recipe.id)) {
+            existing.recipeIds.push(recipe.id);
           }
           if (date && !existing.targetDates.includes(date)) {
             existing.targetDates.push(date);
@@ -949,9 +801,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           consolidatedMap.set(key, {
             name: ing.name,
             amounts: ing.amount ? [ing.amount] : [],
-            store: predictStoreForItem(ing.name),
+            store: assignedStore,
             category: ing.category,
             recipeTitles: [recipe.title],
+            recipeIds: [recipe.id],
             targetDates: date ? [date] : [],
             isPerishable,
           });
@@ -978,6 +831,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addedByMemberId: activeMember,
         targetDate: earliestDate,
         recipeTitle: val.recipeTitles.join(', '),
+        recipeId: val.recipeIds[0],
+        mealSlot: 'dinner',
         isPerishable: val.isPerishable,
       };
     });
@@ -990,7 +845,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             (g) =>
               !g.checked &&
               g.store.toLowerCase().trim() === newItem.store.toLowerCase().trim() &&
-              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim() &&
+              getHorizonBucket(g.targetDate, g.isPerishable) === getHorizonBucket(newItem.targetDate, newItem.isPerishable)
           );
           if (existingIdx >= 0) {
             const existing = next[existingIdx];
@@ -1009,6 +865,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               amount: mergedAmount,
               targetDate: earliestDate,
               recipeTitle: existing.recipeTitle || newItem.recipeTitle,
+              recipeId: existing.recipeId || newItem.recipeId,
               isPerishable: existing.isPerishable || newItem.isPerishable,
             };
           } else {
@@ -1037,6 +894,44 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       skippedCount: skippedNames.length,
       skippedNames,
     };
+  };
+
+  // Self-Cleaning: Remove unbought items when a meal is swapped or cancelled
+  const removeGroceriesForMeal = (
+    date: string,
+    options?: { recipeTitle?: string; recipeId?: string; slot?: string }
+  ): number => {
+    let count = 0;
+    setGroceries((prev) => {
+      const { updatedGroceries, removedCount } = removeMealGroceriesUtil(prev, date, options);
+      count = removedCount;
+      return updatedGroceries;
+    });
+    return count;
+  };
+
+  // Self-Cleaning: Clear old unbought ingredients for specific dates when re-planning a week
+  const clearGroceriesForDates = (dates: string[]): number => {
+    let count = 0;
+    setGroceries((prev) => {
+      const { updatedGroceries, removedCount } = clearDatesGroceriesUtil(prev, dates);
+      count = removedCount;
+      return updatedGroceries;
+    });
+    return count;
+  };
+
+  // Self-Cleaning: Auto-clean obsolete unbought ingredients from past days
+  const cleanPastMealGroceries = (): { removedCount: number; removedItems: GroceryItem[] } => {
+    let count = 0;
+    let items: GroceryItem[] = [];
+    setGroceries((prev) => {
+      const { updatedGroceries, removedCount, removedItems } = cleanPastMealGroceriesUtil(prev);
+      count = removedCount;
+      items = removedItems;
+      return updatedGroceries;
+    });
+    return { removedCount: count, removedItems: items };
   };
 
   // Photos
@@ -1714,6 +1609,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setMealSlot,
         addRecipeIngredientsToGrocery,
         addMultipleRecipesToGrocery,
+        removeGroceriesForMeal,
+        clearGroceriesForDates,
+        cleanPastMealGroceries,
         photos,
         addPhoto,
         togglePhotoLike,

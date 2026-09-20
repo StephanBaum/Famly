@@ -35,6 +35,7 @@ interface GroceriesTabProps {
   showStaplesDrawer: boolean;
   onStoreChange: (itemId: string, itemName: string, newStore: string) => void;
   onDeduplicate?: () => void;
+  onCleanPast?: () => void;
 }
 
 export const GroceriesTab: React.FC<GroceriesTabProps> = ({
@@ -56,6 +57,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   showStaplesDrawer,
   onStoreChange,
   onDeduplicate,
+  onCleanPast,
 }) => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
@@ -86,6 +88,12 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
       }
     }
     return false;
+  }, [groceries]);
+
+  // Count obsolete unbought groceries whose cooking targetDate is in the past
+  const pastItemsCount = React.useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    return groceries.filter((g) => !g.checked && g.targetDate && g.targetDate < todayStr).length;
   }, [groceries]);
 
   // Filter items by store (alias & case-insensitive aware)
@@ -397,6 +405,27 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
             className="duo-btn duo-btn-amber px-3 py-1.5 text-xs font-black rounded-xl shrink-0 self-start sm:self-auto"
           >
             Duplikate zusammenführen
+          </button>
+        </div>
+      )}
+
+      {/* Obsolete Past Meal Ingredients Banner */}
+      {pastItemsCount > 0 && onCleanPast && (
+        <div className="duo-card p-3 sm:p-3.5 bg-sky-50 dark:bg-sky-950/60 border-2 border-sky-300 dark:border-sky-700 text-xs font-bold text-sky-950 dark:text-sky-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-base shrink-0">✨</span>
+            <span>
+              {pastItemsCount} {pastItemsCount === 1 ? 'ungekaufte Zutat' : 'ungekaufte Zutaten'} von bereits vergangenen Tagen gefunden.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onCleanPast}
+            className="duo-btn duo-btn-blue px-3 py-1.5 text-xs font-black rounded-xl shrink-0 self-start sm:self-auto flex items-center gap-1"
+            title="Entfernt alte, nicht gekaufte Mahlzeiten-Zutaten (manuelle und gekaufte Artikel bleiben sicher)"
+          >
+            <span>Alte Zutaten bereinigen</span>
+            <span>🧹</span>
           </button>
         </div>
       )}

@@ -27,6 +27,7 @@ export const ListsAndChoresView: React.FC = () => {
     clearCheckedGroceries,
     setItemStore,
     deduplicateGroceries,
+    cleanPastMealGroceries,
     alwaysInStock,
     toggleAlwaysInStock,
     chores,
@@ -250,6 +251,7 @@ export const ListsAndChoresView: React.FC = () => {
             showStaplesDrawer={showStaplesDrawer}
             onStoreChange={handleStoreChange}
             onDeduplicate={deduplicateGroceries}
+            onCleanPast={cleanPastMealGroceries}
           />
         </div>
       )}

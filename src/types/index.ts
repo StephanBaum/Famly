@@ -155,6 +155,8 @@ export interface GroceryItem {
   addedByMemberId?: string;
   targetDate?: string; // YYYY-MM-DD when the meal/dish is planned
   recipeTitle?: string; // e.g. "Honig-Lachs mit Brokkoli"
+  recipeId?: string; // ID of the source recipe (e.g. "r1", "r_...")
+  mealSlot?: 'dinner' | 'lunch' | 'breakfast';
   isPerishable?: boolean; // true for fresh fish, poultry, minced meat, delicate greens, fresh berries
 }
 

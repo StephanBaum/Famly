@@ -1,22 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { Recipe } from '../types';
 import {
   Utensils,
-  Clock,
-  Users,
-  ShoppingCart,
   BookOpen,
   Calendar,
   Sparkles,
-  ExternalLink,
-  Search,
-  ChefHat,
   Plus,
-  X,
-  Pencil,
   Trash2,
-  Heart,
 } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -24,19 +15,11 @@ import { RecipeImportModal } from '../components/RecipeImportModal';
 import { RecipeEditModal } from '../components/RecipeEditModal';
 import { AutoMealPlanModal } from '../components/AutoMealPlanModal';
 import { ModalPortal } from '../components/ModalPortal';
-import { getRecipePhoto, getCategoryBadge } from '../components/meal-planner/mealUtils';
 import { DayFocusCard } from '../components/meal-planner/DayFocusCard';
 import { WeeklyGridView } from '../components/meal-planner/WeeklyGridView';
-
-
-const CUSTOM_DISH_SUGGESTIONS = [
-  { title: 'Pizza vom Vortag & Salat', icon: '🍕' },
-  { title: 'Asiatisch / Nudeln to-go', icon: '🍜' },
-  { title: 'Warme Paninis & Suppe', icon: '🥪' },
-  { title: 'Frischer bunter Familiensalat', icon: '🥗' },
-  { title: 'Pasta mit Knoblauch & Olivenöl', icon: '🍝' },
-  { title: 'Selbstgemachte Freitag-Burger', icon: '🍔' },
-];
+import { RecipeDetailModal } from '../components/meal-planner/RecipeDetailModal';
+import { SlotEditModal, EditingSlotState } from '../components/meal-planner/SlotEditModal';
+import { RecipeBoxTab } from '../components/meal-planner/RecipeBoxTab';
 
 export const MealPlannerView: React.FC = () => {
   const {
@@ -46,6 +29,8 @@ export const MealPlannerView: React.FC = () => {
     setMealSlot,
     addRecipeIngredientsToGrocery,
     addMultipleRecipesToGrocery,
+    removeGroceriesForMeal,
+    clearGroceriesForDates,
     updateRecipe,
     deleteRecipe,
     toggleFavoriteRecipe,
@@ -56,22 +41,10 @@ export const MealPlannerView: React.FC = () => {
   const [selectedRecipeForModal, setSelectedRecipeForModal] = useState<Recipe | null>(null);
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
   const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null);
-  const [editingSlot, setEditingSlot] = useState<{
-    date: string;
-    slot: 'breakfast' | 'lunch' | 'dinner';
-    currentTitle: string;
-    currentRecipeId?: string;
-    currentChefId?: string;
-  } | null>(null);
-
-  const [slotPickerTab, setSlotPickerTab] = useState<'box' | 'custom'>('box');
-  const [slotCategoryFilter, setSlotCategoryFilter] = useState<string>('all');
-  const [slotSearchQuery, setSlotSearchQuery] = useState<string>('');
+  const [editingSlot, setEditingSlot] = useState<EditingSlotState | null>(null);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAutoPlanModalOpen, setIsAutoPlanModalOpen] = useState(false);
-  const [recipeBoxFilter, setRecipeBoxFilter] = useState<'all' | 'favorites' | 'quick' | 'comfort' | 'healthy' | 'baking'>('all');
-  const [recipeBoxSearch, setRecipeBoxSearch] = useState<string>('');
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   // Rolling Planning Horizon: 'today-7' (7 days starting Today), 'today-14' (14 days starting Today), or 'calendar' (Mon-Sun)
@@ -81,8 +54,8 @@ export const MealPlannerView: React.FC = () => {
   const today = new Date();
   const todayDateStr = format(today, 'yyyy-MM-dd');
 
-  // Dynamically compute days: Today is anchored on the very left (index 0) by default!
-  const weekDays = React.useMemo(() => {
+  // Dynamically compute days: Today is anchored on the very left (index 0) by default
+  const weekDays = useMemo(() => {
     if (horizonMode === 'calendar') {
       const start = addDays(startOfWeek(today, { weekStartsOn: 1 }), dayOffset);
       return Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -130,12 +103,16 @@ export const MealPlannerView: React.FC = () => {
     });
 
     if (syncGroceries) {
+      // Self-Cleaning: Clear old unbought groceries for the affected dates first to prevent duplicates
+      const targetDates = assignments.map((a) => a.date);
+      clearGroceriesForDates(targetDates);
+
       const itemsToSync = groceriesToSync || assignments;
       const syncRes = addMultipleRecipesToGrocery(
         itemsToSync.map((item) => ({ recipe: item.recipe, date: item.date }))
       );
       setSyncFeedback(
-        `Wochenplan gezaubert! ${assignments.length} Tage belegt & ${syncRes.addedCount} Zutaten (~${syncRes.estimatedTotalCost} €) gebündelt auf die Einkaufsliste gesetzt! 🪄🛒`
+        `Wochenplan gezaubert! ${assignments.length} Tage belegt & ${syncRes.addedCount} frische Zutaten (~${syncRes.estimatedTotalCost} €) auf die Einkaufsliste gesetzt! 🪄🛒`
       );
     } else {
       setSyncFeedback(`Wochenplan gezaubert! ${assignments.length} Tage abwechslungsreich belegt! 🪄`);
@@ -143,16 +120,54 @@ export const MealPlannerView: React.FC = () => {
     setTimeout(() => setSyncFeedback(null), 5000);
   };
 
-  const handleSlotSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingSlot || !editingSlot.currentTitle.trim()) return;
-
-    setMealSlot(editingSlot.date, editingSlot.slot, {
-      title: editingSlot.currentTitle.trim(),
-      recipeId: editingSlot.currentRecipeId || undefined,
-      chefId: editingSlot.currentChefId || undefined,
-    });
+  const handleSlotSave = (
+    date: string,
+    slot: 'breakfast' | 'lunch' | 'dinner',
+    data: { title: string; recipeId?: string; chefId?: string },
+    oldRecipeId?: string
+  ) => {
+    // If recipe changed or was replaced, self-clean the previous meal's unbought groceries
+    if (oldRecipeId && oldRecipeId !== data.recipeId) {
+      const removed = removeGroceriesForMeal(date, { recipeId: oldRecipeId, slot });
+      if (removed > 0) {
+        setSyncFeedback(`Mahlzeit geändert: ${removed} vorherige Zutaten von der Einkaufsliste bereinigt 🧹`);
+        setTimeout(() => setSyncFeedback(null), 4000);
+      }
+    }
+    setMealSlot(date, slot, data);
     setEditingSlot(null);
+  };
+
+  const handleClearSlot = (
+    date: string,
+    slot: 'breakfast' | 'lunch' | 'dinner',
+    oldRecipeId?: string
+  ) => {
+    const removed = removeGroceriesForMeal(date, { recipeId: oldRecipeId, slot });
+    setMealSlot(date, slot, { title: '', recipeId: undefined, chefId: undefined });
+    setEditingSlot(null);
+    if (removed > 0) {
+      setSyncFeedback(`Mahlzeit geleert & ${removed} Zutaten von der Einkaufsliste entfernt 🧹`);
+    } else {
+      setSyncFeedback('Mahlzeit geleert');
+    }
+    setTimeout(() => setSyncFeedback(null), 4000);
+  };
+
+  const handleQuickSetSlot = (
+    date: string,
+    slot: 'breakfast' | 'lunch' | 'dinner',
+    title: string,
+    oldRecipeId?: string
+  ) => {
+    const removed = removeGroceriesForMeal(date, { recipeId: oldRecipeId, slot });
+    setMealSlot(date, slot, { title, recipeId: undefined });
+    if (removed > 0) {
+      setSyncFeedback(`${title}: ${removed} nicht gekaufte Zutaten von der Einkaufsliste aufgeräumt 🧹`);
+    } else {
+      setSyncFeedback(`${title} eingetragen ✨`);
+    }
+    setTimeout(() => setSyncFeedback(null), 4000);
   };
 
   return (
@@ -235,7 +250,6 @@ export const MealPlannerView: React.FC = () => {
       {/* WEEKLY BOARD TAB */}
       {activeTab === 'week' && (
         <div className="space-y-4">
-          
           {/* Day Strip & View Layout Toggle */}
           <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 space-y-3 shadow-xs">
             {/* Header: Week Title, Horizon Switcher, and Nav */}
@@ -345,7 +359,7 @@ export const MealPlannerView: React.FC = () => {
               </div>
             </div>
 
-            {/* 7-Day Responsive Grid (Never clips Saturday/Sunday!) */}
+            {/* 7-Day / 14-Day Responsive Day Buttons */}
             <div className="grid grid-cols-7 gap-1 sm:gap-2 w-full">
               {weekDays.map((day, idx) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
@@ -401,18 +415,18 @@ export const MealPlannerView: React.FC = () => {
                     currentRecipeId,
                     currentChefId,
                   });
-                  setSlotPickerTab(currentRecipeId ? 'box' : currentTitle ? 'custom' : 'box');
-                  setSlotCategoryFilter('all');
-                  setSlotSearchQuery('');
                 }}
                 onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
                 onSyncRecipe={handleSyncRecipe}
                 onToggleFavorite={toggleFavoriteRecipe}
+                onQuickSetSlot={(slot, title, oldRecipeId) =>
+                  handleQuickSetSlot(dateStr, slot, title, oldRecipeId)
+                }
               />
             );
           })()}
 
-          {/* MODE 2: FULL 7-DAY GRID */}
+          {/* MODE 2: FULL GRID */}
           {plannerMode === 'grid' && (
             <WeeklyGridView
               weekDays={weekDays}
@@ -428,949 +442,62 @@ export const MealPlannerView: React.FC = () => {
                   currentRecipeId,
                   currentChefId,
                 });
-                setSlotPickerTab(currentRecipeId ? 'box' : currentTitle ? 'custom' : 'box');
-                setSlotCategoryFilter('all');
-                setSlotSearchQuery('');
               }}
               onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
               onSyncRecipe={handleSyncRecipe}
               onToggleFavorite={toggleFavoriteRecipe}
             />
           )}
-
         </div>
       )}
 
       {/* RECIPE BOX TAB */}
-      {activeTab === 'recipes' && (() => {
-        const favoritesCount = recipes.filter((r) => r.isFavorite).length;
-        const filteredRecipes = recipes.filter((r) => {
-          const matchesFilter =
-            recipeBoxFilter === 'all'
-              ? true
-              : recipeBoxFilter === 'favorites'
-              ? Boolean(r.isFavorite)
-              : recipeBoxFilter === 'quick'
-              ? r.category === 'quick' || parseInt(r.prepTime || '30', 10) <= 25
-              : r.category === recipeBoxFilter;
-
-          const q = recipeBoxSearch.toLowerCase().trim();
-          const matchesSearch =
-            !q ||
-            r.title.toLowerCase().includes(q) ||
-            (r.notes && r.notes.toLowerCase().includes(q)) ||
-            r.ingredients.some((ing) => ing.name.toLowerCase().includes(q));
-
-          return matchesFilter && matchesSearch;
-        });
-
-        return (
-          <div className="space-y-4">
-            {/* Filter & Search Toolbar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border-2 border-stone-200 dark:border-slate-800 shadow-xs">
-              {/* Category & Favorite Pills */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {[
-                  { id: 'all', label: `Alle (${recipes.length})`, icon: '✨' },
-                  { id: 'favorites', label: `Favoriten (${favoritesCount})`, icon: '❤️' },
-                  { id: 'quick', label: 'Schnell (<30m)', icon: '⚡' },
-                  { id: 'comfort', label: 'Hausmannskost', icon: '🍲' },
-                  { id: 'healthy', label: 'Gesund', icon: '🥗' },
-                  { id: 'baking', label: 'Backen', icon: '🥐' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setRecipeBoxFilter(tab.id as any)}
-                    className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center gap-1.5 border ${
-                      recipeBoxFilter === tab.id
-                        ? tab.id === 'favorites'
-                          ? 'bg-rose-500 text-white border-rose-600 shadow-xs'
-                          : 'bg-teal-600 text-white border-teal-700 shadow-xs'
-                        : 'bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-750'
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Field */}
-              <div className="relative min-w-[200px] w-full sm:w-auto">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Rezepte oder Zutaten..."
-                  value={recipeBoxSearch}
-                  onChange={(e) => setRecipeBoxSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-xs font-semibold focus:outline-none focus:border-teal-500 text-stone-900 dark:text-white"
-                />
-                {recipeBoxSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setRecipeBoxSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Recipes Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRecipes.map((recipe) => (
-                <div
-                  key={recipe.id}
-                  className="duo-card bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow group relative"
-                >
-                  <div>
-                    <div className="relative h-44 overflow-hidden">
-                      <img
-                        src={getRecipePhoto(recipe)}
-                        alt={recipe.title}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src =
-                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                        }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-                      {/* Category Pill */}
-                      <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-stone-800 dark:text-white shadow-xs capitalize">
-                        {recipe.category}
-                      </div>
-
-                      {/* Top Right Action Icons: Favorite + Edit + Delete */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavoriteRecipe(recipe.id);
-                          }}
-                          className={`p-1.5 rounded-xl shadow-sm backdrop-blur-xs transition-all active:scale-95 ${
-                            recipe.isFavorite
-                              ? 'bg-rose-500 text-white hover:bg-rose-600'
-                              : 'bg-white/90 dark:bg-slate-800/90 hover:bg-white text-stone-600 dark:text-slate-300 hover:text-rose-500'
-                          }`}
-                          title={recipe.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen ❤️'}
-                        >
-                          <Heart className={`w-3.5 h-3.5 ${recipe.isFavorite ? 'fill-white' : ''}`} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRecipeToEdit(recipe);
-                          }}
-                          className="p-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 hover:bg-white text-stone-700 dark:text-slate-200 hover:text-teal-700 shadow-sm backdrop-blur-xs transition-all active:scale-95"
-                          title="Rezept bearbeiten"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRecipeToDelete(recipe);
-                          }}
-                          className="p-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 hover:bg-white text-stone-700 dark:text-slate-200 hover:text-rose-600 shadow-sm backdrop-blur-xs transition-all active:scale-95"
-                          title="Rezept löschen"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Time badge */}
-                      <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-white flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-300" />
-                        <span>{recipe.prepTime}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-black text-stone-900 dark:text-white text-base leading-snug">
-                          {recipe.title}
-                        </h3>
-                        {recipe.isFavorite && (
-                          <span className="text-rose-500 text-xs shrink-0" title="Favorit">
-                            ❤️
-                          </span>
-                        )}
-                      </div>
-                      {recipe.notes && (
-                        <p className="text-xs text-stone-600 dark:text-slate-300 line-clamp-2">{recipe.notes}</p>
-                      )}
-
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {recipe.ingredients.slice(0, 4).map((ing, i) => (
-                          <span
-                            key={i}
-                            className="text-[11px] bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-medium"
-                          >
-                            {ing.name}
-                          </span>
-                        ))}
-                        {recipe.ingredients.length > 4 && (
-                          <span className="text-[11px] bg-stone-100 dark:bg-slate-800 text-stone-400 dark:text-slate-500 px-1.5 py-0.5 rounded-md font-medium">
-                            +{recipe.ingredients.length - 4} weitere
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action bar */}
-                  <div className="px-5 py-3.5 bg-stone-50/70 dark:bg-slate-800/80 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedRecipeForModal(recipe)}
-                        className="text-xs font-bold text-stone-700 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white underline"
-                      >
-                        Details ({recipe.ingredients.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRecipeToEdit(recipe)}
-                        className="text-xs font-bold text-teal-700 dark:text-teal-300 hover:text-teal-900 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-teal-200 dark:border-teal-700 shadow-2xs"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        <span>Bearbeiten</span>
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => handleSyncRecipe(recipe)}
-                      className="duo-btn duo-btn-green px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5" />
-                      <span>Einkaufsliste</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {filteredRecipes.length === 0 && (
-                <div className="col-span-full p-12 text-center duo-card bg-white dark:bg-slate-900 border-2 border-dashed border-stone-200 dark:border-slate-800 rounded-3xl">
-                  <span className="text-4xl block mb-2">
-                    {recipeBoxFilter === 'favorites' ? '❤️' : '🍳'}
-                  </span>
-                  <h4 className="text-base font-black text-stone-900 dark:text-white">
-                    {recipeBoxFilter === 'favorites'
-                      ? 'Noch keine Lieblingsrezepte markiert'
-                      : 'Keine passenden Rezepte gefunden'}
-                  </h4>
-                  <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                    {recipeBoxFilter === 'favorites'
-                      ? 'Klicke auf das Herz-Symbol bei einem beliebigen Rezept, um es als Familien-Favoriten zu speichern!'
-                      : 'Passe die Filter oder den Suchbegriff an oder erstelle ein neues Rezept.'}
-                  </p>
-                  <div className="flex items-center justify-center gap-3 mt-4">
-                    {recipeBoxFilter !== 'all' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRecipeBoxFilter('all');
-                          setRecipeBoxSearch('');
-                        }}
-                        className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                      >
-                        Filter zurücksetzen
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsImportModalOpen(true)}
-                      className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                    >
-                      Link importieren
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRecipeToEdit({} as any)}
-                      className="duo-btn duo-btn-green px-4 py-2 text-xs font-black rounded-xl"
-                    >
-                      + Rezept erstellen
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Edit Slot Modal */}
-      {editingSlot && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto">
-            
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xs shrink-0 ${
-                    editingSlot.slot === 'breakfast'
-                      ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border-b-4 border-amber-300'
-                      : editingSlot.slot === 'lunch'
-                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border-b-4 border-emerald-300'
-                      : 'bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-200 border-b-4 border-teal-300'
-                  }`}
-                >
-                  {editingSlot.slot === 'breakfast' ? '🍳' : editingSlot.slot === 'lunch' ? '🥗' : '🍲'}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full border ${
-                        editingSlot.slot === 'breakfast'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : editingSlot.slot === 'lunch'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-teal-50 text-teal-700 border-teal-200'
-                      }`}
-                    >
-                      {editingSlot.slot === 'breakfast' ? 'Frühstück' : editingSlot.slot === 'lunch' ? 'Mittagessen' : 'Abendessen'}
-                    </span>
-                    <span className="text-xs text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1 capitalize">
-                      <Calendar className="w-3 h-3 text-stone-400" />
-                      {format(new Date(editingSlot.date), 'EEEE, d. MMMM', { locale: de })}
-                    </span>
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white leading-tight mt-0.5">
-                    Was gibt es zu essen?
-                  </h3>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingSlot(null)}
-                className="w-9 h-9 rounded-2xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-500 hover:text-stone-800 dark:text-slate-400 flex items-center justify-center transition-colors shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Mode Switcher Tabs */}
-            <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-stone-200/80 dark:border-slate-700 my-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSlotPickerTab('box')}
-                className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all ${
-                  slotPickerTab === 'box'
-                    ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs border border-stone-200 dark:border-slate-600'
-                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
-                }`}
-              >
-                <BookOpen className="w-4 h-4 text-teal-600" />
-                <span>Aus Rezeptbox wählen ({recipes.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSlotPickerTab('custom');
-                  setEditingSlot({
-                    ...editingSlot,
-                    currentRecipeId: undefined,
-                  });
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all ${
-                  slotPickerTab === 'custom'
-                    ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs border border-stone-200 dark:border-slate-600'
-                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
-                }`}
-              >
-                <span>✏️ Eigenes Gericht / Reste</span>
-              </button>
-            </div>
-
-            {/* Main Form Content */}
-            <form onSubmit={handleSlotSave} className="flex-1 overflow-y-auto space-y-4 pr-1 flex flex-col justify-between">
-              
-              <div className="space-y-4">
-                {/* TAB 1: VISUAL RECIPE BOX PICKER */}
-                {slotPickerTab === 'box' ? (
-                  <div className="space-y-3">
-                    {/* Search and Category Filter Pills */}
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={slotSearchQuery}
-                          onChange={(e) => setSlotSearchQuery(e.target.value)}
-                          placeholder="Rezepttitel, Kategorie oder Zutaten suchen..."
-                          className="w-full pl-9 pr-8 py-2 rounded-xl border border-stone-200 dark:border-slate-700 text-xs font-semibold focus:outline-none bg-stone-50/60 dark:bg-slate-800 text-stone-900 dark:text-white"
-                        />
-                        {slotSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => setSlotSearchQuery('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Category Pills */}
-                      <div className="flex items-center gap-1.5 flex-wrap pb-1 text-xs">
-                        {[
-                          { id: 'all', label: `Alle (${recipes.length})`, icon: '✨' },
-                          { id: 'favorites', label: `Favoriten (${recipes.filter((r) => r.isFavorite).length})`, icon: '❤️' },
-                          { id: 'quick', label: 'Schnell (<30m)', icon: '⚡' },
-                          { id: 'comfort', label: 'Hausmannskost', icon: '🍲' },
-                          { id: 'healthy', label: 'Gesund', icon: '🥗' },
-                          { id: 'baking', label: 'Backen', icon: '🥐' },
-                        ].map((tab) => (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setSlotCategoryFilter(tab.id)}
-                            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap text-xs transition-all flex items-center gap-1.5 border ${
-                              slotCategoryFilter === tab.id
-                                ? tab.id === 'favorites'
-                                  ? 'bg-rose-500 text-white border-rose-600 shadow-xs'
-                                  : 'bg-teal-600 text-white border-teal-700 shadow-xs'
-                                : 'bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100'
-                            }`}
-                          >
-                            <span>{tab.icon}</span>
-                            <span>{tab.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Visual Grid of Recipes */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto p-1.5 border border-stone-200/90 dark:border-slate-700 rounded-2xl bg-stone-50/50 dark:bg-slate-800/40">
-                      {recipes
-                        .filter((r) => {
-                          const matchesCat =
-                            slotCategoryFilter === 'all'
-                              ? true
-                              : slotCategoryFilter === 'favorites'
-                              ? Boolean(r.isFavorite)
-                              : slotCategoryFilter === 'quick'
-                              ? r.category === 'quick' || parseInt(r.prepTime || '30', 10) <= 25
-                              : r.category === slotCategoryFilter;
-
-                          const q = slotSearchQuery.toLowerCase().trim();
-                          const matchesSearch =
-                            !q ||
-                            r.title.toLowerCase().includes(q) ||
-                            (r.notes && r.notes.toLowerCase().includes(q)) ||
-                            r.ingredients.some((ing) => ing.name.toLowerCase().includes(q));
-
-                          return matchesCat && matchesSearch;
-                        })
-                        .map((r) => {
-                          const isSelected = editingSlot.currentRecipeId === r.id;
-                          const cat = getCategoryBadge(r.category);
-                          const photo = getRecipePhoto(r);
-                          return (
-                            <div
-                              key={r.id}
-                              onClick={() => {
-                                setEditingSlot({
-                                  ...editingSlot,
-                                  currentTitle: r.title,
-                                  currentRecipeId: r.id,
-                                });
-                              }}
-                              className={`group cursor-pointer text-left rounded-2xl border-2 transition-all overflow-hidden flex flex-col relative ${
-                                isSelected
-                                  ? 'bg-teal-50/90 dark:bg-teal-950/60 border-teal-500 shadow-md ring-2 ring-teal-400/50 border-b-4 border-b-teal-600 scale-[1.01]'
-                                  : 'bg-white dark:bg-slate-900 border-stone-200 dark:border-slate-800 hover:border-teal-300 hover:shadow-md border-b-4 hover:-translate-y-0.5'
-                              }`}
-                            >
-                              {/* Photo Header */}
-                              <div className="relative h-28 w-full overflow-hidden bg-stone-200 dark:bg-slate-800">
-                                <img
-                                  src={photo}
-                                  alt={r.title}
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).src =
-                                      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                                  }}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-                                {/* Category Badge */}
-                                <div className="absolute top-2 left-2">
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-xs backdrop-blur-xs flex items-center gap-1 ${cat.bg}`}
-                                  >
-                                    <span>{cat.icon}</span>
-                                    <span>{cat.label}</span>
-                                  </span>
-                                </div>
-
-                                {/* Heart Favorite Button */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleFavoriteRecipe(r.id);
-                                  }}
-                                  className={`absolute top-2 right-2 z-10 p-1.5 rounded-xl backdrop-blur-xs transition-all ${
-                                    r.isFavorite
-                                      ? 'bg-rose-500 text-white shadow-xs'
-                                      : 'bg-black/50 hover:bg-black/70 text-white/80 hover:text-white'
-                                  }`}
-                                  title={r.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen ❤️'}
-                                >
-                                  <Heart className={`w-3 h-3 ${r.isFavorite ? 'fill-white' : ''}`} />
-                                </button>
-
-                                {/* Bottom Time / Servings Pills */}
-                                <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between text-[10px] text-white font-bold">
-                                  <span className="flex items-center gap-1 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full">
-                                    <Clock className="w-2.5 h-2.5 text-teal-300" />
-                                    {r.prepTime}
-                                  </span>
-                                  <span className="flex items-center gap-1 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full">
-                                    <Users className="w-2.5 h-2.5 text-amber-300" />
-                                    {r.servings}P
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Card Body */}
-                              <div className="p-2.5 flex-1 flex flex-col justify-between">
-                                <div>
-                                  <h4 className="font-bold text-xs text-stone-900 dark:text-white line-clamp-2 leading-snug group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
-                                    {r.title}
-                                  </h4>
-                                  <p className="text-[10px] text-stone-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                                    <span>🥕</span>
-                                    <span>{r.ingredients.length} Zutaten</span>
-                                  </p>
-                                </div>
-                                {isSelected && (
-                                  <div className="mt-2 pt-1.5 border-t border-teal-200 dark:border-teal-800 flex items-center justify-between text-[10px] font-black text-teal-700 dark:text-teal-300">
-                                    <span>Bereit zum Eintragen</span>
-                                    <span>✓</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                      {/* + Import New Recipe Card */}
-                      <button
-                        type="button"
-                        onClick={() => setIsImportModalOpen(true)}
-                        className="min-h-[150px] rounded-2xl border-2 border-dashed border-teal-300 dark:border-teal-700 hover:border-teal-500 bg-teal-50/40 dark:bg-teal-950/20 hover:bg-teal-50/80 p-4 flex flex-col items-center justify-center text-center transition-all group border-b-4"
-                      >
-                        <div className="w-10 h-10 rounded-2xl bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                          <Plus className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-bold text-teal-900 dark:text-teal-200">Rezept importieren</span>
-                        <span className="text-[10px] text-teal-600 dark:text-teal-400 mt-0.5">Link, Foto oder Text</span>
-                      </button>
-                    </div>
-
-                    {/* Spotlight Box on Selected Recipe */}
-                    {(() => {
-                      const sel = recipes.find((r) => r.id === editingSlot.currentRecipeId);
-                      if (!sel) return null;
-                      return (
-                        <div className="p-3 bg-gradient-to-r from-teal-50/90 to-emerald-50/80 dark:from-slate-800 dark:to-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <img
-                              src={getRecipePhoto(sel)}
-                              alt={sel.title}
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src =
-                                  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                              }}
-                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shadow-2xs border border-teal-200 dark:border-teal-700 shrink-0"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] uppercase font-black text-teal-700 dark:text-teal-300 tracking-wider">
-                                  Aktuelle Auswahl
-                                </span>
-                                <span className="text-[10px] bg-teal-200/90 dark:bg-teal-900/60 text-teal-900 dark:text-teal-200 px-1.5 py-0.2 rounded-md font-bold">
-                                  ⏱️ {sel.prepTime}
-                                </span>
-                                {sel.isFavorite && (
-                                  <span className="text-[10px] text-rose-500 font-bold flex items-center gap-0.5">
-                                    ❤️ Favorit
-                                  </span>
-                                )}
-                              </div>
-                              <h4 className="text-sm font-black text-stone-900 dark:text-white truncate mt-0.5">
-                                {sel.title}
-                              </h4>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {sel.ingredients.slice(0, 3).map((ing, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="text-[10px] bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-stone-200 dark:border-slate-700 font-medium"
-                                  >
-                                    {ing.name}
-                                  </span>
-                                ))}
-                                {sel.ingredients.length > 3 && (
-                                  <span className="text-[10px] text-stone-500 dark:text-slate-400 font-medium">
-                                    +{sel.ingredients.length - 3} weitere
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleSyncRecipe(sel)}
-                            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl duo-btn duo-btn-green text-xs font-bold w-full sm:w-auto justify-center"
-                          >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                            <span>Zur Einkaufsliste</span>
-                          </button>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  /* TAB 2: CUSTOM DISH / LEFTOVERS */
-                  <div className="space-y-3 bg-stone-50/80 dark:bg-slate-800/80 p-4 rounded-2xl border border-stone-200 dark:border-slate-700">
-                    <div>
-                      <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 uppercase mb-1">
-                        Gerichtsname oder Idee
-                      </label>
-                      <input
-                        type="text"
-                        value={editingSlot.currentTitle}
-                        onChange={(e) =>
-                          setEditingSlot({
-                            ...editingSlot,
-                            currentTitle: e.target.value,
-                            currentRecipeId: undefined,
-                          })
-                        }
-                        placeholder="z.B. Lasagne-Reste, Freitagspizza, Paninis"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 text-sm font-semibold focus:outline-none bg-white dark:bg-slate-900 text-stone-900 dark:text-white"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <span className="block text-[11px] font-bold text-stone-500 dark:text-slate-400 uppercase mb-1.5">
-                        Schnelle Familien-Vorschläge
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {CUSTOM_DISH_SUGGESTIONS.map((s, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() =>
-                              setEditingSlot({
-                                ...editingSlot,
-                                currentTitle: s.title,
-                                currentRecipeId: undefined,
-                              })
-                            }
-                            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 hover:border-teal-400 hover:bg-teal-50/50 text-xs font-semibold text-stone-700 dark:text-slate-200 flex items-center gap-1.5 transition-all active:scale-95"
-                          >
-                            <span>{s.icon}</span>
-                            <span>{s.title}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Chef assignment */}
-                <div className="pt-2 border-t border-stone-100 dark:border-slate-800">
-                  <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <ChefHat className="w-4 h-4 text-amber-500" />
-                      <span>Chefkoch / Kochdienst zuweisen</span>
-                    </span>
-                    {editingSlot.currentChefId && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingSlot({ ...editingSlot, currentChefId: undefined })}
-                        className="text-[11px] text-stone-400 hover:text-stone-600 underline font-semibold"
-                      >
-                        Koch zurücksetzen
-                      </button>
-                    )}
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {members.map((m) => {
-                      const isChef = editingSlot.currentChefId === m.id;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() =>
-                            setEditingSlot({
-                              ...editingSlot,
-                              currentChefId: isChef ? undefined : m.id,
-                            })
-                          }
-                          className={`p-2.5 rounded-2xl flex items-center gap-2.5 border-2 transition-all text-left ${
-                            isChef
-                              ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 dark:border-amber-700 shadow-xs ring-2 ring-amber-300/60 border-b-4 translate-y-[-1px]'
-                              : 'bg-white dark:bg-slate-900 border-stone-200 dark:border-slate-800 hover:border-stone-300 hover:bg-stone-50 border-b-2'
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-slate-800 flex items-center justify-center text-lg shrink-0 shadow-2xs">
-                            {m.avatar}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="block text-xs font-bold text-stone-800 dark:text-white truncate">{m.name}</span>
-                            <span className="text-[10px] text-stone-500 dark:text-slate-400 block truncate">
-                              {isChef ? '👨‍🍳 Chefkoch' : 'Helfer'}
-                            </span>
-                          </div>
-                          {isChef && (
-                            <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                              ✓
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer actions */}
-              <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-slate-800 mt-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setEditingSlot(null)}
-                  className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  disabled={!editingSlot.currentTitle.trim()}
-                  className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl disabled:opacity-50"
-                >
-                  <span>Speichern</span>
-                  <span className="ml-1">✨</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-        </ModalPortal>
+      {activeTab === 'recipes' && (
+        <RecipeBoxTab
+          recipes={recipes}
+          onSelectRecipeForModal={(recipe) => setSelectedRecipeForModal(recipe)}
+          onEditRecipe={(recipe) => setRecipeToEdit(recipe)}
+          onDeleteRecipe={(recipe) => setRecipeToDelete(recipe)}
+          onToggleFavorite={toggleFavoriteRecipe}
+          onSyncRecipe={handleSyncRecipe}
+          onOpenImportModal={() => setIsImportModalOpen(true)}
+        />
       )}
 
-      {/* Recipe Detail Modal */}
-      {selectedRecipeForModal && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="relative h-48 rounded-2xl overflow-hidden mb-4">
-              <img
-                src={getRecipePhoto(selectedRecipeForModal)}
-                alt={selectedRecipeForModal.title}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                }}
-                className="w-full h-full object-cover"
-              />
-              <button
-                onClick={() => setSelectedRecipeForModal(null)}
-                className="absolute top-3 right-3 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold"
-              >
-                ✕
-              </button>
-            </div>
+      {/* Modals */}
+      <SlotEditModal
+        editingSlot={editingSlot}
+        recipes={recipes}
+        members={members}
+        onClose={() => setEditingSlot(null)}
+        onSave={handleSlotSave}
+        onClearSlot={handleClearSlot}
+        onToggleFavorite={toggleFavoriteRecipe}
+        onOpenImportModal={() => setIsImportModalOpen(true)}
+        onSyncRecipeDirect={(recipe, targetDate) => {
+          addRecipeIngredientsToGrocery(recipe, targetDate);
+          setSyncFeedback(`Zutaten für "${recipe.title}" auf die Einkaufsliste gesetzt! 🛒`);
+          setTimeout(() => setSyncFeedback(null), 4000);
+        }}
+      />
 
-            <div className="space-y-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 capitalize">
-                    {selectedRecipeForModal.category}
-                  </span>
-                  <span className="text-xs text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-amber-500" />
-                    {selectedRecipeForModal.prepTime}
-                  </span>
-                  <span className="text-xs text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                    <Users className="w-3 h-3 text-blue-500" />
-                    {selectedRecipeForModal.servings} Portionen
-                  </span>
-                  {selectedRecipeForModal.sourceUrl && (
-                    <a
-                      href={selectedRecipeForModal.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-0.5 ml-auto"
-                    >
-                      <span>Original-Link</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
-
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-xl font-black text-stone-900 dark:text-white leading-tight">
-                    {selectedRecipeForModal.title}
-                  </h3>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        toggleFavoriteRecipe(selectedRecipeForModal.id);
-                        setSelectedRecipeForModal({
-                          ...selectedRecipeForModal,
-                          isFavorite: !selectedRecipeForModal.isFavorite,
-                        });
-                      }}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 shadow-2xs ${
-                        selectedRecipeForModal.isFavorite
-                          ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-300'
-                          : 'bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:text-rose-500'
-                      }`}
-                      title={selectedRecipeForModal.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen ❤️'}
-                    >
-                      <Heart
-                        className={`w-3.5 h-3.5 ${
-                          selectedRecipeForModal.isFavorite ? 'fill-rose-500 text-rose-500' : ''
-                        }`}
-                      />
-                      <span className="hidden sm:inline">
-                        {selectedRecipeForModal.isFavorite ? 'Favorit' : 'Merken'}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRecipeToEdit(selectedRecipeForModal);
-                        setSelectedRecipeForModal(null);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-700 text-xs font-bold transition-all active:scale-95 shadow-2xs"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Bearbeiten</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRecipeToDelete(selectedRecipeForModal);
-                        setSelectedRecipeForModal(null);
-                      }}
-                      className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700 transition-all active:scale-95 shadow-2xs"
-                      title="Rezept löschen"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {selectedRecipeForModal.tags && selectedRecipeForModal.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedRecipeForModal.tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] font-extrabold bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 px-2 py-0.5 rounded-md border border-stone-200 dark:border-slate-700"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {selectedRecipeForModal.notes && (
-                  <p className="text-xs text-stone-600 dark:text-slate-300 mt-2 bg-stone-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-stone-200 dark:border-slate-700 font-medium">
-                    {selectedRecipeForModal.notes}
-                  </p>
-                )}
-              </div>
-
-              {/* Ingredients List */}
-              <div>
-                <h4 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                  Zutaten ({selectedRecipeForModal.ingredients.length})
-                </h4>
-                <div className="divide-y divide-stone-100 dark:divide-slate-800 border border-stone-200 dark:border-slate-700 rounded-2xl overflow-hidden">
-                  {selectedRecipeForModal.ingredients.map((ing, idx) => (
-                    <div
-                      key={idx}
-                      className="px-3.5 py-2 flex items-center justify-between text-xs bg-stone-50/40 dark:bg-slate-800/60"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
-                            ing.category === 'produce'
-                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                              : ing.category === 'dairy'
-                              ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300'
-                              : ing.category === 'meat'
-                              ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
-                              : ing.category === 'bakery'
-                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
-                              : 'bg-stone-100 dark:bg-slate-700 text-stone-700 dark:text-slate-200'
-                          }`}
-                        >
-                          {ing.category}
-                        </span>
-                        <span className="font-extrabold text-stone-800 dark:text-white">{ing.name}</span>
-                      </div>
-                      <span className="text-stone-500 dark:text-slate-400 font-bold bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-stone-200 dark:border-slate-700">
-                        {ing.amount}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Instructions List (if present) */}
-              {selectedRecipeForModal.instructions && selectedRecipeForModal.instructions.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                    Zubereitung ({selectedRecipeForModal.instructions.length} Schritte)
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedRecipeForModal.instructions.map((step, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-2.5 p-2.5 bg-stone-50 dark:bg-slate-800/70 rounded-xl border border-stone-200 dark:border-slate-700 text-xs"
-                      >
-                        <span className="w-5 h-5 rounded-full bg-amber-400 text-stone-900 font-black flex items-center justify-center shrink-0 text-[11px]">
-                          {idx + 1}
-                        </span>
-                        <p className="text-stone-700 dark:text-slate-300 font-medium leading-relaxed">{step}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-between">
-                <button
-                  onClick={() => {
-                    handleSyncRecipe(selectedRecipeForModal);
-                    setSelectedRecipeForModal(null);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl duo-btn duo-btn-green text-xs font-black shadow-xs transition-colors"
-                >
-                  <ShoppingCart className="w-4 h-4 stroke-[2.5]" />
-                  <span>Zutaten zur Einkaufsliste senden</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        </ModalPortal>
-      )}
+      <RecipeDetailModal
+        recipe={selectedRecipeForModal}
+        onClose={() => setSelectedRecipeForModal(null)}
+        onToggleFavorite={toggleFavoriteRecipe}
+        onEditRecipe={(r) => {
+          setSelectedRecipeForModal(null);
+          setRecipeToEdit(r);
+        }}
+        onDeleteRecipe={(r) => {
+          setSelectedRecipeForModal(null);
+          setRecipeToDelete(r);
+        }}
+        onSyncRecipe={(r) => {
+          handleSyncRecipe(r);
+          setSelectedRecipeForModal(null);
+        }}
+      />
 
       {/* Smart Recipe Import Modal */}
       <RecipeImportModal

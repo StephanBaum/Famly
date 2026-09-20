@@ -20,6 +20,11 @@ interface DayFocusCardProps {
   onSelectRecipe: (recipe: Recipe) => void;
   onSyncRecipe: (recipe: Recipe) => void;
   onToggleFavorite: (recipeId: string) => void;
+  onQuickSetSlot?: (
+    slot: 'breakfast' | 'lunch' | 'dinner',
+    title: string,
+    oldRecipeId?: string
+  ) => void;
 }
 
 export const DayFocusCard: React.FC<DayFocusCardProps> = ({
@@ -32,6 +37,7 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
   onSelectRecipe,
   onSyncRecipe,
   onToggleFavorite,
+  onQuickSetSlot,
 }) => {
   const dinnerRecipe = mealPlan?.dinner?.recipeId
     ? recipes.find((r) => r.id === mealPlan.dinner?.recipeId)
@@ -159,7 +165,7 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
 
             {/* Action Bar for Dinner */}
             <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() =>
@@ -175,6 +181,39 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
                   <Pencil className="w-3.5 h-3.5 mr-1" />
                   <span>Gericht / Koch ändern</span>
                 </button>
+
+                {onQuickSetSlot && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onQuickSetSlot(
+                          'dinner',
+                          '🍽️ Auswärts essen / Restaurant',
+                          mealPlan?.dinner?.recipeId
+                        )
+                      }
+                      className="px-2.5 py-1.5 text-xs font-black rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center gap-1 shadow-2xs"
+                      title="Spontan ins Restaurant? Entfernt ungekaufte Zutaten automatisch von der Einkaufsliste 🍷"
+                    >
+                      <span>🍽️ Auswärts essen</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onQuickSetSlot(
+                          'dinner',
+                          '🥡 Reste vom Vortag',
+                          mealPlan?.dinner?.recipeId
+                        )
+                      }
+                      className="px-2.5 py-1.5 text-xs font-black rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors flex items-center gap-1 shadow-2xs"
+                      title="Kühlschrank leeren? Entfernt unbenötigte Einkäufe automatisch 🥡"
+                    >
+                      <span>🥡 Reste</span>
+                    </button>
+                  </>
+                )}
 
                 {dinnerRecipe && (
                   <button
