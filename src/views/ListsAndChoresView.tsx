@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { Chore } from '../types';
 import { ModalPortal } from '../components/ModalPortal';
+import { ShoppingFocusModal } from '../components/ShoppingFocusModal';
+import { VoiceInputModal } from '../components/VoiceInputModal';
 import {
   Plus,
   ShoppingCart,
@@ -14,6 +16,11 @@ import {
   Home,
   Brain,
   Edit2,
+  Mic,
+  Gift,
+  Trophy,
+  CheckCheck,
+  Clock,
 } from 'lucide-react';
 
 export const ListsAndChoresView: React.FC = () => {
@@ -34,6 +41,14 @@ export const ListsAndChoresView: React.FC = () => {
     updateChore,
     toggleChore,
     deleteChore,
+    rewards,
+    rewardClaims,
+    addReward,
+    deleteReward,
+    claimReward,
+    approveClaim,
+    deleteClaim,
+    getMemberStarBalance,
     currentMemberId,
   } = useFamily();
 
@@ -44,6 +59,26 @@ export const ListsAndChoresView: React.FC = () => {
   const [newCustomStoreName, setNewCustomStoreName] = useState('');
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
   const [learnedNotification, setLearnedNotification] = useState<string | null>(null);
+
+  // Focus & Voice Modals
+  const [isShoppingFocusOpen, setIsShoppingFocusOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  // Chores vs Rewards Sub-tab
+  const [choreSubTab, setChoreSubTab] = useState<'chores' | 'rewards'>('chores');
+
+  // Rewards State
+  const childrenMembers = members.filter((m) => m.isChild);
+  const eligibleRewardMembers = childrenMembers.length > 0 ? childrenMembers : members;
+  const [selectedChildForReward, setSelectedChildForReward] = useState<string>(
+    eligibleRewardMembers[0]?.id || members[0]?.id || 'm1'
+  );
+  const [isAddRewardOpen, setIsAddRewardOpen] = useState(false);
+  const [newRewardTitle, setNewRewardTitle] = useState('');
+  const [newRewardDescription, setNewRewardDescription] = useState('');
+  const [newRewardCost, setNewRewardCost] = useState(10);
+  const [newRewardIcon, setNewRewardIcon] = useState('🎁');
+  const [rewardError, setRewardError] = useState<string | null>(null);
 
   // Grocery Form
   const [newItemName, setNewItemName] = useState('');
@@ -135,6 +170,40 @@ export const ListsAndChoresView: React.FC = () => {
     deleteGrocery(itemId);
     setLearnedNotification(`"${itemName}" als Vorrat markiert 🏠 (Rezepte fügen es nicht doppelt hinzu)`);
     setTimeout(() => setLearnedNotification(null), 4000);
+  };
+
+  const handleVoiceAddItems = (items: Array<{ name: string; category: any }>) => {
+    const targetStore = selectedStore !== 'all' ? selectedStore : undefined;
+    items.forEach((item) => {
+      addGrocery(item.name, targetStore, undefined, item.category);
+    });
+    setLearnedNotification(`${items.length} Artikel per Spracheingabe hinzugefügt! 🎙️`);
+    setTimeout(() => setLearnedNotification(null), 3500);
+  };
+
+  const handleCreateReward = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRewardTitle.trim()) return;
+    addReward(
+      newRewardTitle.trim(),
+      newRewardCost,
+      newRewardIcon || '🎁',
+      newRewardDescription.trim() || undefined
+    );
+    setNewRewardTitle('');
+    setNewRewardDescription('');
+    setNewRewardCost(10);
+    setNewRewardIcon('🎁');
+    setIsAddRewardOpen(false);
+  };
+
+  const handleClaimReward = (rewardId: string) => {
+    setRewardError(null);
+    const success = claimReward(rewardId, selectedChildForReward);
+    if (!success) {
+      setRewardError('Nicht genügend Sterne vorhanden!');
+      setTimeout(() => setRewardError(null), 3000);
+    }
   };
 
   // Filter groceries by selected store
@@ -282,14 +351,26 @@ export const ListsAndChoresView: React.FC = () => {
               </button>
             </div>
 
-            {/* In-Stock Pantry Staples Drawer Button */}
-            <button
-              onClick={() => setShowStaplesDrawer(!showStaplesDrawer)}
-              className="duo-btn duo-btn-white px-3.5 py-2 rounded-2xl text-xs font-black text-stone-700 dark:text-slate-200 flex items-center gap-1.5 self-start md:self-auto shrink-0"
-            >
-              <Home className="w-3.5 h-3.5 text-amber-500" />
-              <span>Vorräte ({alwaysInStock.length} da)</span>
-            </button>
+            {/* Shopping Focus Mode & Staples Buttons */}
+            <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsShoppingFocusOpen(true)}
+                className="duo-btn duo-btn-green px-3.5 py-2 rounded-2xl text-xs font-black text-white flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+                title="Supermarkt-Fokusmodus: Schnelles, einhändiges Abhaken mit Vibrations-Feedback"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>🛒 Einkaufs-Modus</span>
+              </button>
+
+              <button
+                onClick={() => setShowStaplesDrawer(!showStaplesDrawer)}
+                className="duo-btn duo-btn-white px-3.5 py-2 rounded-2xl text-xs font-black text-stone-700 dark:text-slate-200 flex items-center gap-1.5"
+              >
+                <Home className="w-3.5 h-3.5 text-amber-500" />
+                <span>Vorräte ({alwaysInStock.length} da)</span>
+              </button>
+            </div>
           </div>
 
           {/* "ALWAYS IN STOCK AT HOME" DRAWER */}
@@ -394,6 +475,16 @@ export const ListsAndChoresView: React.FC = () => {
                     ))}
                   </select>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceModalOpen(true)}
+                  className="duo-btn duo-btn-blue px-3.5 py-3 text-sm font-black rounded-2xl shrink-0 shadow-sm flex items-center gap-1.5"
+                  title="Per Spracheingabe diktieren (z.B. Milch, Äpfel, Kaffee)"
+                >
+                  <Mic className="w-4 h-4" />
+                  <span className="hidden sm:inline">Diktieren</span>
+                </button>
 
                 <button
                   type="submit"
@@ -602,7 +693,7 @@ export const ListsAndChoresView: React.FC = () => {
         </div>
       )}
 
-      {/* CHORES TAB */}
+      {/* CHORES & REWARDS TAB */}
       {activeTab === 'chores' && (
         <div className="space-y-6">
           <div className="duo-card p-6 bg-gradient-to-r from-amber-50 via-rose-50 to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-2 border-amber-200 dark:border-slate-800">
@@ -620,13 +711,25 @@ export const ListsAndChoresView: React.FC = () => {
                 </p>
               </div>
 
-              <button
-                onClick={openAddChore}
-                className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
-              >
-                <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-                <span>+ Aufgabe</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {choreSubTab === 'chores' ? (
+                  <button
+                    onClick={openAddChore}
+                    className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
+                  >
+                    <Plus className="w-4 h-4 mr-1 stroke-[3]" />
+                    <span>+ Aufgabe</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAddRewardOpen(true)}
+                    className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm"
+                  >
+                    <Plus className="w-4 h-4 mr-1 stroke-[3]" />
+                    <span>+ Belohnung</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Member Star Counts */}
@@ -635,6 +738,7 @@ export const ListsAndChoresView: React.FC = () => {
                 const memberStars = chores
                   .filter((c) => c.assignedMemberId === m.id && c.completed)
                   .reduce((sum, c) => sum + c.stars, 0);
+                const available = getMemberStarBalance(m.id);
 
                 return (
                   <div
@@ -648,104 +752,444 @@ export const ListsAndChoresView: React.FC = () => {
                         <p className="text-[10px] text-stone-400 font-bold">{m.role}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg">
-                      ⭐ {memberStars}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 rounded-lg block">
+                        ⭐ {available}
+                      </span>
+                      {m.isChild && (
+                        <span className="text-[9px] font-semibold text-stone-400 block mt-0.5">
+                          ({memberStars} ges.)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Sub-tab switch: Aufgaben vs Belohnungs-Shop */}
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-amber-200/60 dark:border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setChoreSubTab('chores')}
+                className={`duo-btn px-4 py-2 text-xs font-black rounded-xl transition-all ${
+                  choreSubTab === 'chores'
+                    ? 'duo-btn-amber'
+                    : 'duo-btn-white text-stone-600 dark:text-slate-300'
+                }`}
+              >
+                <span>📋 Aufgaben ({filteredChores.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChoreSubTab('rewards')}
+                className={`duo-btn px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 ${
+                  choreSubTab === 'rewards'
+                    ? 'duo-btn-purple'
+                    : 'duo-btn-white text-stone-600 dark:text-slate-300'
+                }`}
+              >
+                <span>⭐ Belohnungs-Shop ({rewards.length})</span>
+                {rewardClaims.filter((c) => c.status === 'pending').length > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                    {rewardClaims.filter((c) => c.status === 'pending').length} offen
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Chores List */}
-          <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-black text-stone-900 dark:text-white">
-                Aktive Aufgaben ({filteredChores.length})
-              </h4>
-              <span className="text-xs text-stone-400 dark:text-slate-400 font-bold">
-                Zeige für: {currentMemberId === 'all' ? 'Ganze Familie' : 'Ausgewähltes Mitglied'}
-              </span>
-            </div>
+          {/* CHORES LIST SUB-TAB */}
+          {choreSubTab === 'chores' && (
+            <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                  Aktive Aufgaben ({filteredChores.length})
+                </h4>
+                <span className="text-xs text-stone-400 dark:text-slate-400 font-bold">
+                  Zeige für: {currentMemberId === 'all' ? 'Ganze Familie' : 'Ausgewähltes Mitglied'}
+                </span>
+              </div>
 
-            <div className="space-y-2">
-              {filteredChores.map((chore) => {
-                const assigned = members.find((m) => m.id === chore.assignedMemberId);
-                return (
-                  <div
-                    key={chore.id}
-                    onClick={() => toggleChore(chore.id)}
-                    className={`cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
-                      chore.completed
-                        ? 'bg-amber-50/20 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-65'
-                        : 'bg-stone-50/40 dark:bg-slate-800/60 border-b-4 border-stone-200 dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 hover:border-amber-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {chore.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
-                      )}
+              <div className="space-y-2">
+                {filteredChores.map((chore) => {
+                  const assigned = members.find((m) => m.id === chore.assignedMemberId);
+                  return (
+                    <div
+                      key={chore.id}
+                      onClick={() => toggleChore(chore.id)}
+                      className={`cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
+                        chore.completed
+                          ? 'bg-amber-50/20 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 opacity-65'
+                          : 'bg-stone-50/40 dark:bg-slate-800/60 border-b-4 border-stone-200 dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 hover:border-amber-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {chore.completed ? (
+                          <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950/50 shrink-0" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-stone-300 dark:text-slate-600 hover:text-amber-500 shrink-0" />
+                        )}
 
-                      <div>
-                        <p
-                          className={`text-sm font-black ${
-                            chore.completed
-                              ? 'line-through text-stone-400 dark:text-slate-500'
-                              : 'text-stone-800 dark:text-white'
-                          }`}
+                        <div>
+                          <p
+                            className={`text-sm font-black ${
+                              chore.completed
+                                ? 'line-through text-stone-400 dark:text-slate-500'
+                                : 'text-stone-800 dark:text-white'
+                            }`}
+                          >
+                            {chore.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300">
+                              {chore.frequency === 'daily' ? 'Täglich' : chore.frequency === 'weekly' ? 'Wöchentlich' : 'Einmalig'}
+                            </span>
+                            {assigned && (
+                              <span className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1 font-bold">
+                                <span>Zugewiesen an:</span>
+                                <span>{assigned.avatar}</span>
+                                <span className="text-stone-700 dark:text-slate-200">{assigned.name}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 text-xs font-black border border-amber-300 dark:border-amber-700">
+                          <span>⭐</span>
+                          <span>+{chore.stars} Sterne</span>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditChore(chore);
+                          }}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                          title="Aufgabe bearbeiten"
                         >
-                          {chore.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300">
-                            {chore.frequency === 'daily' ? 'Täglich' : chore.frequency === 'weekly' ? 'Wöchentlich' : 'Einmalig'}
-                          </span>
-                          {assigned && (
-                            <span className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1 font-bold">
-                              <span>Zugewiesen an:</span>
-                              <span>{assigned.avatar}</span>
-                              <span className="text-stone-700 dark:text-slate-200">{assigned.name}</span>
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChore(chore.id);
+                          }}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          title="Aufgabe löschen"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* REWARDS SHOP SUB-TAB */}
+          {choreSubTab === 'rewards' && (
+            <div className="space-y-6 animate-in fade-in">
+              {/* Star Banks per Child / Member */}
+              <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-base font-black text-stone-900 dark:text-white flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-amber-500" />
+                      <span>Sterne-Sparkonten der Kinder</span>
+                    </h4>
+                    <p className="text-xs font-semibold text-stone-500 dark:text-slate-400">
+                      Erledigte Aufgaben bringen Sterne, die hier gegen tolle Familien-Belohnungen eingelöst werden können!
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddRewardOpen(true)}
+                    className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl shadow-sm self-start sm:self-auto"
+                  >
+                    <Plus className="w-4 h-4 mr-1 stroke-[3]" />
+                    <span>+ Eigene Belohnung</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                  {eligibleRewardMembers.map((m) => {
+                    const balance = getMemberStarBalance(m.id);
+                    const isSelected = selectedChildForReward === m.id;
+                    const totalEarned = chores
+                      .filter((c) => c.assignedMemberId === m.id && c.completed)
+                      .reduce((sum, c) => sum + c.stars, 0);
+                    const spent = rewardClaims
+                      .filter((c) => c.memberId === m.id)
+                      .reduce((sum, c) => sum + c.starsSpent, 0);
+
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSelectedChildForReward(m.id)}
+                        className={`text-left p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500 shadow-sm ring-2 ring-amber-400/20'
+                            : 'bg-stone-50/60 dark:bg-slate-800/40 border-stone-200 dark:border-slate-700 hover:border-amber-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">{m.avatar}</span>
+                            <div>
+                              <p className="text-sm font-black text-stone-900 dark:text-white">{m.name}</p>
+                              <p className="text-[10px] font-bold text-stone-400">{m.role}</p>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <span className="text-[10px] font-black uppercase bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                              Aktiv
                             </span>
                           )}
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 text-xs font-black border border-amber-300 dark:border-amber-700">
-                        <span>⭐</span>
-                        <span>+{chore.stars} Sterne</span>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditChore(chore);
-                        }}
-                        className="p-1.5 rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
-                        title="Aufgabe bearbeiten"
-                      >
-                        <Edit2 className="w-4 h-4" />
+                        <div className="flex items-baseline justify-between mt-3 pt-2 border-t border-stone-200/50 dark:border-slate-700/50">
+                          <span className="text-xs font-bold text-stone-500 dark:text-slate-400">Verfügbar:</span>
+                          <span className="text-lg font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                            ⭐ {balance} Sterne
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-stone-400 mt-0.5">
+                          <span>Gesamt: {totalEarned} ⭐</span>
+                          <span>Eingelöst: {spent} ⭐</span>
+                        </div>
                       </button>
+                    );
+                  })}
+                </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteChore(chore.id);
-                        }}
-                        className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                        title="Aufgabe löschen"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                {/* Selected child notification / hint */}
+                <div className="bg-amber-50/50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-stone-700 dark:text-slate-200">
+                    <span>💡</span>
+                    <span>
+                      Belohnungen werden eingelöst für:{' '}
+                      <strong className="font-black text-amber-700 dark:text-amber-400">
+                        {members.find((m) => m.id === selectedChildForReward)?.name || 'Ausgewähltes Kind'}
+                      </strong>{' '}
+                      (Guthaben: {getMemberStarBalance(selectedChildForReward)} Sterne)
+                    </span>
                   </div>
-                );
-              })}
+                  {rewardError && (
+                    <span className="font-black text-rose-600 dark:text-rose-400 animate-bounce">
+                      {rewardError}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Available Rewards Grid */}
+              <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-black text-stone-900 dark:text-white flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-purple-500" />
+                    <span>Verfügbare Belohnungen</span>
+                  </h4>
+                  <span className="text-xs font-bold text-stone-400 dark:text-slate-400">
+                    {rewards.length} Belohnungen im Katalog
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {rewards.map((reward) => {
+                    const currentChildBalance = getMemberStarBalance(selectedChildForReward);
+                    const canAfford = currentChildBalance >= reward.starsCost;
+                    const needed = reward.starsCost - currentChildBalance;
+
+                    return (
+                      <div
+                        key={reward.id}
+                        className={`p-4 rounded-2xl border-2 flex flex-col justify-between transition-all ${
+                          canAfford
+                            ? 'bg-gradient-to-b from-white to-amber-50/30 dark:from-slate-800 dark:to-slate-800/80 border-stone-200 dark:border-slate-700 hover:border-amber-400 shadow-2xs'
+                            : 'bg-stone-50/50 dark:bg-slate-900/60 border-stone-200/60 dark:border-slate-800/80 opacity-75'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className="text-3xl p-2 bg-stone-100 dark:bg-slate-700/60 rounded-2xl">
+                              {reward.icon}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 text-xs font-black border border-amber-300 dark:border-amber-700">
+                                ⭐ {reward.starsCost}
+                              </span>
+                              {reward.id.startsWith('r_custom') && (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteReward(reward.id)}
+                                  className="text-stone-300 hover:text-rose-500 p-1"
+                                  title="Belohnung löschen"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <h5 className="text-sm font-black text-stone-900 dark:text-white mb-1">
+                            {reward.title}
+                          </h5>
+                          {reward.description && (
+                            <p className="text-xs text-stone-500 dark:text-slate-400 leading-relaxed mb-3">
+                              {reward.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-3 mt-2 border-t border-stone-100 dark:border-slate-800">
+                          {canAfford ? (
+                            <button
+                              type="button"
+                              onClick={() => handleClaimReward(reward.id)}
+                              className="w-full duo-btn duo-btn-amber py-2 text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            >
+                              <span>⭐ Einlösen</span>
+                            </button>
+                          ) : (
+                            <div className="w-full py-2 px-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-center text-xs font-bold text-stone-400 dark:text-slate-500 border border-stone-200 dark:border-slate-700">
+                              Noch {needed} ⭐ benötigt
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Claims & History Section */}
+              <div className="duo-card p-6 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-base font-black text-stone-900 dark:text-white flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-indigo-500" />
+                      <span>Eingelöste Belohnungen & Gutscheine</span>
+                    </h4>
+                    <p className="text-xs font-semibold text-stone-500 dark:text-slate-400">
+                      Von Kindern beantragte Belohnungen können hier von den Eltern genehmigt & abgehakt werden.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-stone-400 dark:text-slate-400">
+                    {rewardClaims.length} gesamt
+                  </span>
+                </div>
+
+                {rewardClaims.length === 0 ? (
+                  <div className="text-center py-8 text-stone-400 dark:text-slate-500 space-y-2">
+                    <span className="text-3xl block">🎟️</span>
+                    <p className="text-xs font-bold">Noch keine Belohnungen beantragt.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {rewardClaims.map((claim) => {
+                      const claimant = members.find((m) => m.id === claim.memberId);
+                      const isPending = claim.status === 'pending';
+
+                      return (
+                        <div
+                          key={claim.id}
+                          className={`p-3.5 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                            isPending
+                              ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60'
+                              : 'bg-stone-50/40 dark:bg-slate-800/40 border-stone-200 dark:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl p-2 bg-white dark:bg-slate-800 rounded-xl border border-stone-200 dark:border-slate-700">
+                              {claim.rewardIcon}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-sm font-black text-stone-900 dark:text-white">
+                                  {claim.rewardTitle}
+                                </h5>
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                                  (-{claim.starsSpent} ⭐)
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                                <span>Eingelöst von:</span>
+                                <span className="font-bold text-stone-700 dark:text-slate-200">
+                                  {claimant?.avatar} {claimant?.name || 'Kind'}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  {new Date(claim.claimedAt).toLocaleDateString('de-DE', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-auto">
+                            {isPending ? (
+                              <>
+                                <span className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                                  ⏳ Wartet auf OK
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => approveClaim(claim.id)}
+                                  className="duo-btn duo-btn-green px-3 py-1.5 text-xs font-black rounded-xl flex items-center gap-1 shadow-2xs"
+                                  title="Von Eltern genehmigen & einlösen"
+                                >
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                  <span>Genehmigen</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => deleteClaim(claim.id)}
+                                  className="text-stone-400 hover:text-rose-500 p-1.5"
+                                  title="Einlösung stornieren (Sterne erstatten)"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  <span>Genehmigt & Eingelöst</span>
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => deleteClaim(claim.id)}
+                                  className="text-stone-300 hover:text-rose-500 p-1.5"
+                                  title="Eintrag entfernen"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -885,6 +1329,130 @@ export const ListsAndChoresView: React.FC = () => {
           </div>
         </ModalPortal>
       )}
+
+      {/* Add Custom Reward Modal */}
+      {isAddRewardOpen && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-black text-stone-900 dark:text-white mb-1 flex items-center gap-2">
+                <Gift className="w-5 h-5 text-purple-500" />
+                <span>Eigene Familien-Belohnung erstellen</span>
+              </h3>
+              <p className="text-xs font-semibold text-stone-500 dark:text-slate-400 mb-4">
+                Lege eine neue Belohnung fest, die sich eure Kinder mit ihren erledigten Haushaltsaufgaben verdienen können.
+              </p>
+
+              <form onSubmit={handleCreateReward} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Titel der Belohnung
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Zoobesuch, Pizza-Abend, 45 Min Nintendo Switch"
+                    value={newRewardTitle}
+                    onChange={(e) => setNewRewardTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                    Beschreibung (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Ein Ausflug am Wochenende mit der ganzen Familie"
+                    value={newRewardDescription}
+                    onChange={(e) => setNewRewardDescription(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                      Kosten in Sternen
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={newRewardCost}
+                      onChange={(e) => setNewRewardCost(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-stone-600 dark:text-slate-300 uppercase mb-1">
+                      Icon / Emoji
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={2}
+                        value={newRewardIcon}
+                        onChange={(e) => setNewRewardIcon(e.target.value)}
+                        className="w-14 text-center px-2 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-lg bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                        required
+                      />
+                      <div className="flex gap-1 overflow-x-auto text-base">
+                        {['🍦', '🎮', '🎬', '🍕', '🎡', '⛺', '🛹', '🎳'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setNewRewardIcon(emoji)}
+                            className="p-1 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddRewardOpen(false)}
+                    className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="duo-btn duo-btn-purple px-5 py-2 text-xs font-black rounded-xl"
+                  >
+                    Belohnung speichern
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Shopping Focus Mode Modal */}
+      <ShoppingFocusModal
+        isOpen={isShoppingFocusOpen}
+        onClose={() => setIsShoppingFocusOpen(false)}
+        groceries={groceries}
+        stores={stores}
+        onToggleItem={toggleGrocery}
+        onClearChecked={clearCheckedGroceries}
+      />
+
+      {/* Voice Input Modal */}
+      <VoiceInputModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onAddItems={handleVoiceAddItems}
+      />
     </div>
   );
 };

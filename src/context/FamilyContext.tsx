@@ -14,7 +14,18 @@ import {
   PinnedNote,
   Ingredient,
   StoreDefinition,
+  Reward,
+  RewardClaim,
 } from '../types';
+import {
+  subscribeToFamilyRealtime,
+  syncGroceryToCloud,
+  deleteGroceryFromCloud,
+  syncChoreToCloud,
+  deleteChoreFromCloud,
+  syncAppointmentToCloud,
+  deleteAppointmentFromCloud,
+} from '../services/supabaseSync';
 import {
   INITIAL_MEMBERS,
   INITIAL_RECIPES,
@@ -107,6 +118,16 @@ interface FamilyContextType {
   toggleChore: (id: string) => void;
   deleteChore: (id: string) => void;
 
+  // Rewards & Gamification
+  rewards: Reward[];
+  rewardClaims: RewardClaim[];
+  addReward: (title: string, starsCost: number, icon?: string, description?: string, targetMemberId?: string) => void;
+  deleteReward: (id: string) => void;
+  claimReward: (rewardId: string, memberId: string) => boolean;
+  approveClaim: (claimId: string) => void;
+  deleteClaim: (claimId: string) => void;
+  getMemberStarBalance: (memberId: string) => number;
+
   notes: PinnedNote[];
   addNote: (title: string, content: string, tag: PinnedNote['tag'], isPinned?: boolean) => void;
   deleteNote: (id: string) => void;
@@ -153,9 +174,19 @@ const STORAGE_KEYS = {
   STORE_MAP: 'famly_store_map_v2',
   ALWAYS_IN_STOCK: 'famly_always_in_stock_v2',
   LOGGED_IN_MEMBER: 'famly_logged_in_member_v3',
+  REWARDS: 'famly_rewards_v2',
+  REWARD_CLAIMS: 'famly_reward_claims_v2',
   THEME: 'famly_theme_mode',
   FAMILY_NAME: 'famly_family_name',
 };
+
+export const INITIAL_REWARDS: Reward[] = [
+  { id: 'rew_1', title: 'Großes Eisbecher-Essen', icon: '🍦', starsCost: 15, description: 'Beliebige Eisdiele mit 3 Kugeln & Sahne' },
+  { id: 'rew_2', title: '45 Min extra Medien-/Spielzeit', icon: '🎮', starsCost: 20, description: 'Für Konsole, Tablet oder Lieblingsserie' },
+  { id: 'rew_3', title: 'Wunsch-Abendessen bestimmen', icon: '🍕', starsCost: 25, description: 'Du suchst aus, was die Familie kocht oder bestellt' },
+  { id: 'rew_4', title: 'Filmabend mit Wunschfilm & Popcorn', icon: '🎬', starsCost: 30, description: 'Großer Familien-Kinoabend auf dem Sofa' },
+  { id: 'rew_5', title: 'Ausflug in den Freizeitpark oder Zoo', icon: '🎡', starsCost: 50, description: 'Gemeinsamer Wochenend-Erlebnisausflug' },
+];
 
 function getStoredOrDefault<T>(key: string, defaultValue: T): T {
   try {
@@ -257,6 +288,14 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return [];
   });
 
+  // Rewards & Gamification
+  const [rewards, setRewards] = useState<Reward[]>(() =>
+    getStoredOrDefault(STORAGE_KEYS.REWARDS, INITIAL_REWARDS)
+  );
+  const [rewardClaims, setRewardClaims] = useState<RewardClaim[]>(() =>
+    getStoredOrDefault(STORAGE_KEYS.REWARD_CLAIMS, [])
+  );
+
   // Stores & Learning states
   const [stores, setStores] = useState<StoreDefinition[]>(() =>
     getStoredOrDefault(STORAGE_KEYS.STORES, INITIAL_STORES)
@@ -345,6 +384,69 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [notes]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.REWARDS, JSON.stringify(rewards));
+  }, [rewards]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.REWARD_CLAIMS, JSON.stringify(rewardClaims));
+  }, [rewardClaims]);
+
+  // Supabase Realtime Live-Sync Subscription
+  useEffect(() => {
+    const unsubscribe = subscribeToFamilyRealtime({
+      onGroceryChange: (eventType, item) => {
+        if (!item || !item.id) return;
+        if (eventType === 'DELETE') {
+          setGroceries((prev) => prev.filter((g) => g.id !== item.id));
+        } else {
+          setGroceries((prev) => {
+            const exists = prev.some((g) => g.id === item.id);
+            if (exists) {
+              return prev.map((g) => (g.id === item.id ? { ...g, ...item } : g));
+            } else {
+              return [item, ...prev];
+            }
+          });
+        }
+      },
+      onChoreChange: (eventType, chore) => {
+        if (!chore || !chore.id) return;
+        if (eventType === 'DELETE') {
+          setChores((prev) => prev.filter((c) => c.id !== chore.id));
+        } else {
+          setChores((prev) => {
+            const exists = prev.some((c) => c.id === chore.id);
+            if (exists) {
+              return prev.map((c) => (c.id === chore.id ? { ...c, ...chore } : c));
+            } else {
+              return [chore, ...prev];
+            }
+          });
+        }
+      },
+      onAppointmentChange: (eventType, appt) => {
+        if (!appt || !appt.id) return;
+        if (eventType === 'DELETE') {
+          setAppointments((prev) => prev.filter((a) => a.id !== appt.id));
+        } else {
+          setAppointments((prev) => {
+            const exists = prev.some((a) => a.id === appt.id);
+            if (exists) {
+              return prev.map((a) => (a.id === appt.id ? { ...a, ...appt } : a));
+            } else {
+              return [appt, ...prev];
+            }
+          });
+        }
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(stores));
   }, [stores]);
 
@@ -406,14 +508,25 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `a_${Date.now()}`,
     };
     setAppointments((prev) => [...prev, newApp]);
+    syncAppointmentToCloud(newApp);
   };
 
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
-    setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
+    setAppointments((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          const updated = { ...a, ...updates };
+          syncAppointmentToCloud(updated);
+          return updated;
+        }
+        return a;
+      })
+    );
   };
 
   const deleteAppointment = (id: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== id));
+    deleteAppointmentFromCloud(id);
   };
 
   // Recipes & Meal planning
@@ -792,16 +905,25 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
     };
     setGroceries((prev) => [newItem, ...prev]);
+    syncGroceryToCloud(newItem);
   };
 
   const toggleGrocery = (id: string) => {
     setGroceries((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
+      prev.map((item) => {
+        if (item.id === id) {
+          const updated = { ...item, checked: !item.checked };
+          syncGroceryToCloud(updated);
+          return updated;
+        }
+        return item;
+      })
     );
   };
 
   const deleteGrocery = (id: string) => {
     setGroceries((prev) => prev.filter((item) => item.id !== id));
+    deleteGroceryFromCloud(id);
   };
 
   const clearCheckedGroceries = (storeFilter?: string) => {
@@ -809,6 +931,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.filter((item) => {
         if (!item.checked) return true;
         if (storeFilter && item.store !== storeFilter) return true;
+        deleteGroceryFromCloud(item.id);
         return false;
       })
     );
@@ -830,11 +953,19 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stars,
     };
     setChores((prev) => [newChore, ...prev]);
+    syncChoreToCloud(newChore);
   };
 
   const updateChore = (id: string, updates: Partial<Omit<Chore, 'id'>>) => {
     setChores((prev) =>
-      prev.map((chore) => (chore.id === id ? { ...chore, ...updates } : chore))
+      prev.map((chore) => {
+        if (chore.id === id) {
+          const updated = { ...chore, ...updates };
+          syncChoreToCloud(updated);
+          return updated;
+        }
+        return chore;
+      })
     );
   };
 
@@ -851,7 +982,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               colors: ['#F59E0B', '#10B981', '#6366F1', '#EC4899'],
             });
           }
-          return { ...chore, completed: newCompleted };
+          const updated = { ...chore, completed: newCompleted };
+          syncChoreToCloud(updated);
+          return updated;
         }
         return chore;
       })
@@ -860,6 +993,82 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteChore = (id: string) => {
     setChores((prev) => prev.filter((chore) => chore.id !== id));
+    deleteChoreFromCloud(id);
+  };
+
+  // Rewards & Gamification
+  const addReward = (
+    title: string,
+    starsCost: number,
+    icon = '🎁',
+    description?: string,
+    targetMemberId?: string
+  ) => {
+    const newRew: Reward = {
+      id: `rew_${Date.now()}`,
+      title: title.trim(),
+      starsCost: Math.max(1, Number(starsCost)),
+      icon: icon || '🎁',
+      description: description?.trim() || undefined,
+      targetMemberId: targetMemberId || undefined,
+    };
+    setRewards((prev) => [...prev, newRew]);
+  };
+
+  const deleteReward = (id: string) => {
+    setRewards((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const getMemberStarBalance = (memberId: string): number => {
+    const totalEarned = chores
+      .filter((c) => c.assignedMemberId === memberId && c.completed)
+      .reduce((acc, c) => acc + (c.stars || 0), 0);
+
+    const totalSpent = rewardClaims
+      .filter((cl) => cl.memberId === memberId && cl.status !== 'rejected')
+      .reduce((acc, cl) => acc + (cl.starsSpent || 0), 0);
+
+    return Math.max(0, totalEarned - totalSpent);
+  };
+
+  const claimReward = (rewardId: string, memberId: string): boolean => {
+    const reward = rewards.find((r) => r.id === rewardId);
+    if (!reward) return false;
+
+    const balance = getMemberStarBalance(memberId);
+    if (balance < reward.starsCost) return false;
+
+    const newClaim: RewardClaim = {
+      id: `claim_${Date.now()}`,
+      rewardId: reward.id,
+      rewardTitle: reward.title,
+      rewardIcon: reward.icon,
+      memberId,
+      starsSpent: reward.starsCost,
+      claimedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+
+    setRewardClaims((prev) => [newClaim, ...prev]);
+
+    confetti({
+      particleCount: 75,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#F59E0B', '#10B981', '#EC4899', '#6366F1'],
+    });
+
+    return true;
+  };
+
+  const approveClaim = (claimId: string) => {
+    setRewardClaims((prev) =>
+      prev.map((c) => (c.id === claimId ? { ...c, status: 'approved' } : c))
+    );
+  };
+
+  const deleteClaim = (claimId: string) => {
+    setRewardClaims((prev) => prev.filter((c) => c.id !== claimId));
   };
 
   // Notes
@@ -898,6 +1107,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStores(INITIAL_STORES);
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
     setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
+    setRewards(INITIAL_REWARDS);
+    setRewardClaims([]);
     setFamilyNameState('Familie Baum');
     setLoggedInMemberId('m2'); // Alex logged in by default
     setIsOnboarded(true);
@@ -944,6 +1155,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGroceries([]);
     setChores([]);
     setNotes([]);
+    setRewards(INITIAL_REWARDS);
+    setRewardClaims([]);
     setStores(config.loadSampleStores !== false ? INITIAL_STORES : []);
     setStoreLearningMap(INITIAL_STORE_LEARNING_MAP);
     setAlwaysInStock(INITIAL_ALWAYS_IN_STOCK);
@@ -977,6 +1190,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGroceries([]);
     setChores([]);
     setNotes([]);
+    setRewards(INITIAL_REWARDS);
+    setRewardClaims([]);
   };
 
   const exportAllData = (): string => {
@@ -997,6 +1212,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stores,
       storeLearningMap,
       alwaysInStock,
+      rewards,
+      rewardClaims,
     };
     return JSON.stringify(dump, null, 2);
   };
@@ -1045,6 +1262,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       if (Array.isArray(data.alwaysInStock)) {
         setAlwaysInStock(data.alwaysInStock);
+      }
+      if (Array.isArray(data.rewards)) {
+        setRewards(data.rewards);
+      }
+      if (Array.isArray(data.rewardClaims)) {
+        setRewardClaims(data.rewardClaims);
       }
       setIsOnboarded(true);
       localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
@@ -1107,6 +1330,14 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateChore,
         toggleChore,
         deleteChore,
+        rewards,
+        rewardClaims,
+        addReward,
+        deleteReward,
+        claimReward,
+        approveClaim,
+        deleteClaim,
+        getMemberStarBalance,
         notes,
         addNote,
         deleteNote,

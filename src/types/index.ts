@@ -166,3 +166,24 @@ export interface PinnedNote {
   authorMemberId: string;
   createdAt: string;
 }
+
+export interface Reward {
+  id: string;
+  title: string;
+  icon: string;
+  starsCost: number;
+  description?: string;
+  targetMemberId?: string; // specific child or undefined for all
+}
+
+export interface RewardClaim {
+  id: string;
+  rewardId: string;
+  rewardTitle: string;
+  rewardIcon: string;
+  memberId: string;
+  starsSpent: number;
+  claimedAt: string; // ISO date string
+  status: 'pending' | 'approved' | 'redeemed' | 'rejected';
+}
+

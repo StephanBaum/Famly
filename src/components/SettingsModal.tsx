@@ -15,6 +15,7 @@ import {
   AIProvider,
 } from '../services/aiRecipeService';
 import { CloudConnectShareModal } from './CloudConnectShareModal';
+import { InstallAppBanner } from './InstallAppBanner';
 import schemaSql from '../../supabase/schema.sql?raw';
 import {
   X,
@@ -291,6 +292,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* PWA Homescreen App Installation */}
+            <InstallAppBanner />
 
             {/* Section 2: Cloud & Multi-Device Sync (Supabase BYOK) */}
             <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="famly-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#064E3B" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  
+  <!-- App Icon Background Shape with rounded squirle corner -->
+  <rect width="512" height="512" rx="128" fill="url(#famly-grad)" />
+  
+  <!-- Subtle warm accent highlight -->
+  <circle cx="420" cy="90" r="45" fill="#F59E0B" opacity="0.85" />
+  
+  <!-- Cheerful House Icon with Heart in center -->
+  <g filter="url(#shadow)" transform="translate(64, 60)">
+    <!-- Roof -->
+    <path d="M192 48 L32 184 C24 191 24 204 33 211 C42 218 55 218 63 209 L192 98 L321 209 C329 218 342 218 351 211 C360 204 360 191 352 184 Z" fill="#FFFFFF" />
+    <!-- Chimney -->
+    <rect x="260" y="80" width="34" height="60" rx="6" fill="#FDE68A" />
+    <!-- House Body -->
+    <path d="M64 192 L64 340 C64 362 82 380 104 380 L280 380 C302 380 320 362 320 340 L320 192 Z" fill="#FFFFFF" fill-opacity="0.95" />
+    <!-- Heart Doorway in House -->
+    <path d="M192 318 C192 318 140 280 140 240 C140 216 158 198 180 198 C192 198 202 204 208 212 C214 204 224 198 236 198 C258 198 276 216 276 240 C276 280 224 318 224 318 Z" transform="translate(-16, -10)" fill="#F43F5E" />
+  </g>
+</svg>

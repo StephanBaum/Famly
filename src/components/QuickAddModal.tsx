@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { AppointmentCategory, GroceryCategory } from '../types';
-import { Calendar, ShoppingCart, Sparkles, Pin } from 'lucide-react';
+import { Calendar, ShoppingCart, Sparkles, Pin, Mic } from 'lucide-react';
 import { ModalPortal } from './ModalPortal';
+import { VoiceInputModal } from './VoiceInputModal';
 import { format } from 'date-fns';
 
 interface QuickAddModalProps {
@@ -16,6 +17,7 @@ type QuickType = 'event' | 'grocery' | 'chore' | 'note';
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose }) => {
   const { members, currentMemberId, addAppointment, addGrocery, addChore, addNote, stores } = useFamily();
   const [selectedType, setSelectedType] = useState<QuickType>('event');
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   // Event form
   const [eventTitle, setEventTitle] = useState('');
@@ -62,6 +64,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
       addNote(noteTitle.trim(), noteContent.trim(), 'info', true);
     }
 
+    onClose();
+  };
+
+  const handleVoiceAdd = (items: Array<{ name: string; category: GroceryCategory }>) => {
+    items.forEach((item) => {
+      addGrocery(item.name, groceryStore, undefined, item.category);
+    });
+    setIsVoiceModalOpen(false);
     onClose();
   };
 
@@ -114,7 +124,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
             type="button"
             onClick={() => setSelectedType('note')}
             className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center gap-1 transition-all ${
-              selectedType === 'note' ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 shadow-2xs' : 'text-stone-600 dark:text-slate-400'
+              selectedType === 'note' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-2xs' : 'text-stone-600 dark:text-slate-400'
             }`}
           >
             <Pin className="w-3.5 h-3.5" />
@@ -122,7 +132,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {selectedType === 'event' && (
             <>
               <div>
@@ -173,7 +183,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
           {selectedType === 'grocery' && (
             <>
               <div>
-                <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase mb-1">Artikel</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase">Artikel</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceModalOpen(true)}
+                    className="text-xs font-black text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Mic className="w-3 h-3" />
+                    <span>Per Sprache diktieren</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="z.B. Sauerteigbrot, Hafermilch"
@@ -281,6 +301,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
         </form>
       </div>
     </div>
+
+    {/* Voice Dictation Modal */}
+    <VoiceInputModal
+      isOpen={isVoiceModalOpen}
+      onClose={() => setIsVoiceModalOpen(false)}
+      onAddItems={handleVoiceAdd}
+    />
     </ModalPortal>
   );
 };
