@@ -157,11 +157,12 @@ export const MealPlannerView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200/60 dark:border-slate-700">
+        {/* Tab switch */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1.5 rounded-2xl border-2 border-stone-200 dark:border-slate-700">
             <button
               onClick={() => setActiveTab('week')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'week'
                   ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs'
                   : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
@@ -172,7 +173,7 @@ export const MealPlannerView: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('recipes')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'recipes'
                   ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs'
                   : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
@@ -185,7 +186,7 @@ export const MealPlannerView: React.FC = () => {
 
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="duo-btn duo-btn-green px-3.5 py-2 text-xs font-black rounded-2xl flex items-center gap-1.5 shadow-sm"
+            className="duo-btn duo-btn-green px-3.5 py-2 text-xs font-black rounded-2xl flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
           >
             <Sparkles className="w-4 h-4 fill-white stroke-[2.5]" />
             <span>+ Rezept</span>
@@ -211,9 +212,42 @@ export const MealPlannerView: React.FC = () => {
         <div className="space-y-4">
           
           {/* Day Strip & View Layout Toggle */}
-          <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs overflow-hidden">
-            {/* Day Pills Strip */}
-            <div className="flex items-center gap-1.5 overflow-x-auto p-1 scrollbar-none w-full sm:w-auto">
+          <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 space-y-3 shadow-xs">
+            {/* Header: Week Title & Mode Switcher */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-black text-stone-500 dark:text-slate-400 uppercase tracking-wider">
+                Woche: {format(weekDays[0], 'd. MMM', { locale: de })} – {format(weekDays[6], 'd. MMM', { locale: de })}
+              </span>
+
+              {/* Mode Switcher: Focus Day vs Full Week Grid */}
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setPlannerMode('focus')}
+                  className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                    plannerMode === 'focus'
+                      ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                      : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                  }`}
+                >
+                  ⭐ Fokus-Tag
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlannerMode('grid')}
+                  className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                    plannerMode === 'grid'
+                      ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                      : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                  }`}
+                >
+                  📅 7-Tage-Raster
+                </button>
+              </div>
+            </div>
+
+            {/* 7-Day Responsive Grid (Never clips Saturday/Sunday!) */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 w-full">
               {weekDays.map((day, idx) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isToday = dateStr === todayDateStr;
@@ -226,47 +260,24 @@ export const MealPlannerView: React.FC = () => {
                       setSelectedDayIdx(idx);
                       setPlannerMode('focus');
                     }}
-                    className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-1.5 rounded-xl border-2 transition-all shrink-0 ${
+                    className={`flex flex-col items-center justify-center py-2 px-1 sm:px-2 rounded-xl border-2 transition-all min-w-0 ${
                       isSelected
-                        ? 'bg-teal-600 text-white border-teal-700 shadow-xs scale-105'
+                        ? 'bg-teal-600 text-white border-teal-700 shadow-xs'
                         : isToday
                         ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-900 dark:text-teal-200 border-teal-300 dark:border-teal-700 font-extrabold'
                         : 'bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100 font-bold'
                     }`}
                   >
-                    <span className="text-[10px] uppercase tracking-wider">
+                    <span className="text-[10px] sm:text-xs uppercase tracking-wider truncate w-full text-center">
                       {isToday ? '★ Heute' : format(day, 'EEE', { locale: de })}
                     </span>
-                    <span className="text-xs font-black">{format(day, 'd. MMM', { locale: de })}</span>
+                    <span className="text-xs sm:text-sm font-black truncate w-full text-center">
+                      <span className="sm:hidden">{format(day, 'd.', { locale: de })}</span>
+                      <span className="hidden sm:inline">{format(day, 'd. MMM', { locale: de })}</span>
+                    </span>
                   </button>
                 );
               })}
-            </div>
-
-            {/* Mode Switcher: Focus Day vs Full Week Grid */}
-            <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 self-end sm:self-auto shrink-0">
-              <button
-                type="button"
-                onClick={() => setPlannerMode('focus')}
-                className={`px-3 py-1 text-xs font-black rounded-lg transition-all ${
-                  plannerMode === 'focus'
-                    ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                    : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
-                }`}
-              >
-                ⭐ Fokus-Tag
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlannerMode('grid')}
-                className={`px-3 py-1 text-xs font-black rounded-lg transition-all ${
-                  plannerMode === 'grid'
-                    ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                    : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
-                }`}
-              >
-                📅 7-Tage-Raster
-              </button>
             </div>
           </div>
 

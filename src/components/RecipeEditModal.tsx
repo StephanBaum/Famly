@@ -482,28 +482,29 @@ export const RecipeEditModal: React.FC<RecipeEditModalProps> = ({
               👩‍🍳 Zubereitungsschritte ({instructions.length})
             </label>
 
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin pr-1">
               {instructions.map((step, idx) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-2 p-2 bg-stone-50 dark:bg-slate-800/70 rounded-xl border border-stone-200 dark:border-slate-700 text-xs"
+                  className="flex items-start gap-2.5 p-2.5 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200 dark:border-slate-700 text-xs shadow-2xs"
                 >
-                  <span className="w-5 h-5 rounded-full bg-amber-400 text-stone-900 font-black flex items-center justify-center shrink-0 text-[11px] mt-0.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-400 text-stone-900 font-black flex items-center justify-center shrink-0 text-xs mt-1 shadow-2xs">
                     {idx + 1}
                   </span>
                   <textarea
                     value={step}
                     onChange={(e) => handleUpdateStep(idx, e.target.value)}
-                    rows={2}
-                    className="flex-1 font-medium text-stone-800 dark:text-slate-200 bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 rounded p-1"
+                    rows={3}
+                    className="flex-1 font-medium text-stone-800 dark:text-slate-200 bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-xl p-2.5 text-xs leading-relaxed resize-none scrollbar-none"
+                    placeholder={`Schritt ${idx + 1} beschreiben...`}
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveStep(idx)}
-                    className="text-stone-400 hover:text-rose-600 p-1"
+                    className="w-7 h-7 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 flex items-center justify-center shrink-0 mt-1 transition-colors"
                     title="Schritt entfernen"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
