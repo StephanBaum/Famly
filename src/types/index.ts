@@ -160,11 +160,13 @@ export interface GroceryItem {
   isPerishable?: boolean; // true for fresh fish, poultry, minced meat, delicate greens, fresh berries
 }
 
+export type ChoreFrequency = 'once' | 'daily' | '2x_weekly' | 'weekly' | 'biweekly' | 'monthly';
+
 export interface Chore {
   id: string;
   title: string;
   assignedMemberId: string;
-  frequency: 'daily' | 'weekly' | 'once';
+  frequency: ChoreFrequency;
   completed: boolean;
   stars: number;
   dueDate?: string;

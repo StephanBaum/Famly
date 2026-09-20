@@ -2,13 +2,22 @@ import React from 'react';
 import { Chore, FamilyMember } from '../../types';
 import { CheckCircle2, Circle, Edit2, Trash2 } from 'lucide-react';
 
+export const CHORE_FREQUENCY_MAP: Record<string, { label: string; icon: string }> = {
+  once: { label: 'Einmalig', icon: '🎯' },
+  '2x_weekly': { label: '2x / Woche', icon: '🔄' },
+  weekly: { label: 'Wöchentlich', icon: '🗓️' },
+  biweekly: { label: 'Alle 2 Wochen', icon: '⏳' },
+  monthly: { label: 'Monatlich', icon: '📅' },
+  daily: { label: 'Täglich', icon: '☀️' },
+};
+
 interface ChoresTabProps {
   chores: Chore[];
   members: FamilyMember[];
   currentMemberId: string | 'all';
   onToggleChore: (id: string) => void;
   onEditChore: (chore: Chore) => void;
-  onDeleteChore: (id: string) => void;
+  onDeleteChore: (chore: Chore) => void;
 }
 
 export const ChoresTab: React.FC<ChoresTabProps> = ({
@@ -61,12 +70,9 @@ export const ChoresTab: React.FC<ChoresTabProps> = ({
                     {chore.title}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300">
-                      {chore.frequency === 'daily'
-                        ? 'Täglich'
-                        : chore.frequency === 'weekly'
-                        ? 'Wöchentlich'
-                        : 'Einmalig'}
+                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300 flex items-center gap-1">
+                      <span>{CHORE_FREQUENCY_MAP[chore.frequency]?.icon || '🎯'}</span>
+                      <span>{CHORE_FREQUENCY_MAP[chore.frequency]?.label || 'Einmalig'}</span>
                     </span>
                     {assigned && (
                       <span className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1 font-bold">
@@ -101,7 +107,7 @@ export const ChoresTab: React.FC<ChoresTabProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteChore(chore.id);
+                    onDeleteChore(chore);
                   }}
                   className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                   title="Aufgabe löschen"

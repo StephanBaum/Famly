@@ -58,7 +58,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
       addGrocery(groceryName.trim(), groceryStore, groceryAmount.trim() || undefined, groceryCat);
     } else if (selectedType === 'chore') {
       if (!choreTitle.trim()) return;
-      addChore(choreTitle.trim(), choreMember, 'daily', 3);
+      addChore(choreTitle.trim(), choreMember, 'once', 3);
     } else if (selectedType === 'note') {
       if (!noteTitle.trim() || !noteContent.trim()) return;
       addNote(noteTitle.trim(), noteContent.trim(), 'info', true);

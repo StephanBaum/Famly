@@ -6,13 +6,14 @@ import { ShoppingFocusModal } from '../components/ShoppingFocusModal';
 import { VoiceInputModal } from '../components/VoiceInputModal';
 import { GroceriesTab } from '../components/groceries/GroceriesTab';
 import { StaplesDrawer } from '../components/groceries/StaplesDrawer';
-import { ChoresTab } from '../components/chores/ChoresTab';
+import { ChoresTab, CHORE_FREQUENCY_MAP } from '../components/chores/ChoresTab';
 import { RewardsTab } from '../components/chores/RewardsTab';
 import {
   Plus,
   ShoppingCart,
   Sparkles,
   Gift,
+  Trash2,
 } from 'lucide-react';
 
 export const ListsAndChoresView: React.FC = () => {
@@ -76,16 +77,17 @@ export const ListsAndChoresView: React.FC = () => {
   // Chore Form State
   const [isAddChoreOpen, setIsAddChoreOpen] = useState(false);
   const [editingChoreId, setEditingChoreId] = useState<string | null>(null);
+  const [choreToDelete, setChoreToDelete] = useState<Chore | null>(null);
   const [choreTitle, setChoreTitle] = useState('');
   const [choreAssignee, setChoreAssignee] = useState(members[2]?.id || members[0]?.id || 'm1');
-  const [choreFrequency, setChoreFrequency] = useState<Chore['frequency']>('daily');
+  const [choreFrequency, setChoreFrequency] = useState<Chore['frequency']>('once');
   const [choreStars, setChoreStars] = useState(3);
 
   const openAddChore = () => {
     setEditingChoreId(null);
     setChoreTitle('');
     setChoreAssignee(members[2]?.id || members[0]?.id || 'm1');
-    setChoreFrequency('daily');
+    setChoreFrequency('once');
     setChoreStars(3);
     setIsAddChoreOpen(true);
   };
@@ -367,7 +369,7 @@ export const ListsAndChoresView: React.FC = () => {
               currentMemberId={currentMemberId}
               onToggleChore={toggleChore}
               onEditChore={openEditChore}
-              onDeleteChore={deleteChore}
+              onDeleteChore={(chore) => setChoreToDelete(chore)}
             />
           ) : (
             <RewardsTab
@@ -481,11 +483,14 @@ export const ListsAndChoresView: React.FC = () => {
                     <select
                       value={choreFrequency}
                       onChange={(e) => setChoreFrequency(e.target.value as Chore['frequency'])}
-                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none cursor-pointer font-semibold"
                     >
-                      <option value="daily">Täglich</option>
-                      <option value="weekly">Wöchentlich</option>
-                      <option value="once">Einmalig</option>
+                      <option value="once">🎯 Einmalig (Standard)</option>
+                      <option value="weekly">🗓️ Wöchentlich</option>
+                      <option value="2x_weekly">🔄 2x pro Woche</option>
+                      <option value="biweekly">⏳ Alle 2 Wochen</option>
+                      <option value="monthly">📅 Monatlich</option>
+                      <option value="daily">☀️ Täglich</option>
                     </select>
                   </div>
                   <div>
@@ -650,6 +655,101 @@ export const ListsAndChoresView: React.FC = () => {
         onClose={() => setIsVoiceModalOpen(false)}
         onAddItems={handleVoiceAddItems}
       />
+
+      {/* Delete Chore Confirmation Modal */}
+      {choreToDelete && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+                <Trash2 className="w-6 h-6" />
+              </div>
+
+              {choreToDelete.frequency === 'once' ? (
+                <>
+                  <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                    Aufgabe löschen?
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                    Möchtest du die einmalige Aufgabe <strong className="text-stone-900 dark:text-white">"{choreToDelete.title}"</strong> wirklich löschen?
+                  </p>
+                  <div className="flex items-center justify-end gap-2 mt-5">
+                    <button
+                      type="button"
+                      onClick={() => setChoreToDelete(null)}
+                      className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteChore(choreToDelete.id);
+                        setChoreToDelete(null);
+                      }}
+                      className="duo-btn duo-btn-rose px-5 py-2 text-xs font-black rounded-xl"
+                    >
+                      Ja, Aufgabe löschen
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                    Wiederkehrende Aufgabe löschen?
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-slate-300 mt-2 leading-relaxed">
+                    Die Aufgabe <strong className="text-stone-900 dark:text-white">"{choreToDelete.title}"</strong> ist als <span className="font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200">{CHORE_FREQUENCY_MAP[choreToDelete.frequency]?.label || choreToDelete.frequency}</span> eingestellt.
+                  </p>
+                  <p className="text-xs text-stone-500 dark:text-slate-400 mt-1.5">
+                    Wie möchtest du mit den zukünftigen Wiederholungen verfahren?
+                  </p>
+
+                  <div className="space-y-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteChore(choreToDelete.id);
+                        setChoreToDelete(null);
+                      }}
+                      className="w-full duo-btn duo-btn-rose p-3 text-xs font-black rounded-2xl flex items-center justify-between text-left"
+                    >
+                      <div>
+                        <div className="font-black">Alle zukünftigen Wiederholungen löschen 🗑️</div>
+                        <div className="text-[10px] font-normal opacity-90 mt-0.5">Entfernt die Aufgabe komplett aus allen Listen</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateChore(choreToDelete.id, { frequency: 'once' });
+                        setChoreToDelete(null);
+                      }}
+                      className="w-full duo-btn duo-btn-amber p-3 text-xs font-black rounded-2xl flex items-center justify-between text-left"
+                    >
+                      <div>
+                        <div className="font-black">Nur Wiederholungen stoppen (Auf einmalig setzen) ⏸️</div>
+                        <div className="text-[10px] font-normal opacity-90 mt-0.5">Aktuelle Aufgabe bleibt stehen, wiederholt sich danach aber nicht mehr</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setChoreToDelete(null)}
+                      className="duo-btn duo-btn-white px-4 py-2 text-xs font-bold rounded-xl"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </div>
   );
 };
