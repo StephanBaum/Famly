@@ -2,15 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Recipe, MealPlanDay } from '../types';
 import { RECIPE_THEMES, CURATED_RECIPE_CATALOG } from '../utils/recipeCatalog';
 import { ModalPortal } from './ModalPortal';
+import { MealPlanPreviewCard } from './meal-planner/MealPlanPreviewCard';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import {
   X,
   Sparkles,
   RefreshCw,
-  Heart,
   Calendar,
-  Clock,
   ShoppingCart,
   Zap,
   ChevronDown,
@@ -630,145 +629,31 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5">
-                {assignments.map((assignment, idx) => {
-                  const r = assignment.recipe;
-                  const isFav = Boolean(r.isFavorite);
-                  const syn = assignment.synergyConnection;
-
-                  return (
-                    <div
-                      key={assignment.dateStr}
-                      className="duo-card p-2.5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 rounded-2xl flex flex-col justify-between hover:border-teal-300 transition-all shadow-xs group relative"
-                    >
-                      {/* Day Header */}
-                      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-stone-100 dark:border-slate-800">
-                        <div>
-                          <span className="block text-xs font-black text-stone-900 dark:text-white leading-tight">
-                            {assignment.dayName.slice(0, 2)}
-                          </span>
-                          <span className="block text-[10px] font-bold text-stone-400">
-                            {format(new Date(assignment.dateStr), 'd.M.')}
-                          </span>
-                        </div>
-
-                        {/* 🔄 Single Day Shuffle button */}
-                        <button
-                          type="button"
-                          onClick={() => handleShuffleSingleDay(idx)}
-                          title="Anderes Gericht für diesen Tag würfeln"
-                          className="w-6 h-6 rounded-lg bg-stone-100 dark:bg-slate-800 hover:bg-teal-100 dark:hover:bg-teal-950/70 text-stone-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-300 flex items-center justify-center transition-colors"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      {/* Recipe Image & Title */}
-                      <div className="space-y-1.5">
-                        <div className="relative h-20 w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-slate-800">
-                          <img
-                            src={r.imageUrl}
-                            alt={r.title}
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src =
-                                'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                            }}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                          {/* Heart Favorite Toggle Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onToggleFavorite(r.id);
-                              setAssignments((prev) =>
-                                prev.map((a, i) =>
-                                  i === idx
-                                    ? {
-                                        ...a,
-                                        recipe: {
-                                          ...a.recipe,
-                                          isFavorite: !a.recipe.isFavorite,
-                                        },
-                                      }
-                                    : a
-                                )
-                              );
-                            }}
-                            title={isFav ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                            className={`absolute top-1 right-1 w-6 h-6 rounded-lg flex items-center justify-center backdrop-blur-xs transition-all ${
-                              isFav
-                                ? 'bg-rose-500 text-white shadow-xs'
-                                : 'bg-black/50 text-white/80 hover:text-white hover:bg-black/70'
-                            }`}
-                          >
-                            <Heart
-                              className={`w-3 h-3 ${isFav ? 'fill-white stroke-white' : 'stroke-white'}`}
-                            />
-                          </button>
-
-                          {/* Time badge */}
-                          <div className="absolute bottom-1 left-1.5 text-[9px] font-bold text-white flex items-center gap-0.5 bg-black/60 px-1.5 py-0.2 rounded-md">
-                            <Clock className="w-2.5 h-2.5 text-amber-300" />
-                            <span>{r.prepTime}</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h5
-                            className="text-xs font-black text-stone-900 dark:text-white line-clamp-2 leading-tight"
-                            title={r.title}
-                          >
-                            {r.title}
-                          </h5>
-                          <span className="text-[10px] text-stone-400 dark:text-slate-400 mt-0.5 block">
-                            {r.ingredients.length} Zutaten • ca. {r.estimatedCost || 12} €
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Synergy Badge if connected */}
-                      {syn && (
-                        <div
-                          className={`mt-2 p-1.5 rounded-xl border text-[9px] font-extrabold leading-tight ${
-                            syn.type === 'cook-extra'
-                              ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'
-                              : 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1">
-                            <Zap className="w-2.5 h-2.5 text-amber-500 shrink-0" />
-                            <span>
-                              {syn.type === 'cook-extra'
-                                ? `Doppelt ${syn.baseName} kochen`
-                                : `Nutzt ${syn.baseName} von gestern!`}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Source tag */}
-                      <div className="mt-2 pt-1.5 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between text-[10px] font-bold">
-                        {isFav ? (
-                          <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                            <span>❤️</span>
-                            <span>Favorit</span>
-                          </span>
-                        ) : (
-                          <span className="text-teal-600 dark:text-teal-400 flex items-center gap-0.5">
-                            <span>✨</span>
-                            <span>Idee</span>
-                          </span>
-                        )}
-                        {assignment.isAlreadyPlanned && (
-                          <span className="text-[9px] text-amber-600 font-black">Fix</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
+                {assignments.map((assignment, idx) => (
+                  <MealPlanPreviewCard
+                    key={assignment.dateStr}
+                    assignment={assignment}
+                    index={idx}
+                    onShuffleDay={handleShuffleSingleDay}
+                    onToggleFavorite={(recipeId) => {
+                      onToggleFavorite(recipeId);
+                      setAssignments((prev) =>
+                        prev.map((a, i) =>
+                          i === idx
+                            ? {
+                                ...a,
+                                recipe: {
+                                  ...a.recipe,
+                                  isFavorite: !a.recipe.isFavorite,
+                                },
+                              }
+                            : a
+                        )
+                      );
+                    }}
+                  />
+                ))}
               </div>
             </div>
 
@@ -851,7 +736,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
               />
               <ShoppingCart className="w-3.5 h-3.5" />
-              <span>Alle benötigten Zutaten direkt auf die Einkaufsliste setzen (~{Math.round(totalEstimatedCost)} €)</span>
+              <span>Zutaten auf Einkaufsliste (~{Math.round(totalEstimatedCost)} €)</span>
             </label>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -865,10 +750,10 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
               <button
                 type="button"
                 onClick={handleApply}
-                className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5"
+                className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Sparkles className="w-4 h-4 stroke-[2.5]" />
-                <span>Wochenplan & Zutaten übernehmen ✨</span>
+                <span>Plan übernehmen ✨</span>
               </button>
             </div>
           </div>

@@ -645,11 +645,28 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     ) {
       return 'dm';
     }
-    if (clean.includes('bread') || clean.includes('loaf') || clean.includes('croissant') || clean.includes('baguette')) {
-      return 'Bakery';
+    if (
+      clean.includes('bread') ||
+      clean.includes('loaf') ||
+      clean.includes('croissant') ||
+      clean.includes('baguette') ||
+      clean.includes('brot') ||
+      clean.includes('brötchen') ||
+      clean.includes('semmel') ||
+      clean.includes('brezel')
+    ) {
+      return 'Bäcker';
     }
-    if (clean.includes('vitamin') || clean.includes('bandage') || clean.includes('aspirin') || clean.includes('medicine')) {
-      return 'Pharmacy';
+    if (
+      clean.includes('vitamin') ||
+      clean.includes('bandage') ||
+      clean.includes('aspirin') ||
+      clean.includes('medicine') ||
+      clean.includes('pflaster') ||
+      clean.includes('schmerzmittel') ||
+      clean.includes('apotheke')
+    ) {
+      return 'Apotheke';
     }
     return 'Rewe'; // Default supermarket
   };
@@ -1053,7 +1070,13 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setGroceries((prev) =>
       prev.filter((item) => {
         if (!item.checked) return true;
-        if (storeFilter && item.store !== storeFilter) return true;
+        if (storeFilter && storeFilter !== 'all') {
+          const normFilter = storeFilter.toLowerCase().trim();
+          const normStore = item.store.toLowerCase().trim();
+          if (normStore !== normFilter && !normStore.startsWith(normFilter)) {
+            return true;
+          }
+        }
         deleteGroceryFromCloud(item.id);
         return false;
       })

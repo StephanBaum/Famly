@@ -24,56 +24,10 @@ import { RecipeImportModal } from '../components/RecipeImportModal';
 import { RecipeEditModal } from '../components/RecipeEditModal';
 import { AutoMealPlanModal } from '../components/AutoMealPlanModal';
 import { ModalPortal } from '../components/ModalPortal';
+import { getRecipePhoto, getCategoryBadge } from '../components/meal-planner/mealUtils';
+import { DayFocusCard } from '../components/meal-planner/DayFocusCard';
+import { WeeklyGridView } from '../components/meal-planner/WeeklyGridView';
 
-// Robust food photo fallback helper
-const getRecipePhoto = (recipe: Recipe): string => {
-  if (
-    recipe.imageUrl &&
-    recipe.imageUrl.startsWith('http') &&
-    !recipe.imageUrl.includes('photo-1621996346565-e3d5d6281057')
-  ) {
-    return recipe.imageUrl;
-  }
-  const t = (recipe.title || '').toLowerCase();
-  if (t.includes('pasta') || t.includes('spaghetti') || t.includes('fettuccine') || t.includes('zitronen')) {
-    return 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('pizza')) {
-    return 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('curry') || t.includes('thai') || t.includes('noodle')) {
-    return 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('salmon') || t.includes('fish') || t.includes('lachs')) {
-    return 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('pancake') || t.includes('cake') || t.includes('strudel') || t.includes('baking') || t.includes('kuchen')) {
-    return 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('taco') || t.includes('burrito') || t.includes('mexican')) {
-    return 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=600&q=80';
-  }
-  if (t.includes('spätzle') || t.includes('kaesspatzen')) {
-    return 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=600&q=80';
-  }
-  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-};
-
-// Duolingo-styled category pill badge styling
-const getCategoryBadge = (category?: Recipe['category']) => {
-  switch (category) {
-    case 'quick':
-      return { label: 'Schnell', icon: '⚡', bg: 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700' };
-    case 'comfort':
-      return { label: 'Hausmannskost', icon: '🍲', bg: 'bg-orange-100 dark:bg-orange-950/60 text-orange-900 dark:text-orange-200 border-orange-300 dark:border-orange-700' };
-    case 'healthy':
-      return { label: 'Gesund', icon: '🥗', bg: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700' };
-    case 'baking':
-      return { label: 'Backen', icon: '🥐', bg: 'bg-pink-100 dark:bg-pink-950/60 text-pink-900 dark:text-pink-200 border-pink-300 dark:border-pink-700' };
-    default:
-      return { label: 'Favorit', icon: '🌟', bg: 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700' };
-  }
-};
 
 const CUSTOM_DISH_SUGGESTIONS = [
   { title: 'Pizza vom Vortag & Salat', icon: '🍕' },
@@ -337,557 +291,58 @@ export const MealPlannerView: React.FC = () => {
           {plannerMode === 'focus' && (() => {
             const focusDay = weekDays[selectedDayIdx] || weekDays[0];
             const dateStr = format(focusDay, 'yyyy-MM-dd');
-            const isToday = dateStr === todayDateStr;
             const dayPlan = mealPlans.find((m) => m.date === dateStr);
 
-            const dinnerRecipe = dayPlan?.dinner?.recipeId
-              ? recipes.find((r) => r.id === dayPlan.dinner?.recipeId)
-              : null;
-            const dinnerChef = dayPlan?.dinner?.chefId
-              ? members.find((m) => m.id === dayPlan.dinner?.chefId)
-              : null;
-
-            const lunchChef = dayPlan?.lunch?.chefId
-              ? members.find((m) => m.id === dayPlan.lunch?.chefId)
-              : null;
-
-            const breakfastChef = dayPlan?.breakfast?.chefId
-              ? members.find((m) => m.id === dayPlan.breakfast?.chefId)
-              : null;
-
             return (
-              <div className="space-y-4 animate-in fade-in">
-                
-                {/* Day Header Banner */}
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white capitalize">
-                      {format(focusDay, 'EEEE, d. MMMM', { locale: de })}
-                    </h3>
-                    {isToday && (
-                      <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700">
-                        Heute
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* HERO: TONIGHT'S DINNER */}
-                <div className="duo-card overflow-hidden bg-white dark:bg-slate-900 border-2 border-teal-200 dark:border-teal-900/60 shadow-sm">
-                  <div className="p-4 bg-teal-50/80 dark:bg-teal-950/40 border-b border-teal-100 dark:border-teal-900/40 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🍲</span>
-                      <h4 className="text-sm font-black text-teal-950 dark:text-teal-200 uppercase tracking-wider">
-                        Heutiges Abendessen
-                      </h4>
-                    </div>
-                    {dinnerChef && (
-                      <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-teal-200 dark:border-teal-800 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-2xs">
-                        <span>👨‍🍳 Koch:</span>
-                        <span>{dinnerChef.avatar}</span>
-                        <span>{dinnerChef.name}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {dayPlan?.dinner?.title ? (
-                    <div className="p-5 space-y-4">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        {dinnerRecipe && (
-                          <img
-                            src={getRecipePhoto(dinnerRecipe)}
-                            alt={dayPlan.dinner.title}
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src =
-                                'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                            }}
-                            className="w-full sm:w-44 h-36 sm:h-32 object-cover rounded-2xl border border-stone-200 dark:border-slate-700 shadow-xs shrink-0"
-                          />
-                        )}
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3">
-                            <h4 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white leading-tight">
-                              {dayPlan.dinner.title}
-                            </h4>
-                            {dinnerRecipe && (
-                              <button
-                                type="button"
-                                onClick={() => toggleFavoriteRecipe(dinnerRecipe.id)}
-                                className={`p-2 rounded-xl border transition-all shrink-0 ${
-                                  dinnerRecipe.isFavorite
-                                    ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 text-rose-500 shadow-2xs'
-                                    : 'bg-stone-100 dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-400 hover:text-rose-500'
-                                }`}
-                                title={dinnerRecipe.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen ❤️'}
-                              >
-                                <Heart className={`w-4 h-4 ${dinnerRecipe.isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-2 flex-wrap text-xs">
-                            {dinnerRecipe?.prepTime && (
-                              <span className="bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 border border-stone-200 dark:border-slate-700">
-                                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                                <span>{dinnerRecipe.prepTime}</span>
-                              </span>
-                            )}
-                            {dinnerRecipe?.servings && (
-                              <span className="bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 border border-stone-200 dark:border-slate-700">
-                                <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                <span>{dinnerRecipe.servings} Portionen</span>
-                              </span>
-                            )}
-                            {dinnerRecipe?.category && (
-                              <span className="capitalize px-2.5 py-1 rounded-lg font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
-                                {dinnerRecipe.category}
-                              </span>
-                            )}
-                            {dinnerRecipe?.estimatedCost && (
-                              <span className="px-2.5 py-1 rounded-lg font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                                <span>🏷️</span>
-                                <span>~{dinnerRecipe.estimatedCost.toFixed(2)} €</span>
-                              </span>
-                            )}
-                            {dinnerRecipe?.synergyTip && (
-                              <span className="px-2.5 py-1 rounded-lg font-black bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
-                                <span>⚡</span>
-                                <span>{dinnerRecipe.synergyTip}</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {dinnerRecipe?.notes && (
-                            <p className="text-xs text-stone-500 dark:text-slate-400 font-medium line-clamp-2">
-                              {dinnerRecipe.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Bar for Dinner */}
-                      <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingSlot({
-                                date: dateStr,
-                                slot: 'dinner',
-                                currentTitle: dayPlan?.dinner?.title || '',
-                                currentRecipeId: dayPlan?.dinner?.recipeId,
-                                currentChefId: dayPlan?.dinner?.chefId,
-                              });
-                              setSlotPickerTab(dayPlan?.dinner?.recipeId ? 'box' : 'custom');
-                              setSlotCategoryFilter('all');
-                              setSlotSearchQuery('');
-                            }}
-                            className="duo-btn duo-btn-white px-4 py-2 text-xs font-black rounded-xl"
-                          >
-                            <Pencil className="w-3.5 h-3.5 mr-1" />
-                            <span>Gericht / Koch ändern</span>
-                          </button>
-
-                          {dinnerRecipe && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedRecipeForModal(dinnerRecipe)}
-                              className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline px-2 py-1"
-                            >
-                              Rezept anzeigen
-                            </button>
-                          )}
-                        </div>
-
-                        {dinnerRecipe && (
-                          <button
-                            type="button"
-                            onClick={() => handleSyncRecipe(dinnerRecipe)}
-                            className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl shadow-xs flex items-center justify-center gap-2"
-                          >
-                            <ShoppingCart className="w-4 h-4 stroke-[2.5]" />
-                            <span>Zutaten zur Einkaufsliste</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center space-y-3">
-                      <p className="text-sm font-bold text-stone-500 dark:text-slate-400 capitalize">
-                        Noch kein Abendessen für {format(focusDay, 'EEEE', { locale: de })} geplant!
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingSlot({
-                            date: dateStr,
-                            slot: 'dinner',
-                            currentTitle: '',
-                            currentRecipeId: undefined,
-                            currentChefId: undefined,
-                          });
-                          setSlotPickerTab('box');
-                          setSlotCategoryFilter('all');
-                          setSlotSearchQuery('');
-                        }}
-                        className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl shadow-xs"
-                      >
-                        + Abendessen aus Rezeptbox wählen
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* LUNCH & BREAKFAST */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  
-                  {/* LUNCH CARD */}
-                  <div
-                    onClick={() => {
-                      setEditingSlot({
-                        date: dateStr,
-                        slot: 'lunch',
-                        currentTitle: dayPlan?.lunch?.title || '',
-                        currentRecipeId: dayPlan?.lunch?.recipeId,
-                        currentChefId: dayPlan?.lunch?.chefId,
-                      });
-                      setSlotPickerTab(dayPlan?.lunch?.recipeId ? 'box' : 'custom');
-                      setSlotCategoryFilter('all');
-                      setSlotSearchQuery('');
-                    }}
-                    className="cursor-pointer group duo-card p-4 sm:p-5 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all space-y-3"
-                  >
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-slate-800 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🥗</span>
-                        <h4 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider">
-                          Mittagessen
-                        </h4>
-                      </div>
-                      {lunchChef && (
-                        <span className="text-[11px] font-bold text-stone-600 dark:text-slate-300 bg-stone-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                          {lunchChef.avatar} {lunchChef.name}
-                        </span>
-                      )}
-                    </div>
-
-                    {dayPlan?.lunch?.title ? (
-                      <div className="space-y-1">
-                        <p className="text-base font-black text-stone-900 dark:text-white">
-                          {dayPlan.lunch.title}
-                        </p>
-                        <span className="text-xs text-teal-700 dark:text-teal-400 font-extrabold group-hover:underline block">
-                          Tippen zum Ändern →
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-stone-400 italic py-2 group-hover:text-emerald-700 font-bold">
-                        + Tippen zum Planen oder Reste
-                      </p>
-                    )}
-                  </div>
-
-                  {/* BREAKFAST CARD */}
-                  <div
-                    onClick={() => {
-                      setEditingSlot({
-                        date: dateStr,
-                        slot: 'breakfast',
-                        currentTitle: dayPlan?.breakfast?.title || '',
-                        currentRecipeId: dayPlan?.breakfast?.recipeId,
-                        currentChefId: dayPlan?.breakfast?.chefId,
-                      });
-                      setSlotPickerTab(dayPlan?.breakfast?.recipeId ? 'box' : 'custom');
-                      setSlotCategoryFilter('all');
-                      setSlotSearchQuery('');
-                    }}
-                    className="cursor-pointer group duo-card p-4 sm:p-5 bg-white dark:bg-slate-900 hover:border-amber-300 dark:hover:border-amber-700 transition-all space-y-3"
-                  >
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-slate-800 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🍳</span>
-                        <h4 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider">
-                          Frühstück
-                        </h4>
-                      </div>
-                      {breakfastChef && (
-                        <span className="text-[11px] font-bold text-stone-600 dark:text-slate-300 bg-stone-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                          {breakfastChef.avatar} {breakfastChef.name}
-                        </span>
-                      )}
-                    </div>
-
-                    {dayPlan?.breakfast?.title ? (
-                      <div className="space-y-1">
-                        <p className="text-base font-black text-stone-900 dark:text-white">
-                          {dayPlan.breakfast.title}
-                        </p>
-                        <span className="text-xs text-amber-800 dark:text-amber-300 font-extrabold group-hover:underline block">
-                          Tippen zum Ändern →
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-stone-400 italic py-2 group-hover:text-amber-700 font-bold">
-                        + Tippen zum Planen
-                      </p>
-                    )}
-                  </div>
-
-                </div>
-
-              </div>
+              <DayFocusCard
+                focusDay={focusDay}
+                isToday={dateStr === todayDateStr}
+                mealPlan={dayPlan}
+                recipes={recipes}
+                members={members}
+                onOpenEditSlot={(slot, currentTitle, currentRecipeId, currentChefId) => {
+                  setEditingSlot({
+                    date: dateStr,
+                    slot,
+                    currentTitle: currentTitle || '',
+                    currentRecipeId,
+                    currentChefId,
+                  });
+                  setSlotPickerTab(currentRecipeId ? 'box' : currentTitle ? 'custom' : 'box');
+                  setSlotCategoryFilter('all');
+                  setSlotSearchQuery('');
+                }}
+                onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
+                onSyncRecipe={handleSyncRecipe}
+                onToggleFavorite={toggleFavoriteRecipe}
+              />
             );
           })()}
 
           {/* MODE 2: FULL 7-DAY GRID */}
           {plannerMode === 'grid' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3 animate-in fade-in">
-              {weekDays.map((day) => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const isToday = dateStr === todayDateStr;
-                const dayPlan = mealPlans.find((m) => m.date === dateStr);
-
-                const dinnerRecipe = dayPlan?.dinner?.recipeId
-                  ? recipes.find((r) => r.id === dayPlan.dinner?.recipeId)
-                  : null;
-                const dinnerChef = dayPlan?.dinner?.chefId
-                  ? members.find((m) => m.id === dayPlan.dinner?.chefId)
-                  : null;
-
-                const lunchChef = dayPlan?.lunch?.chefId
-                  ? members.find((m) => m.id === dayPlan.lunch?.chefId)
-                  : null;
-
-                const breakfastChef = dayPlan?.breakfast?.chefId
-                  ? members.find((m) => m.id === dayPlan.breakfast?.chefId)
-                  : null;
-
-                return (
-                  <div
-                    key={dateStr}
-                    className={`duo-card bg-white dark:bg-slate-900 border-2 flex flex-col justify-between overflow-hidden shadow-xs transition-all ${
-                      isToday
-                        ? 'border-teal-500 dark:border-teal-400 ring-4 ring-teal-400/20'
-                        : 'border-stone-200 dark:border-slate-800 hover:border-teal-200'
-                    }`}
-                  >
-                    {/* Day Header */}
-                    <div
-                      className={`px-3 py-2 border-b text-center flex items-center justify-between ${
-                        isToday
-                          ? 'bg-teal-500 text-white font-black'
-                          : 'bg-stone-50/90 dark:bg-slate-800 text-stone-700 dark:text-slate-300 font-bold'
-                      }`}
-                    >
-                      <span className="text-xs uppercase tracking-wider">{format(day, 'EEE', { locale: de })}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                          isToday ? 'bg-white/20 text-white' : 'bg-stone-200/70 dark:bg-slate-700 text-stone-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {format(day, 'd. MMM', { locale: de })}
-                      </span>
-                    </div>
-
-                    {/* Meals in Day */}
-                    <div className="p-2.5 space-y-2.5 flex-1 flex flex-col justify-between">
-                      {/* DINNER */}
-                      <div
-                        onClick={() => {
-                          setEditingSlot({
-                            date: dateStr,
-                            slot: 'dinner',
-                            currentTitle: dayPlan?.dinner?.title || '',
-                            currentRecipeId: dayPlan?.dinner?.recipeId,
-                            currentChefId: dayPlan?.dinner?.chefId,
-                          });
-                          setSlotPickerTab(dayPlan?.dinner?.recipeId ? 'box' : dayPlan?.dinner?.title ? 'custom' : 'box');
-                          setSlotCategoryFilter('all');
-                          setSlotSearchQuery('');
-                        }}
-                        className="group cursor-pointer rounded-2xl p-2.5 bg-teal-50/40 dark:bg-teal-950/30 hover:bg-teal-50 border border-teal-100 dark:border-teal-900/40 hover:border-teal-300 transition-all relative"
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-black text-teal-800 dark:text-teal-300 mb-1.5">
-                          <span className="flex items-center gap-1">
-                            <Utensils className="w-3.5 h-3.5 text-teal-600" />
-                            <span>Abendessen</span>
-                          </span>
-                          {dinnerChef && (
-                            <span
-                              title={`Koch: ${dinnerChef.name}`}
-                              className="flex items-center gap-1 text-[10px] bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full border border-stone-200 dark:border-slate-700 shadow-2xs font-bold text-stone-700 dark:text-slate-200"
-                            >
-                              <span>{dinnerChef.avatar}</span>
-                              <span>{dinnerChef.name}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {dayPlan?.dinner?.title ? (
-                          <div>
-                            {dinnerRecipe && (
-                              <img
-                                src={getRecipePhoto(dinnerRecipe)}
-                                alt={dayPlan.dinner.title}
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLImageElement).src =
-                                    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
-                                }}
-                                className="w-full h-20 object-cover rounded-xl mb-1.5 shadow-2xs border border-teal-200/60 group-hover:scale-[1.02] transition-transform"
-                              />
-                            )}
-                            <div className="flex items-start justify-between gap-1">
-                              <p className="text-xs font-black text-stone-900 dark:text-white line-clamp-2 leading-tight flex-1">
-                                {dayPlan.dinner.title}
-                              </p>
-                              {dinnerRecipe && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleFavoriteRecipe(dinnerRecipe.id);
-                                  }}
-                                  className={`p-1 rounded-lg transition-colors shrink-0 ${
-                                    dinnerRecipe.isFavorite
-                                      ? 'text-rose-500 hover:text-rose-600'
-                                      : 'text-stone-300 dark:text-slate-600 hover:text-rose-400'
-                                  }`}
-                                  title={dinnerRecipe.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen ❤️'}
-                                >
-                                  <Heart className={`w-3.5 h-3.5 ${dinnerRecipe.isFavorite ? 'fill-rose-500' : ''}`} />
-                                </button>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                              {dinnerRecipe?.prepTime && (
-                                <span className="text-[10px] text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                                  <Clock className="w-2.5 h-2.5 text-teal-600" />
-                                  {dinnerRecipe.prepTime}
-                                </span>
-                              )}
-                              {dinnerRecipe?.estimatedCost && (
-                                <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                                  ~{dinnerRecipe.estimatedCost.toFixed(0)}€
-                                </span>
-                              )}
-                            </div>
-                            {dinnerRecipe?.synergyTip && (
-                              <div
-                                title={dinnerRecipe.synergyTip}
-                                className="mt-1 text-[9px] font-black text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded flex items-center gap-1 truncate"
-                              >
-                                <span className="shrink-0">⚡</span>
-                                <span className="truncate">{dinnerRecipe.synergyTip}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-stone-400 italic py-2 text-center font-medium group-hover:text-teal-600">
-                            + Planen
-                          </p>
-                        )}
-                      </div>
-
-                      {/* LUNCH */}
-                      <div
-                        onClick={() => {
-                          setEditingSlot({
-                            date: dateStr,
-                            slot: 'lunch',
-                            currentTitle: dayPlan?.lunch?.title || '',
-                            currentRecipeId: dayPlan?.lunch?.recipeId,
-                            currentChefId: dayPlan?.lunch?.chefId,
-                          });
-                          setSlotPickerTab(dayPlan?.lunch?.recipeId ? 'box' : dayPlan?.lunch?.title ? 'custom' : 'box');
-                          setSlotCategoryFilter('all');
-                          setSlotSearchQuery('');
-                        }}
-                        className={`cursor-pointer rounded-xl p-2 border transition-all ${
-                          dayPlan?.lunch?.title
-                            ? 'bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 border-emerald-200/80 dark:border-emerald-900/40'
-                            : 'bg-stone-50/80 dark:bg-slate-800/80 hover:bg-stone-100 border-stone-200/60 dark:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-black text-emerald-800 dark:text-emerald-300 mb-1">
-                          <span className="flex items-center gap-1">
-                            <span>🥗</span>
-                            <span>Mittag</span>
-                          </span>
-                          {lunchChef && (
-                            <span className="text-[9px] bg-white dark:bg-slate-800 px-1.5 py-0.2 rounded font-bold text-stone-600 dark:text-slate-300">
-                              {lunchChef.avatar} {lunchChef.name}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-extrabold text-stone-800 dark:text-slate-200 truncate">
-                          {dayPlan?.lunch?.title || (
-                            <span className="text-stone-400 font-normal italic">+ Mittag</span>
-                          )}
-                        </p>
-                      </div>
-
-                      {/* BREAKFAST */}
-                      <div
-                        onClick={() => {
-                          setEditingSlot({
-                            date: dateStr,
-                            slot: 'breakfast',
-                            currentTitle: dayPlan?.breakfast?.title || '',
-                            currentRecipeId: dayPlan?.breakfast?.recipeId,
-                            currentChefId: dayPlan?.breakfast?.chefId,
-                          });
-                          setSlotPickerTab(dayPlan?.breakfast?.recipeId ? 'box' : dayPlan?.breakfast?.title ? 'custom' : 'box');
-                          setSlotCategoryFilter('all');
-                          setSlotSearchQuery('');
-                        }}
-                        className={`cursor-pointer rounded-xl p-2 border transition-all ${
-                          dayPlan?.breakfast?.title
-                            ? 'bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-50 border-amber-200/80 dark:border-amber-900/40'
-                            : 'bg-stone-50/80 dark:bg-slate-800/80 hover:bg-stone-100 border-stone-200/60 dark:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-black text-amber-800 dark:text-amber-300 mb-1">
-                          <span className="flex items-center gap-1">
-                            <span>🍳</span>
-                            <span>Frühstück</span>
-                          </span>
-                          {breakfastChef && (
-                            <span className="text-[9px] bg-white dark:bg-slate-800 px-1.5 py-0.2 rounded font-bold text-stone-600 dark:text-slate-300">
-                              {breakfastChef.avatar} {breakfastChef.name}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-extrabold text-stone-800 dark:text-slate-200 truncate">
-                          {dayPlan?.breakfast?.title || (
-                            <span className="text-stone-400 font-normal italic">+ Frühstück</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Footer Quick Grocery Sync */}
-                    {dinnerRecipe && (
-                      <div className="p-2 bg-stone-50/80 dark:bg-slate-800/80 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between">
-                        <button
-                          onClick={() => setSelectedRecipeForModal(dinnerRecipe)}
-                          className="text-[11px] font-bold text-teal-700 dark:text-teal-400 hover:text-teal-950 underline"
-                        >
-                          Rezept
-                        </button>
-                        <button
-                          onClick={() => handleSyncRecipe(dinnerRecipe)}
-                          title="Zutaten zur Einkaufsliste hinzufügen"
-                          className="text-[10px] font-black text-teal-700 dark:text-teal-300 hover:text-teal-900 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shadow-2xs active:translate-y-0.5 transition-all"
-                        >
-                          <ShoppingCart className="w-3 h-3" />
-                          <span>Auf Liste</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <WeeklyGridView
+              weekDays={weekDays}
+              todayDateStr={todayDateStr}
+              mealPlans={mealPlans}
+              recipes={recipes}
+              members={members}
+              onOpenEditSlot={(slot, dateStr, currentTitle, currentRecipeId, currentChefId) => {
+                setEditingSlot({
+                  date: dateStr,
+                  slot,
+                  currentTitle: currentTitle || '',
+                  currentRecipeId,
+                  currentChefId,
+                });
+                setSlotPickerTab(currentRecipeId ? 'box' : currentTitle ? 'custom' : 'box');
+                setSlotCategoryFilter('all');
+                setSlotSearchQuery('');
+              }}
+              onSelectRecipe={(recipe) => setSelectedRecipeForModal(recipe)}
+              onSyncRecipe={handleSyncRecipe}
+              onToggleFavorite={toggleFavoriteRecipe}
+            />
           )}
 
         </div>
