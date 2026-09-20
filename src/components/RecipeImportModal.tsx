@@ -27,6 +27,7 @@ import {
   DEMO_PHOTO_SCANS,
   inferGroceryCategory,
 } from '../utils/recipeParser';
+import { isAIConfigured, getAIConfig, generateRecipeWithAI } from '../services/aiRecipeService';
 
 interface RecipeImportModalProps {
   isOpen: boolean;
@@ -78,41 +79,69 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Run simulated intelligent parsing with staged step updates
+  // Run intelligent parsing (Real AI or smart heuristic fallback)
   const runAnalysis = async (parserFn: () => Promise<Omit<Recipe, 'id'>>) => {
     setIsAnalyzing(true);
-    setAnalysisStep('Lese Rezeptquelle & Inhalt ein...');
+    const aiConfig = getAIConfig();
+    const isAi = isAIConfigured();
 
-    setTimeout(() => {
-      setAnalysisStep('Erkenne Zutaten, Mengenangaben & Zubereitungszeit...');
-    }, 600);
+    setAnalysisStep(
+      isAi
+        ? `Verbinde mit ${aiConfig?.provider === 'gemini' ? 'Google Gemini' : 'OpenAI'}...`
+        : 'Lese Rezeptquelle & Inhalt ein...'
+    );
 
-    setTimeout(() => {
+    const stepTimer1 = setTimeout(() => {
+      setAnalysisStep(
+        isAi
+          ? 'KI erkennt Zutaten, Maßeinheiten & Zubereitung...'
+          : 'Erkenne Zutaten, Mengenangaben & Zubereitungszeit...'
+      );
+    }, 500);
+
+    const stepTimer2 = setTimeout(() => {
       setAnalysisStep('Ordne Einkaufsregale zu (Obst/Gemüse, Kühlregal, Vorrat)...');
-    }, 1200);
+    }, 1100);
 
-    setTimeout(async () => {
+    try {
+      const recipe = await parserFn();
+      setDraftRecipe(recipe);
+    } catch (err: any) {
+      console.warn('AI Parsing failed, falling back to local heuristic:', err);
       try {
-        const recipe = await parserFn();
-        setDraftRecipe(recipe);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsAnalyzing(false);
+        const fallback = parseRecipeFromDescription(descriptionInput || urlInput || 'Familien-Rezept');
+        setDraftRecipe(fallback);
+      } catch (fallbackErr) {
+        console.error('Total parsing error:', fallbackErr);
       }
-    }, 1800);
+    } finally {
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
+      setIsAnalyzing(false);
+    }
   };
 
   const handleImportLink = (linkToUse?: string) => {
     const targetUrl = linkToUse || urlInput;
     if (!targetUrl.trim()) return;
-    runAnalysis(() => parseRecipeFromLink(targetUrl.trim()));
+
+    if (isAIConfigured()) {
+      runAnalysis(() => generateRecipeWithAI({ linkUrl: targetUrl.trim(), mode: 'link' }));
+    } else {
+      runAnalysis(() => parseRecipeFromLink(targetUrl.trim()));
+    }
   };
 
   const handleImportPhoto = (demoId?: string, imageSrc?: string) => {
     const idToUse = demoId || selectedDemoPhotoId || undefined;
     const previewToUse = imageSrc || selectedPhotoPreview || 'sample';
-    runAnalysis(() => parseRecipeFromPhoto(previewToUse, idToUse));
+
+    if (isAIConfigured() && selectedPhotoPreview && selectedPhotoPreview.startsWith('data:')) {
+      // Real Multimodal AI Vision on the user's uploaded photo!
+      runAnalysis(() => generateRecipeWithAI({ imageBase64: selectedPhotoPreview, mode: 'photo' }));
+    } else {
+      runAnalysis(() => parseRecipeFromPhoto(previewToUse, idToUse));
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +159,12 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
   const handleImportDescription = (textToUse?: string) => {
     const text = textToUse || descriptionInput;
     if (!text.trim()) return;
-    runAnalysis(async () => parseRecipeFromDescription(text.trim()));
+
+    if (isAIConfigured()) {
+      runAnalysis(() => generateRecipeWithAI({ prompt: text.trim(), mode: 'describe' }));
+    } else {
+      runAnalysis(async () => parseRecipeFromDescription(text.trim()));
+    }
   };
 
   const handleSaveManual = (e: React.FormEvent) => {
@@ -238,12 +272,20 @@ export const RecipeImportModal: React.FC<RecipeImportModalProps> = ({
               <Sparkles className="w-6 h-6 fill-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white">
                   {draftRecipe ? 'Rezept überprüfen & verfeinern' : 'Smarter Rezept-Import'}
                 </h3>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                  KI Magie ✨
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                    isAIConfigured()
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                      : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                  }`}
+                >
+                  {isAIConfigured()
+                    ? `✨ ${getAIConfig()?.provider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI'} aktiv`
+                    : '✨ Lokaler Modus'}
                 </span>
               </div>
               <p className="text-xs font-semibold text-stone-500 dark:text-slate-400">
