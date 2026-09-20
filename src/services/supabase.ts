@@ -16,8 +16,8 @@ export const getSupabaseConfig = (): {
   const customUrl = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_SUPABASE_URL) : null;
   const customKey = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_SUPABASE_ANON_KEY) : null;
 
-  const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || '';
-  const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || '';
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : '') || '';
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : '') || '';
 
   const isCustom = Boolean(customUrl && customKey && customUrl.trim().length > 0 && customKey.trim().length > 0);
   const url = (isCustom ? customUrl! : envUrl).trim();

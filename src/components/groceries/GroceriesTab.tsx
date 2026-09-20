@@ -30,6 +30,7 @@ interface GroceriesTabProps {
   onToggleStaplesDrawer: () => void;
   showStaplesDrawer: boolean;
   onStoreChange: (itemId: string, itemName: string, newStore: string) => void;
+  onDeduplicate?: () => void;
 }
 
 export const GroceriesTab: React.FC<GroceriesTabProps> = ({
@@ -50,12 +51,26 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   onToggleStaplesDrawer,
   showStaplesDrawer,
   onStoreChange,
+  onDeduplicate,
 }) => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemStore, setNewItemStore] = useState('Rewe');
   const [lastToggledItem, setLastToggledItem] = useState<{ id: string; name: string } | null>(null);
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+
+  // Check if duplicate unchecked items exist
+  const hasDuplicates = React.useMemo(() => {
+    const seen = new Set<string>();
+    for (const g of groceries) {
+      if (!g.checked) {
+        const key = `${g.store.toLowerCase().trim()}:::${g.name.toLowerCase().trim()}`;
+        if (seen.has(key)) return true;
+        seen.add(key);
+      }
+    }
+    return false;
+  }, [groceries]);
 
   // Filter items by store (alias & case-insensitive aware)
   const isStoreMatch = (itemStore: string, filter: string): boolean => {
@@ -129,6 +144,25 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
           >
             <RotateCcw className="w-3 h-3" />
             <span>Rückgängig</span>
+          </button>
+        </div>
+      )}
+
+      {/* Duplicate Consolidation Banner */}
+      {hasDuplicates && onDeduplicate && (
+        <div className="duo-card p-3 sm:p-3.5 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-300 dark:border-amber-700 text-xs font-bold text-amber-950 dark:text-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-base shrink-0">🧹</span>
+            <span>
+              Es wurden doppelte Einträge auf der Einkaufsliste gefunden.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onDeduplicate}
+            className="duo-btn duo-btn-amber px-3 py-1.5 text-xs font-black rounded-xl shrink-0 self-start sm:self-auto"
+          >
+            Duplikate zusammenführen
           </button>
         </div>
       )}

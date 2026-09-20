@@ -117,6 +117,7 @@ interface FamilyContextType {
   deleteGrocery: (id: string) => void;
   clearCheckedGroceries: (storeFilter?: string) => void;
   setItemStore: (itemId: string, newStore: string) => void;
+  deduplicateGroceries: () => void;
 
   // Store & Pantry Staples Learning
   storeLearningMap: Record<string, string>;
@@ -217,6 +218,53 @@ function getStoredOrDefault<T>(key: string, defaultValue: T): T {
   return defaultValue;
 }
 
+export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): GroceryItem[] {
+  if (!Array.isArray(rawItems)) return [];
+
+  const seenIds = new Set<string>();
+  const repairedItems: GroceryItem[] = rawItems
+    .filter((item) => item && typeof item === 'object' && item.name)
+    .map((item, idx) => {
+      let itemId = item.id;
+      if (!itemId || seenIds.has(itemId)) {
+        itemId = `g_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`;
+      }
+      seenIds.add(itemId);
+      return {
+        ...item,
+        id: itemId,
+        name: (item.name || '').trim(),
+        store: (item.store || 'Rewe').trim(),
+        amount: item.amount ? String(item.amount).trim() : '',
+        checked: Boolean(item.checked),
+      };
+    });
+
+  // Consolidate duplicate unchecked items that have identical store + name
+  const uncheckedMap = new Map<string, GroceryItem>();
+  const checkedItems: GroceryItem[] = [];
+
+  for (const item of repairedItems) {
+    if (item.checked) {
+      checkedItems.push(item);
+      continue;
+    }
+
+    const key = `${item.store.toLowerCase()}:::${item.name.toLowerCase()}`;
+    if (uncheckedMap.has(key)) {
+      const existing = uncheckedMap.get(key)!;
+      // Merge amounts if not already present
+      if (item.amount && (!existing.amount || !existing.amount.includes(item.amount))) {
+        existing.amount = existing.amount ? `${existing.amount} + ${item.amount}` : item.amount;
+      }
+    } else {
+      uncheckedMap.set(key, { ...item });
+    }
+  }
+
+  return [...Array.from(uncheckedMap.values()), ...checkedItems];
+}
+
 export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
@@ -284,7 +332,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [groceries, setGroceries] = useState<GroceryItem[]>(() => {
     const stored = getStoredOrDefault<GroceryItem[] | null>(STORAGE_KEYS.GROCERIES, null);
-    if (stored !== null) return stored;
+    if (stored !== null) return sanitizeAndDeduplicateGroceries(stored);
     return [];
   });
 
@@ -681,9 +729,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } else {
         const assignedStore = predictStoreForItem(ing.name);
         toAdd.push({
-          id: `g_${Date.now()}_${idx}`,
-          name: ing.name,
-          amount: ing.amount,
+          id: `g_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`,
+          name: ing.name.trim(),
+          amount: ing.amount ? ing.amount.trim() : undefined,
           store: assignedStore,
           category: ing.category,
           checked: false,
@@ -693,7 +741,31 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     if (toAdd.length > 0) {
-      setGroceries((prev) => [...toAdd, ...prev]);
+      setGroceries((prev) => {
+        const next = [...prev];
+        toAdd.forEach((newItem) => {
+          const existingIdx = next.findIndex(
+            (g) =>
+              !g.checked &&
+              g.store.toLowerCase().trim() === newItem.store.toLowerCase().trim() &&
+              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+          );
+          if (existingIdx >= 0) {
+            const existing = next[existingIdx];
+            const newAmount = newItem.amount?.trim();
+            if (newAmount && (!existing.amount || !existing.amount.includes(newAmount))) {
+              next[existingIdx] = {
+                ...existing,
+                amount: existing.amount ? `${existing.amount} + ${newAmount}` : newAmount,
+              };
+            }
+          } else {
+            next.unshift(newItem);
+          }
+        });
+        return next;
+      });
+
       confetti({
         particleCount: 50,
         spread: 60,
@@ -777,8 +849,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       return {
-        id: `g_batch_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
-        name: val.name,
+        id: `g_batch_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`,
+        name: val.name.trim(),
         amount: combinedAmount || undefined,
         store: val.store,
         category: val.category,
@@ -788,7 +860,31 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     if (toAdd.length > 0) {
-      setGroceries((prev) => [...toAdd, ...prev]);
+      setGroceries((prev) => {
+        const next = [...prev];
+        toAdd.forEach((newItem) => {
+          const existingIdx = next.findIndex(
+            (g) =>
+              !g.checked &&
+              g.store.toLowerCase().trim() === newItem.store.toLowerCase().trim() &&
+              g.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+          );
+          if (existingIdx >= 0) {
+            const existing = next[existingIdx];
+            const newAmount = newItem.amount?.trim();
+            if (newAmount && (!existing.amount || !existing.amount.includes(newAmount))) {
+              next[existingIdx] = {
+                ...existing,
+                amount: existing.amount ? `${existing.amount} + ${newAmount}` : newAmount,
+              };
+            }
+          } else {
+            next.unshift(newItem);
+          }
+        });
+        return next;
+      });
+
       confetti({
         particleCount: 75,
         spread: 75,
@@ -1035,17 +1131,51 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }));
     }
 
-    const newItem: GroceryItem = {
-      id: `g_${Date.now()}`,
-      name: name.trim(),
-      store: assignedStore,
-      category: category || 'produce',
-      amount: amount || '',
-      checked: false,
-      addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
-    };
-    setGroceries((prev) => [newItem, ...prev]);
-    syncGroceryToCloud(newItem);
+    const cleanName = name.trim();
+    const cleanAmount = amount ? amount.trim() : '';
+
+    setGroceries((prev) => {
+      const existingIdx = prev.findIndex(
+        (g) =>
+          !g.checked &&
+          g.store.toLowerCase().trim() === assignedStore.toLowerCase().trim() &&
+          g.name.toLowerCase().trim() === cleanName.toLowerCase()
+      );
+
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        const existing = updated[existingIdx];
+        let mergedAmount = existing.amount;
+        if (cleanAmount && (!existing.amount || !existing.amount.includes(cleanAmount))) {
+          mergedAmount = existing.amount ? `${existing.amount} + ${cleanAmount}` : cleanAmount;
+        }
+        const updatedItem = { ...existing, amount: mergedAmount };
+        updated[existingIdx] = updatedItem;
+        syncGroceryToCloud(updatedItem);
+        return updated;
+      }
+
+      const newItem: GroceryItem = {
+        id: `g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        name: cleanName,
+        store: assignedStore,
+        category: category || 'produce',
+        amount: cleanAmount,
+        checked: false,
+        addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
+      };
+      syncGroceryToCloud(newItem);
+      return [newItem, ...prev];
+    });
+  };
+
+  const deduplicateGroceries = () => {
+    setGroceries((prev) => sanitizeAndDeduplicateGroceries(prev));
+    confetti({
+      particleCount: 60,
+      spread: 70,
+      origin: { y: 0.7 },
+    });
   };
 
   const toggleGrocery = (id: string) => {
@@ -1392,7 +1522,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setGalleries(data.galleries);
       }
       if (Array.isArray(data.groceries)) {
-        setGroceries(data.groceries);
+        setGroceries(sanitizeAndDeduplicateGroceries(data.groceries));
       }
       if (Array.isArray(data.chores)) {
         setChores(data.chores);
@@ -1470,6 +1600,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteGrocery,
         clearCheckedGroceries,
         setItemStore,
+        deduplicateGroceries,
         storeLearningMap,
         alwaysInStock,
         toggleAlwaysInStock,
