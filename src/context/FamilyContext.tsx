@@ -87,8 +87,10 @@ interface FamilyContextType {
     slot: 'breakfast' | 'lunch' | 'dinner',
     data: { title: string; recipeId?: string; chefId?: string }
   ) => void;
-  addRecipeIngredientsToGrocery: (recipe: Recipe) => RecipeSyncResult;
-  addMultipleRecipesToGrocery: (recipes: Recipe[]) => BatchRecipeSyncResult;
+  addRecipeIngredientsToGrocery: (recipe: Recipe, targetDate?: string) => RecipeSyncResult;
+  addMultipleRecipesToGrocery: (
+    recipes: Recipe[] | Array<{ recipe: Recipe; date?: string }>
+  ) => BatchRecipeSyncResult;
 
   photos: PhotoMemory[];
   addPhoto: (photo: Omit<PhotoMemory, 'id' | 'likes'>) => void;
@@ -218,6 +220,69 @@ function getStoredOrDefault<T>(key: string, defaultValue: T): T {
   return defaultValue;
 }
 
+export function detectIsPerishable(name: string, _category?: GroceryCategory): boolean {
+  const n = (name || '').toLowerCase().trim();
+  if (!n) return false;
+
+  // Fresh fish & seafood (very short shelf-life)
+  if (
+    n.includes('lachs') ||
+    n.includes('fisch') ||
+    n.includes('forelle') ||
+    n.includes('garnele') ||
+    n.includes('seelachs') ||
+    n.includes('kabeljau') ||
+    n.includes('thunfisch') ||
+    n.includes('shrimp') ||
+    n.includes('meeresfrüchte')
+  ) {
+    return true;
+  }
+
+  // Fresh poultry & minced meat (must be eaten/cooked promptly)
+  if (
+    n.includes('hackfleisch') ||
+    n.includes('faschiertes') ||
+    n.includes('hähnchen') ||
+    n.includes('hühnchen') ||
+    n.includes('pute') ||
+    n.includes('rindfleisch') ||
+    n.includes('schweinefleisch') ||
+    n.includes('filet') ||
+    n.includes('steak') ||
+    n.includes('schnitzel')
+  ) {
+    return true;
+  }
+
+  // Delicate fresh berries & tender greens
+  if (
+    n.includes('himbeere') ||
+    n.includes('erdbeere') ||
+    n.includes('heidelbeere') ||
+    n.includes('blaubeere') ||
+    n.includes('feldsalat') ||
+    n.includes('rucola') ||
+    n.includes('blattsalat') ||
+    n.includes('kopfsalat') ||
+    n.includes('spinat (frisch)') ||
+    n.includes('babyspinat')
+  ) {
+    return true;
+  }
+
+  // Fresh delicate herbs
+  if (
+    n.includes('frischer koriander') ||
+    n.includes('frisches basilikum') ||
+    n.includes('frische minze')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): GroceryItem[] {
   if (!Array.isArray(rawItems)) return [];
 
@@ -230,6 +295,11 @@ export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): Grocer
         itemId = `g_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`;
       }
       seenIds.add(itemId);
+      const isPerishable =
+        typeof item.isPerishable === 'boolean'
+          ? item.isPerishable
+          : detectIsPerishable(item.name, item.category);
+
       return {
         ...item,
         id: itemId,
@@ -237,6 +307,9 @@ export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): Grocer
         store: (item.store || 'Rewe').trim(),
         amount: item.amount ? String(item.amount).trim() : '',
         checked: Boolean(item.checked),
+        targetDate: item.targetDate,
+        recipeTitle: item.recipeTitle,
+        isPerishable,
       };
     });
 
@@ -256,6 +329,16 @@ export function sanitizeAndDeduplicateGroceries(rawItems: GroceryItem[]): Grocer
       // Merge amounts if not already present
       if (item.amount && (!existing.amount || !existing.amount.includes(item.amount))) {
         existing.amount = existing.amount ? `${existing.amount} + ${item.amount}` : item.amount;
+      }
+      // Keep earliest targetDate
+      if (item.targetDate && (!existing.targetDate || item.targetDate < existing.targetDate)) {
+        existing.targetDate = item.targetDate;
+      }
+      if (!existing.recipeTitle && item.recipeTitle) {
+        existing.recipeTitle = item.recipeTitle;
+      }
+      if (item.isPerishable) {
+        existing.isPerishable = true;
       }
     } else {
       uncheckedMap.set(key, { ...item });
@@ -719,7 +802,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return 'Rewe'; // Default supermarket
   };
 
-  const addRecipeIngredientsToGrocery = (recipe: Recipe): RecipeSyncResult => {
+  const addRecipeIngredientsToGrocery = (recipe: Recipe, targetDate?: string): RecipeSyncResult => {
     const toAdd: GroceryItem[] = [];
     const skippedNames: string[] = [];
 
@@ -736,6 +819,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           category: ing.category,
           checked: false,
           addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
+          targetDate,
+          recipeTitle: recipe.title,
+          isPerishable: detectIsPerishable(ing.name, ing.category),
         });
       }
     });
@@ -753,12 +839,22 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (existingIdx >= 0) {
             const existing = next[existingIdx];
             const newAmount = newItem.amount?.trim();
+            let mergedAmount = existing.amount;
             if (newAmount && (!existing.amount || !existing.amount.includes(newAmount))) {
-              next[existingIdx] = {
-                ...existing,
-                amount: existing.amount ? `${existing.amount} + ${newAmount}` : newAmount,
-              };
+              mergedAmount = existing.amount ? `${existing.amount} + ${newAmount}` : newAmount;
             }
+            const earliestDate =
+              newItem.targetDate && (!existing.targetDate || newItem.targetDate < existing.targetDate)
+                ? newItem.targetDate
+                : existing.targetDate;
+
+            next[existingIdx] = {
+              ...existing,
+              amount: mergedAmount,
+              targetDate: earliestDate,
+              recipeTitle: existing.recipeTitle || newItem.recipeTitle,
+              isPerishable: existing.isPerishable || newItem.isPerishable,
+            };
           } else {
             next.unshift(newItem);
           }
@@ -780,7 +876,17 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   };
 
-  const addMultipleRecipesToGrocery = (recipesList: Recipe[]): BatchRecipeSyncResult => {
+  const addMultipleRecipesToGrocery = (
+    recipesListOrAssignments: Recipe[] | Array<{ recipe: Recipe; date?: string }>
+  ): BatchRecipeSyncResult => {
+    // Normalize into array of { recipe, date }
+    const normalized: Array<{ recipe: Recipe; date?: string }> = recipesListOrAssignments.map((item) => {
+      if ('ingredients' in item) {
+        return { recipe: item, date: undefined };
+      }
+      return item;
+    });
+
     const consolidatedMap = new Map<
       string,
       {
@@ -789,12 +895,14 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         store: string;
         category?: GroceryCategory;
         recipeTitles: string[];
+        targetDates: string[];
+        isPerishable: boolean;
       }
     >();
     const skippedNames: string[] = [];
     let mergedCount = 0;
 
-    recipesList.forEach((recipe) => {
+    normalized.forEach(({ recipe, date }) => {
       recipe.ingredients.forEach((ing) => {
         const stapleCheck = ing.name.toLowerCase().trim();
         // True non-perishable basic seasonings & water
@@ -820,6 +928,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .replace(/\s*\([^)]*\)/g, '')
           .trim();
 
+        const isPerishable = detectIsPerishable(ing.name, ing.category);
+
         if (consolidatedMap.has(key)) {
           mergedCount++;
           const existing = consolidatedMap.get(key)!;
@@ -829,6 +939,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (!existing.recipeTitles.includes(recipe.title)) {
             existing.recipeTitles.push(recipe.title);
           }
+          if (date && !existing.targetDates.includes(date)) {
+            existing.targetDates.push(date);
+          }
+          if (isPerishable) {
+            existing.isPerishable = true;
+          }
         } else {
           consolidatedMap.set(key, {
             name: ing.name,
@@ -836,6 +952,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             store: predictStoreForItem(ing.name),
             category: ing.category,
             recipeTitles: [recipe.title],
+            targetDates: date ? [date] : [],
+            isPerishable,
           });
         }
       });
@@ -848,6 +966,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         combinedAmount = `${val.amounts.join(' + ')} (für ${val.recipeTitles.length} Gerichte)`;
       }
 
+      const earliestDate = val.targetDates.length > 0 ? [...val.targetDates].sort()[0] : undefined;
+
       return {
         id: `g_batch_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`,
         name: val.name.trim(),
@@ -856,6 +976,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         category: val.category,
         checked: false,
         addedByMemberId: activeMember,
+        targetDate: earliestDate,
+        recipeTitle: val.recipeTitles.join(', '),
+        isPerishable: val.isPerishable,
       };
     });
 
@@ -872,12 +995,22 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (existingIdx >= 0) {
             const existing = next[existingIdx];
             const newAmount = newItem.amount?.trim();
+            let mergedAmount = existing.amount;
             if (newAmount && (!existing.amount || !existing.amount.includes(newAmount))) {
-              next[existingIdx] = {
-                ...existing,
-                amount: existing.amount ? `${existing.amount} + ${newAmount}` : newAmount,
-              };
+              mergedAmount = existing.amount ? `${existing.amount} + ${newAmount}` : newAmount;
             }
+            const earliestDate =
+              newItem.targetDate && (!existing.targetDate || newItem.targetDate < existing.targetDate)
+                ? newItem.targetDate
+                : existing.targetDate;
+
+            next[existingIdx] = {
+              ...existing,
+              amount: mergedAmount,
+              targetDate: earliestDate,
+              recipeTitle: existing.recipeTitle || newItem.recipeTitle,
+              isPerishable: existing.isPerishable || newItem.isPerishable,
+            };
           } else {
             next.unshift(newItem);
           }
@@ -892,6 +1025,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     }
 
+    const recipesList = normalized.map((n) => n.recipe);
     const estimatedTotalCost = Math.round(
       recipesList.reduce((sum, r) => sum + (r.estimatedCost || 13.5), 0) * 10
     ) / 10;

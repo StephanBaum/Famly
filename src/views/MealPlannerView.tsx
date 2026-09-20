@@ -74,33 +74,50 @@ export const MealPlannerView: React.FC = () => {
   const [recipeBoxSearch, setRecipeBoxSearch] = useState<string>('');
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
-  // 7 days of the current week starting from Monday
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Rolling Planning Horizon: 'today-7' (7 days starting Today), 'today-14' (14 days starting Today), or 'calendar' (Mon-Sun)
+  const [horizonMode, setHorizonMode] = useState<'today-7' | 'today-14' | 'calendar'>('today-7');
+  const [dayOffset, setDayOffset] = useState<number>(0);
 
-  // Day Focus for mobile vs Full 7-Day Week
-  const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+  const today = new Date();
+  const todayDateStr = format(today, 'yyyy-MM-dd');
+
+  // Dynamically compute days: Today is anchored on the very left (index 0) by default!
+  const weekDays = React.useMemo(() => {
+    if (horizonMode === 'calendar') {
+      const start = addDays(startOfWeek(today, { weekStartsOn: 1 }), dayOffset);
+      return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+    }
+    const count = horizonMode === 'today-14' ? 14 : 7;
+    const start = addDays(today, dayOffset);
+    return Array.from({ length: count }, (_, i) => addDays(start, i));
+  }, [horizonMode, dayOffset]);
+
+  // Day Focus for mobile vs Full 7-Day / 14-Day Grid
   const todayIdx = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === todayDateStr);
-  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(todayIdx >= 0 ? todayIdx : 0);
+  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(() => (todayIdx >= 0 ? todayIdx : 0));
   const [plannerMode, setPlannerMode] = useState<'focus' | 'grid'>('focus');
 
   const handleSyncRecipe = (recipe: Recipe) => {
-    const result = addRecipeIngredientsToGrocery(recipe);
+    const targetDay = weekDays[selectedDayIdx] || new Date();
+    const targetDateStr = format(targetDay, 'yyyy-MM-dd');
+    const result = addRecipeIngredientsToGrocery(recipe, targetDateStr);
     if (result.skippedCount > 0) {
       setSyncFeedback(
-        `${result.addedCount} Zutaten auf die Einkaufsliste gesetzt! ${result.skippedCount} Standard-Vorräte übersprungen (${result.skippedNames.join(', ')}) 🧂`
+        `${result.addedCount} Zutaten für ${format(targetDay, 'EEEE, d. MMM', { locale: de })} auf die Einkaufsliste gesetzt! ${result.skippedCount} Standard-Vorräte übersprungen 🧂`
       );
     } else {
-      setSyncFeedback(`${result.addedCount} Zutaten auf deine Einkaufsliste gesetzt! 🛒`);
+      setSyncFeedback(
+        `${result.addedCount} Zutaten für ${format(targetDay, 'EEEE, d. MMM', { locale: de })} auf deine Einkaufsliste gesetzt! 🛒`
+      );
     }
     setTimeout(() => setSyncFeedback(null), 5000);
   };
 
   const handleApplyAutoPlan = (
     assignments: Array<{ date: string; recipe: Recipe }>,
-    syncGroceries: boolean
+    syncGroceries: boolean,
+    groceriesToSync?: Array<{ date: string; recipe: Recipe }>
   ) => {
-    const recipesToSync: Recipe[] = [];
     assignments.forEach(({ date, recipe }) => {
       // If recipe is not already in the family recipes library, persist it
       if (!recipes.some((r) => r.id === recipe.id)) {
@@ -110,16 +127,18 @@ export const MealPlannerView: React.FC = () => {
         title: recipe.title,
         recipeId: recipe.id,
       });
-      recipesToSync.push(recipe);
     });
 
     if (syncGroceries) {
-      const syncRes = addMultipleRecipesToGrocery(recipesToSync);
+      const itemsToSync = groceriesToSync || assignments;
+      const syncRes = addMultipleRecipesToGrocery(
+        itemsToSync.map((item) => ({ recipe: item.recipe, date: item.date }))
+      );
       setSyncFeedback(
-        `Wochenplan gezaubert! 7 Tage belegt & ${syncRes.addedCount} Zutaten (~${syncRes.estimatedTotalCost} €) gebündelt auf die Einkaufsliste gesetzt! 🪄🛒`
+        `Wochenplan gezaubert! ${assignments.length} Tage belegt & ${syncRes.addedCount} Zutaten (~${syncRes.estimatedTotalCost} €) gebündelt auf die Einkaufsliste gesetzt! 🪄🛒`
       );
     } else {
-      setSyncFeedback(`Wochenplan gezaubert! 7 Tage abwechslungsreich belegt! 🪄`);
+      setSyncFeedback(`Wochenplan gezaubert! ${assignments.length} Tage abwechslungsreich belegt! 🪄`);
     }
     setTimeout(() => setSyncFeedback(null), 5000);
   };
@@ -219,36 +238,110 @@ export const MealPlannerView: React.FC = () => {
           
           {/* Day Strip & View Layout Toggle */}
           <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 space-y-3 shadow-xs">
-            {/* Header: Week Title & Mode Switcher */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-xs font-black text-stone-500 dark:text-slate-400 uppercase tracking-wider">
-                Woche: {format(weekDays[0], 'd. MMM', { locale: de })} – {format(weekDays[6], 'd. MMM', { locale: de })}
-              </span>
+            {/* Header: Week Title, Horizon Switcher, and Nav */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black text-stone-800 dark:text-slate-200 uppercase tracking-wider">
+                  {horizonMode === 'today-14' ? '2-Wochen-Plan:' : 'Wochenplan:'}{' '}
+                  {format(weekDays[0], 'd. MMM', { locale: de })} – {format(weekDays[weekDays.length - 1], 'd. MMM', { locale: de })}
+                </span>
+                {dayOffset !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDayOffset(0)}
+                    className="duo-btn px-2 py-0.5 text-[10px] font-black rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200"
+                  >
+                    ★ Zurück zu Heute
+                  </button>
+                )}
+              </div>
 
-              {/* Mode Switcher: Focus Day vs Full Week Grid */}
-              <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPlannerMode('focus')}
-                  className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
-                    plannerMode === 'focus'
-                      ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                      : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
-                  }`}
-                >
-                  ⭐ Fokus-Tag
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlannerMode('grid')}
-                  className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
-                    plannerMode === 'grid'
-                      ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                      : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
-                  }`}
-                >
-                  📅 7-Tage-Raster
-                </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Rolling Horizon Switcher: 7 Tage vs 14 Tage */}
+                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0 text-xs font-black">
+                  <button
+                    type="button"
+                    onClick={() => setHorizonMode('today-7')}
+                    className={`px-2.5 py-1 rounded-lg transition-all ${
+                      horizonMode === 'today-7'
+                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                    }`}
+                    title="7 Tage rollend ab heute anzeigen"
+                  >
+                    7 Tage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHorizonMode('today-14')}
+                    className={`px-2.5 py-1 rounded-lg transition-all ${
+                      horizonMode === 'today-14'
+                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                    }`}
+                    title="14 Tage (2 Wochen) im Voraus planen"
+                  >
+                    14 Tage (2 Wo.)
+                  </button>
+                </div>
+
+                {/* Shift Navigation: ◀ Heute ▶ */}
+                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDayOffset((prev) => prev - (horizonMode === 'today-14' ? 14 : 7))}
+                    className="px-2 py-1 text-xs font-black text-stone-600 dark:text-slate-300 hover:text-stone-900"
+                    title="Frühere Tage anzeigen"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDayOffset(0)}
+                    className={`px-2 py-1 text-xs font-black rounded-lg ${
+                      dayOffset === 0
+                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-900'
+                    }`}
+                    title="Heute ganz links anzeigen"
+                  >
+                    Heute
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDayOffset((prev) => prev + (horizonMode === 'today-14' ? 14 : 7))}
+                    className="px-2 py-1 text-xs font-black text-stone-600 dark:text-slate-300 hover:text-stone-900"
+                    title="Spätere Tage anzeigen"
+                  >
+                    ▶
+                  </button>
+                </div>
+
+                {/* Mode Switcher: Focus Day vs Full Week Grid */}
+                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setPlannerMode('focus')}
+                    className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                      plannerMode === 'focus'
+                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                    }`}
+                  >
+                    ⭐ Fokus-Tag
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlannerMode('grid')}
+                    className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                      plannerMode === 'grid'
+                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                    }`}
+                  >
+                    📅 Raster
+                  </button>
+                </div>
               </div>
             </div>
 

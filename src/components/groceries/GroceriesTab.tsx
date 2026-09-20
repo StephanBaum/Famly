@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { GroceryItem, StoreDefinition, FamilyMember } from '../../types';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import {
   ShoppingCart,
   Check,
@@ -9,6 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
+  AlertTriangle,
+  Calendar,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -58,6 +62,18 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   const [newItemStore, setNewItemStore] = useState('Rewe');
   const [lastToggledItem, setLastToggledItem] = useState<{ id: string; name: string } | null>(null);
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  type TimeframeFilter = 'all' | 'soon' | 'later';
+  const [timeframeFilter, setTimeframeFilter] = useState<TimeframeFilter>('all');
+
+  const getDaysUntil = (targetDate?: string): number | null => {
+    if (!targetDate) return null;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    if (targetDate === todayStr) return 0;
+    const today = new Date(todayStr);
+    const target = new Date(targetDate);
+    const diffTime = target.getTime() - today.getTime();
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   // Check if duplicate unchecked items exist
   const hasDuplicates = React.useMemo(() => {
@@ -80,7 +96,24 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
     return normStore === normFilter || normStore.startsWith(normFilter) || normFilter.startsWith(normStore);
   };
 
-  const filteredGroceries = groceries.filter((g) => isStoreMatch(g.store, selectedStore));
+  const matchesTimeframe = (item: GroceryItem): boolean => {
+    if (timeframeFilter === 'all') return true;
+    const daysUntil = getDaysUntil(item.targetDate);
+    if (daysUntil === null) return timeframeFilter === 'soon'; // generic items belong to current trip
+
+    if (timeframeFilter === 'soon') {
+      // Within 3-4 days OR non-perishable staples
+      return daysUntil <= 3 || !item.isPerishable;
+    }
+    if (timeframeFilter === 'later') {
+      // Days further out (e.g. perishable items for late week)
+      return daysUntil > 3;
+    }
+    return true;
+  };
+
+  const storeFilteredGroceries = groceries.filter((g) => isStoreMatch(g.store, selectedStore));
+  const filteredGroceries = storeFilteredGroceries.filter(matchesTimeframe);
   const uncheckedGroceries = filteredGroceries.filter((g) => !g.checked);
   const checkedGroceries = filteredGroceries.filter((g) => g.checked);
 
@@ -259,6 +292,50 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
         </div>
       </div>
 
+      {/* SMART TIMEFRAME HORIZON FILTER */}
+      {groceries.some((g) => g.targetDate) && (
+        <div className="flex items-center gap-1.5 px-1 py-0.5 overflow-x-auto text-xs font-bold">
+          <span className="text-[11px] font-black text-stone-400 dark:text-slate-500 uppercase tracking-wider mr-1 shrink-0">
+            Einkauf:
+          </span>
+          <button
+            type="button"
+            onClick={() => setTimeframeFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
+              timeframeFilter === 'all'
+                ? 'bg-stone-800 text-white dark:bg-white dark:text-stone-900 shadow-xs'
+                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
+            }`}
+          >
+            Alle Artikel ({storeFilteredGroceries.filter((g) => !g.checked).length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimeframeFilter('soon')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 ${
+              timeframeFilter === 'soon'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
+            }`}
+            title="Zeigt alles für die nächsten 3–4 Tage sowie alle haltbaren Vorräte"
+          >
+            <span>⚡ Sofort / Nächste 3–4 Tage</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimeframeFilter('later')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 ${
+              timeframeFilter === 'later'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
+            }`}
+            title="Zeigt Artikel für spätere Tage & nächste Woche (z.B. Fisch oder Hackfleisch, die man erst frisch kauft)"
+          >
+            <span>🗓️ Später / Nächste Woche</span>
+          </button>
+        </div>
+      )}
+
       {/* Quick Add Bar */}
       <form
         onSubmit={handleQuickAdd}
@@ -384,7 +461,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
 
                   {/* Middle: Item Details */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white truncate">
                         {item.name}
                       </span>
@@ -393,10 +470,35 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                           {item.amount}
                         </span>
                       )}
+
+                      {/* Freshness Alert or Planned Date Badge */}
+                      {(() => {
+                        const daysUntil = getDaysUntil(item.targetDate);
+                        if (item.isPerishable && daysUntil !== null && daysUntil > 3) {
+                          return (
+                            <span
+                              title={`Geplant für ${item.targetDate}: Leicht verderblich – erst kurz vor dem Kochen kaufen!`}
+                              className="text-[10px] sm:text-[11px] font-black bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-200 px-2 py-0.5 rounded-md border border-rose-300 dark:border-rose-700 shrink-0 flex items-center gap-1"
+                            >
+                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span>Erst {format(new Date(item.targetDate!), 'EEE d.M.', { locale: de })} (Frische!)</span>
+                            </span>
+                          );
+                        }
+                        if (item.targetDate) {
+                          return (
+                            <span className="text-[10px] sm:text-[11px] font-bold bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-200 px-1.5 py-0.5 rounded-md border border-teal-200 dark:border-teal-800 shrink-0 flex items-center gap-1">
+                              <Calendar className="w-2.5 h-2.5 text-teal-600" />
+                              <span>{daysUntil === 0 ? 'Heute' : daysUntil === 1 ? 'Morgen' : format(new Date(item.targetDate), 'EEE d.M.', { locale: de })}</span>
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div
-                      className="flex items-center gap-2 mt-1"
+                      className="flex items-center gap-2 mt-1 flex-wrap"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <select
@@ -411,6 +513,15 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                           </option>
                         ))}
                       </select>
+
+                      {item.recipeTitle && (
+                        <span
+                          title={`Aus Rezept: ${item.recipeTitle}`}
+                          className="text-[11px] font-medium text-stone-400 dark:text-slate-500 truncate max-w-[130px] sm:max-w-[200px]"
+                        >
+                          🍽️ {item.recipeTitle}
+                        </span>
+                      )}
 
                       {addedBy && (
                         <span

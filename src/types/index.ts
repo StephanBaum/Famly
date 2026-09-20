@@ -153,6 +153,9 @@ export interface GroceryItem {
   category?: GroceryCategory;
   checked: boolean;
   addedByMemberId?: string;
+  targetDate?: string; // YYYY-MM-DD when the meal/dish is planned
+  recipeTitle?: string; // e.g. "Honig-Lachs mit Brokkoli"
+  isPerishable?: boolean; // true for fresh fish, poultry, minced meat, delicate greens, fresh berries
 }
 
 export interface Chore {

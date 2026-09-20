@@ -34,37 +34,39 @@ export const WeeklyGridView: React.FC<WeeklyGridViewProps> = ({
   onSyncRecipe,
   onToggleFavorite,
 }) => {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3 animate-in fade-in">
-      {weekDays.map((day) => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        const isToday = dateStr === todayDateStr;
-        const dayPlan = mealPlans.find((m) => m.date === dateStr);
+  const isMultiWeek = weekDays.length > 7;
+  const week1Days = isMultiWeek ? weekDays.slice(0, 7) : weekDays;
+  const week2Days = isMultiWeek ? weekDays.slice(7) : [];
 
-        const dinnerRecipe = dayPlan?.dinner?.recipeId
-          ? recipes.find((r) => r.id === dayPlan.dinner?.recipeId)
-          : null;
-        const dinnerChef = dayPlan?.dinner?.chefId
-          ? members.find((m) => m.id === dayPlan.dinner?.chefId)
-          : null;
+  const renderDayCard = (day: Date) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const isToday = dateStr === todayDateStr;
+    const dayPlan = mealPlans.find((m) => m.date === dateStr);
 
-        const lunchChef = dayPlan?.lunch?.chefId
-          ? members.find((m) => m.id === dayPlan.lunch?.chefId)
-          : null;
+    const dinnerRecipe = dayPlan?.dinner?.recipeId
+      ? recipes.find((r) => r.id === dayPlan.dinner?.recipeId)
+      : null;
+    const dinnerChef = dayPlan?.dinner?.chefId
+      ? members.find((m) => m.id === dayPlan.dinner?.chefId)
+      : null;
 
-        const breakfastChef = dayPlan?.breakfast?.chefId
-          ? members.find((m) => m.id === dayPlan.breakfast?.chefId)
-          : null;
+    const lunchChef = dayPlan?.lunch?.chefId
+      ? members.find((m) => m.id === dayPlan.lunch?.chefId)
+      : null;
 
-        return (
-          <div
-            key={dateStr}
-            className={`duo-card bg-white dark:bg-slate-900 border-2 flex flex-col justify-between overflow-hidden shadow-xs transition-all ${
-              isToday
-                ? 'border-teal-500 dark:border-teal-400 ring-4 ring-teal-400/20'
-                : 'border-stone-200 dark:border-slate-800 hover:border-teal-200'
-            }`}
-          >
+    const breakfastChef = dayPlan?.breakfast?.chefId
+      ? members.find((m) => m.id === dayPlan.breakfast?.chefId)
+      : null;
+
+    return (
+      <div
+        key={dateStr}
+        className={`duo-card bg-white dark:bg-slate-900 border-2 flex flex-col justify-between overflow-hidden shadow-xs transition-all ${
+          isToday
+            ? 'border-teal-500 dark:border-teal-400 ring-4 ring-teal-400/20'
+            : 'border-stone-200 dark:border-slate-800 hover:border-teal-200'
+        }`}
+      >
             {/* Day Header */}
             <div
               className={`px-3 py-2 border-b text-center flex items-center justify-between ${
@@ -271,9 +273,49 @@ export const WeeklyGridView: React.FC<WeeklyGridViewProps> = ({
                 </button>
               </div>
             )}
+      </div>
+    );
+  };
+
+  if (isMultiWeek) {
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        {/* Week 1 */}
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs font-black text-teal-800 dark:text-teal-200 bg-teal-100 dark:bg-teal-950/70 px-3 py-1 rounded-xl border border-teal-300 dark:border-teal-700">
+              Woche 1: Nächste 7 Tage (ab heute)
+            </span>
+            <span className="text-xs font-bold text-stone-500 dark:text-slate-400">
+              {format(week1Days[0], 'd. MMM', { locale: de })} – {format(week1Days[6], 'd. MMM', { locale: de })}
+            </span>
           </div>
-        );
-      })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3">
+            {week1Days.map(renderDayCard)}
+          </div>
+        </div>
+
+        {/* Week 2 */}
+        <div className="space-y-2.5 pt-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs font-black text-indigo-800 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-950/70 px-3 py-1 rounded-xl border border-indigo-300 dark:border-indigo-700">
+              Woche 2: Folgewoche
+            </span>
+            <span className="text-xs font-bold text-stone-500 dark:text-slate-400">
+              {format(week2Days[0], 'd. MMM', { locale: de })} – {format(week2Days[week2Days.length - 1], 'd. MMM', { locale: de })}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3">
+            {week2Days.map(renderDayCard)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3 animate-in fade-in">
+      {weekDays.map(renderDayCard)}
     </div>
   );
 };

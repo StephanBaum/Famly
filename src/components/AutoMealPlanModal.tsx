@@ -25,7 +25,8 @@ interface AutoMealPlanModalProps {
   recipes: Recipe[];
   onApplyPlan: (
     assignments: Array<{ date: string; recipe: Recipe }>,
-    syncGroceries: boolean
+    syncGroceries: boolean,
+    groceriesToSync?: Array<{ date: string; recipe: Recipe }>
   ) => void;
   onToggleFavorite: (recipeId: string) => void;
 }
@@ -61,6 +62,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
   const [themeFilter, setThemeFilter] = useState<PlanThemeFilter>('all');
   const [onlyEmptyDays, setOnlyEmptyDays] = useState<boolean>(false);
   const [syncToGroceries, setSyncToGroceries] = useState<boolean>(true);
+  const [syncScope, setSyncScope] = useState<'all' | 'first4days'>('all');
   const [showGroceryPreview, setShowGroceryPreview] = useState<boolean>(false);
 
   const [assignments, setAssignments] = useState<PlannedDayAssignment[]>([]);
@@ -440,7 +442,8 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       date: a.dateStr,
       recipe: a.recipe,
     }));
-    onApplyPlan(toApply, syncToGroceries);
+    const groceriesToSync = syncScope === 'first4days' ? toApply.slice(0, 4) : toApply;
+    onApplyPlan(toApply, syncToGroceries, groceriesToSync);
     try {
       confetti({
         particleCount: 90,
@@ -727,17 +730,31 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
           </div>
 
           {/* Footer actions */}
-          <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
-              <input
-                type="checkbox"
-                checked={syncToGroceries}
-                onChange={(e) => setSyncToGroceries(e.target.checked)}
-                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-              />
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>Zutaten auf Einkaufsliste (~{Math.round(totalEstimatedCost)} €)</span>
-            </label>
+          <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={syncToGroceries}
+                  onChange={(e) => setSyncToGroceries(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>Zutaten auf Einkaufsliste (~{Math.round(totalEstimatedCost)} €)</span>
+              </label>
+
+              {syncToGroceries && (
+                <select
+                  value={syncScope}
+                  onChange={(e) => setSyncScope(e.target.value as 'all' | 'first4days')}
+                  className="text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 px-2.5 py-1.5 rounded-xl cursor-pointer"
+                  title="Wähle, ob alle Tage oder nur die ersten Tage sofort eingekauft werden sollen"
+                >
+                  <option value="all">Alle {assignments.length} Tage (inkl. Frische-Hinweise)</option>
+                  <option value="first4days">Nur nächste 3–4 Tage (Frische-Einkauf)</option>
+                </select>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
