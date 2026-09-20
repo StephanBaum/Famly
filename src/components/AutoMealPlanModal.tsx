@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Recipe, MealPlanDay } from '../types';
 import { RECIPE_THEMES, CURATED_RECIPE_CATALOG } from '../utils/recipeCatalog';
 import { ModalPortal } from './ModalPortal';
@@ -12,6 +12,9 @@ import {
   Calendar,
   Clock,
   ShoppingCart,
+  Zap,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -37,6 +40,13 @@ interface PlannedDayAssignment {
   formattedDate: string;
   recipe: Recipe;
   isAlreadyPlanned: boolean;
+  synergyConnection?: {
+    type: 'cook-extra' | 'use-leftovers';
+    partnerDayName: string;
+    baseName: string;
+    tip: string;
+    timeSaved: number;
+  };
 }
 
 export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
@@ -52,11 +62,12 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
   const [themeFilter, setThemeFilter] = useState<PlanThemeFilter>('all');
   const [onlyEmptyDays, setOnlyEmptyDays] = useState<boolean>(false);
   const [syncToGroceries, setSyncToGroceries] = useState<boolean>(true);
+  const [showGroceryPreview, setShowGroceryPreview] = useState<boolean>(false);
 
   const [assignments, setAssignments] = useState<PlannedDayAssignment[]>([]);
 
   // Combined recipe pool: user's recipe box + curated catalog (deduplicated by title)
-  const allAvailableRecipes = React.useMemo(() => {
+  const allAvailableRecipes = useMemo(() => {
     const existingTitles = new Set(recipes.map((r) => r.title.toLowerCase().trim()));
     const additionalFromCatalog = CURATED_RECIPE_CATALOG.filter(
       (c) => !existingTitles.has(c.title.toLowerCase().trim())
@@ -65,34 +76,127 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
   }, [recipes]);
 
   // Favorite recipes pool
-  const favoriteRecipes = React.useMemo(() => {
+  const favoriteRecipes = useMemo(() => {
     return allAvailableRecipes.filter((r) => r.isFavorite);
   }, [allAvailableRecipes]);
 
-  // Discoverable new recipes (from catalog not in current box, or un-favorited)
-  const discoverRecipes = React.useMemo(() => {
+  // Discoverable new recipes
+  const discoverRecipes = useMemo(() => {
     return allAvailableRecipes.filter((r) => !r.isFavorite);
   }, [allAvailableRecipes]);
 
-  // Helper to pick a candidate recipe
+  // Helper to resolve or synthesize a recipe with full ingredients if missing
+  const resolveFullRecipe = (title: string, existingRecipeId?: string): Recipe => {
+    if (existingRecipeId) {
+      const found = allAvailableRecipes.find((r) => r.id === existingRecipeId);
+      if (found) return found;
+    }
+    const matchByTitle = allAvailableRecipes.find(
+      (r) => r.title.toLowerCase().trim() === title.toLowerCase().trim()
+    );
+    if (matchByTitle) return matchByTitle;
+
+    // Synthesize realistic family ingredients from title keywords
+    const lower = title.toLowerCase();
+    if (lower.includes('lachs') || lower.includes('fisch')) {
+      return {
+        id: `synth_${Date.now()}_lachs`,
+        title,
+        prepTime: '25 Min.',
+        servings: 5,
+        category: 'healthy',
+        mainProtein: 'fish',
+        estimatedCost: 16.0,
+        imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80',
+        ingredients: [
+          { name: 'Lachsfilet (frisch)', amount: '600g', category: 'meat' },
+          { name: 'Frischer Brokkoli', amount: '500g', category: 'produce' },
+          { name: 'Jasminreis', amount: '500g', category: 'pantry' },
+          { name: 'Sojasauce & Honig', amount: 'je 2 EL', category: 'pantry' },
+        ],
+      };
+    }
+    if (lower.includes('schmor') || lower.includes('gulasch') || lower.includes('rind')) {
+      return {
+        id: `synth_${Date.now()}_schmor`,
+        title,
+        prepTime: '45 Min.',
+        servings: 5,
+        category: 'comfort',
+        mainProtein: 'meat',
+        estimatedCost: 15.0,
+        imageUrl: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=600&q=80',
+        ingredients: [
+          { name: 'Rindfleisch / Gulasch', amount: '600g', category: 'meat' },
+          { name: 'Festkochende Kartoffeln', amount: '1kg', category: 'produce' },
+          { name: 'Bundmöhren', amount: '500g', category: 'produce' },
+          { name: 'Rinderbrühe', amount: '500ml', category: 'pantry' },
+        ],
+      };
+    }
+    if (lower.includes('bowl') || lower.includes('salat')) {
+      return {
+        id: `synth_${Date.now()}_bowl`,
+        title,
+        prepTime: '20 Min.',
+        servings: 5,
+        category: 'healthy',
+        mainProtein: 'vegetarian',
+        estimatedCost: 11.5,
+        imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+        ingredients: [
+          { name: 'Bunter Quinoa oder Reis', amount: '300g', category: 'pantry' },
+          { name: 'Reife Avocados', amount: '2 Stück', category: 'produce' },
+          { name: 'Kichererbsen (Dose)', amount: '1 Dose (400g)', category: 'pantry' },
+          { name: 'Feta-Käse', amount: '200g', category: 'dairy' },
+          { name: 'Kirschtomaten', amount: '250g', category: 'produce' },
+        ],
+      };
+    }
+    // Default complete family pasta recipe
+    return {
+      id: `synth_${Date.now()}_pasta`,
+      title,
+      prepTime: '20 Min.',
+      servings: 5,
+      category: 'quick',
+      mainProtein: 'pasta',
+      estimatedCost: 9.0,
+      imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80',
+      ingredients: [
+        { name: 'Pasta (Spaghetti oder Penne)', amount: '500g', category: 'pantry' },
+        { name: 'Kirschtomaten & Basilikum', amount: '250g / 1 Bund', category: 'produce' },
+        { name: 'Parmesankäse', amount: '100g', category: 'dairy' },
+        { name: 'Natives Olivenöl extra', amount: '3 EL', category: 'pantry' },
+      ],
+    };
+  };
+
+  // Smart candidate picker with strict zero-duplicate rule and protein diversity
   const pickCandidate = (
     mode: PlanSourceMode,
     theme: PlanThemeFilter,
-    excludeIds: Set<string>
+    excludeIds: Set<string>,
+    lastProtein?: string,
+    proteinCounts: Map<string, number> = new Map()
   ): Recipe => {
     let pool: Recipe[] = [];
 
     if (mode === 'favorites') {
-      pool = favoriteRecipes.length > 0 ? favoriteRecipes : allAvailableRecipes;
+      pool = favoriteRecipes;
     } else if (mode === 'discover') {
-      pool = discoverRecipes.length > 0 ? discoverRecipes : allAvailableRecipes;
+      pool = discoverRecipes;
     } else {
-      // mix: 50% chance of favorite if favorites exist
+      // 50/50 mix
       const pickFav = Math.random() < 0.5 && favoriteRecipes.length > 0;
-      pool = pickFav ? favoriteRecipes : discoverRecipes.length > 0 ? discoverRecipes : allAvailableRecipes;
+      pool = pickFav ? favoriteRecipes : discoverRecipes;
     }
 
-    // Apply theme filter if selected
+    if (pool.length === 0) {
+      pool = allAvailableRecipes;
+    }
+
+    // Apply theme filter
     if (theme !== 'all') {
       const themeMatches = pool.filter((r) => {
         if (r.theme === theme) return true;
@@ -109,81 +213,221 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
       }
     }
 
-    // Exclude recipes already chosen in this week if possible
-    const unpicked = pool.filter((r) => !excludeIds.has(r.id));
-    const candidates = unpicked.length > 0 ? unpicked : pool;
+    // STRICT HARD RULE: Exclude all recipes already picked in this week!
+    let available = pool.filter((r) => !excludeIds.has(r.id));
 
-    const randomIndex = Math.floor(Math.random() * candidates.length);
-    return candidates[randomIndex] || allAvailableRecipes[0];
+    // Fallback: If chosen theme/mode has fewer than 7 unique recipes, draw from the 40+ catalog
+    if (available.length === 0) {
+      available = allAvailableRecipes.filter((r) => !excludeIds.has(r.id));
+    }
+    // Absolute fallback (emergency only, if entire catalog >40 was somehow exhausted)
+    if (available.length === 0) {
+      available = allAvailableRecipes;
+    }
+
+    // VARIETY GUARD (Soft Filters):
+    // 1. Avoid repeating same mainProtein on consecutive days (e.g. no fish 2 days in a row)
+    // 2. Max 2x fish/salmon per week
+    // 3. Max 2x red meat per week
+    let scoredCandidates = available.filter((r) => {
+      const protein = r.mainProtein || 'vegetarian';
+      if (lastProtein && protein === lastProtein && (protein === 'fish' || protein === 'meat')) {
+        return false;
+      }
+      const count = proteinCounts.get(protein) || 0;
+      if (protein === 'fish' && count >= 2) return false;
+      if (protein === 'meat' && count >= 2) return false;
+      return true;
+    });
+
+    if (scoredCandidates.length === 0) {
+      // Relax protein constraints if pool is tight, but strictly maintain zero duplicate IDs
+      scoredCandidates = available;
+    }
+
+    const randomIndex = Math.floor(Math.random() * scoredCandidates.length);
+    return scoredCandidates[randomIndex] || available[0] || allAvailableRecipes[0];
   };
 
-  // Generate the 7-day assignments
+  // Generate the full 7-day plan with smart Batch-Prep Synergies
   const generatePlan = () => {
     const chosenIds = new Set<string>();
+    const proteinCounts = new Map<string, number>();
     const newAssignments: PlannedDayAssignment[] = [];
 
-    weekDays.forEach((day) => {
+    for (let dayIdx = 0; dayIdx < weekDays.length; dayIdx++) {
+      const day = weekDays[dayIdx];
       const dateStr = format(day, 'yyyy-MM-dd');
       const existingPlan = currentMealPlans.find((p) => p.date === dateStr);
       const isAlreadyPlanned = Boolean(existingPlan?.dinner?.title);
 
       if (onlyEmptyDays && isAlreadyPlanned) {
-        // Keep existing recipe
-        const existingRecipe = recipes.find((r) => r.id === existingPlan?.dinner?.recipeId);
-        const fallbackRecipe: Recipe = existingRecipe || {
-          id: `custom_${dateStr}`,
-          title: existingPlan?.dinner?.title || 'Bereits geplant',
-          prepTime: '30 Min.',
-          servings: 5,
-          category: 'family-favorite',
-          imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-          ingredients: [],
-        };
+        const fullRecipe = resolveFullRecipe(
+          existingPlan!.dinner!.title,
+          existingPlan!.dinner!.recipeId
+        );
+        chosenIds.add(fullRecipe.id);
+        const prot = fullRecipe.mainProtein || 'vegetarian';
+        proteinCounts.set(prot, (proteinCounts.get(prot) || 0) + 1);
+
         newAssignments.push({
           dateStr,
           dayName: format(day, 'EEEE', { locale: de }),
           formattedDate: format(day, 'd. MMMM', { locale: de }),
-          recipe: fallbackRecipe,
+          recipe: fullRecipe,
           isAlreadyPlanned: true,
         });
-        chosenIds.add(fallbackRecipe.id);
-      } else {
-        const recipe = pickCandidate(sourceMode, themeFilter, chosenIds);
-        chosenIds.add(recipe.id);
-        newAssignments.push({
-          dateStr,
-          dayName: format(day, 'EEEE', { locale: de }),
-          formattedDate: format(day, 'd. MMMM', { locale: de }),
-          recipe,
-          isAlreadyPlanned: false,
-        });
+        continue;
       }
-    });
+
+      // Check if previous day had a cook-extra recipe and can pair with a leftover-utilizing partner
+      const prevAssignment = dayIdx > 0 ? newAssignments[dayIdx - 1] : undefined;
+      let matchedSynergyRecipe: Recipe | undefined;
+
+      if (
+        prevAssignment &&
+        prevAssignment.recipe.synergyRole === 'cook-extra' &&
+        prevAssignment.recipe.synergyBase
+      ) {
+        const base = prevAssignment.recipe.synergyBase;
+        // Look for matching use-leftovers recipe in the catalog that is not yet picked
+        matchedSynergyRecipe = allAvailableRecipes.find(
+          (r) =>
+            r.synergyBase === base &&
+            r.synergyRole === 'use-leftovers' &&
+            !chosenIds.has(r.id)
+        );
+      }
+
+      const lastProtein = prevAssignment?.recipe?.mainProtein;
+      const recipe =
+        matchedSynergyRecipe ||
+        pickCandidate(sourceMode, themeFilter, chosenIds, lastProtein, proteinCounts);
+
+      chosenIds.add(recipe.id);
+      const prot = recipe.mainProtein || 'vegetarian';
+      proteinCounts.set(prot, (proteinCounts.get(prot) || 0) + 1);
+
+      // Record synergy connection if paired
+      let synergyConnection: PlannedDayAssignment['synergyConnection'] = undefined;
+      if (
+        matchedSynergyRecipe &&
+        prevAssignment &&
+        prevAssignment.recipe.synergyBase
+      ) {
+        const base = prevAssignment.recipe.synergyBase;
+        const baseName =
+          base === 'rice'
+            ? 'Reis'
+            : base === 'potatoes'
+            ? 'Kartoffeln'
+            : base === 'chicken'
+            ? 'Hähnchen'
+            : 'Süßkartoffeln';
+
+        synergyConnection = {
+          type: 'use-leftovers',
+          partnerDayName: prevAssignment.dayName,
+          baseName,
+          tip: recipe.synergyTip || `Nutzt den gekochten ${baseName} von gestern!`,
+          timeSaved: recipe.timeSavedMinutes || 15,
+        };
+
+        // Also annotate previous day
+        prevAssignment.synergyConnection = {
+          type: 'cook-extra',
+          partnerDayName: format(day, 'EEEE', { locale: de }),
+          baseName,
+          tip: prevAssignment.recipe.synergyTip || `Koche heute doppelt ${baseName} für morgen!`,
+          timeSaved: recipe.timeSavedMinutes || 15,
+        };
+      }
+
+      newAssignments.push({
+        dateStr,
+        dayName: format(day, 'EEEE', { locale: de }),
+        formattedDate: format(day, 'd. MMMM', { locale: de }),
+        recipe,
+        isAlreadyPlanned: false,
+        synergyConnection,
+      });
+    }
 
     setAssignments(newAssignments);
   };
 
-  // Single-day shuffle: replace one day's recipe
+  // Single-day shuffle: replace one day's recipe while preserving zero duplicates
   const handleShuffleSingleDay = (index: number) => {
     setAssignments((prev) => {
       const current = prev[index];
       if (!current) return prev;
 
       const otherIds = new Set(prev.filter((_, i) => i !== index).map((a) => a.recipe.id));
-      otherIds.add(current.recipe.id); // exclude current to get a different one
+      otherIds.add(current.recipe.id); // exclude current to get a brand-new distinct one
 
-      const newRecipe = pickCandidate(sourceMode, themeFilter, otherIds);
+      const prevProtein = index > 0 ? prev[index - 1]?.recipe.mainProtein : undefined;
+      const newRecipe = pickCandidate(sourceMode, themeFilter, otherIds, prevProtein);
+
       const updated = [...prev];
       updated[index] = {
         ...current,
         recipe: newRecipe,
         isAlreadyPlanned: false,
+        synergyConnection: undefined,
       };
       return updated;
     });
   };
 
-  // Generate on mount or mode/filter change
+  // Consolidated ingredients & budget calculations
+  const { consolidatedIngredients, totalEstimatedCost, totalTimeSaved } = useMemo(() => {
+    const map = new Map<string, { name: string; amounts: string[]; category?: string }>();
+    let totalCost = 0;
+    let timeSaved = 0;
+
+    assignments.forEach((a) => {
+      totalCost += a.recipe.estimatedCost || 13.5;
+      if (a.synergyConnection?.type === 'use-leftovers') {
+        timeSaved += a.synergyConnection.timeSaved || 15;
+      }
+
+      a.recipe.ingredients.forEach((ing) => {
+        const clean = ing.name.toLowerCase().trim();
+        if (
+          clean === 'salz' ||
+          clean === 'pfeffer' ||
+          clean === 'wasser' ||
+          clean === 'leitungswasser'
+        ) {
+          return;
+        }
+        const key = clean
+          .replace(/^(frische[rsn]?|bio-|reife[rsn]?|gekochtes?|festkochende)\s+/i, '')
+          .replace(/\s*\([^)]*\)/g, '')
+          .trim();
+
+        if (map.has(key)) {
+          const item = map.get(key)!;
+          if (ing.amount && !item.amounts.includes(ing.amount)) {
+            item.amounts.push(ing.amount);
+          }
+        } else {
+          map.set(key, {
+            name: ing.name,
+            amounts: ing.amount ? [ing.amount] : [],
+            category: ing.category,
+          });
+        }
+      });
+    });
+
+    return {
+      consolidatedIngredients: Array.from(map.values()),
+      totalEstimatedCost: Math.round(totalCost * 10) / 10,
+      totalTimeSaved: timeSaved,
+    };
+  }, [assignments]);
+
   useEffect(() => {
     if (isOpen) {
       generatePlan();
@@ -204,7 +448,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
         spread: 70,
         origin: { y: 0.6 },
       });
-    } catch (e) {
+    } catch {
       // ignore
     }
     onClose();
@@ -213,8 +457,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col my-auto overflow-hidden">
-          
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[94vh] flex flex-col my-auto overflow-hidden">
           {/* Header */}
           <div className="flex items-start justify-between pb-3 border-b border-stone-100 dark:border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
@@ -222,17 +465,18 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 ✨
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/80 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700">
-                    Smarter Wochenplaner
+                    Smarter Wochen-Generator
                   </span>
                   <span className="text-xs text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-stone-400" />
-                    Woche vom {format(weekDays[0], 'd. MMM', { locale: de })} – {format(weekDays[6], 'd. MMM', { locale: de })}
+                    Woche vom {format(weekDays[0], 'd. MMM', { locale: de })} –{' '}
+                    {format(weekDays[6], 'd. MMM', { locale: de })}
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white leading-tight mt-0.5">
-                  Woche automatisch mit Rezepten befüllen
+                  Woche zaubern mit smartem Vorkochen
                 </h3>
               </div>
             </div>
@@ -247,10 +491,8 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
 
           {/* Scrollable Body */}
           <div className="flex-1 overflow-y-auto space-y-4 py-3 pr-1">
-            
             {/* Step 1: Controls (Source & Theme) */}
             <div className="duo-card p-3 sm:p-4 bg-stone-50/80 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
-              
               {/* Row 1: Source Mode */}
               <div>
                 <label className="block text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wide mb-1.5 flex items-center gap-1">
@@ -286,10 +528,10 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                   >
                     <div className="flex items-center gap-2 font-black text-xs text-rose-600 dark:text-rose-400">
                       <span>❤️</span>
-                      <span>Nur Favoriten ({favoriteRecipes.length})</span>
+                      <span>Favoriten ({favoriteRecipes.length})</span>
                     </div>
                     <p className="text-[11px] text-stone-500 dark:text-slate-400 font-medium mt-0.5">
-                      Nur Gerichte, die die Familie liebt
+                      Ergänzt mit passenden Entdeckungen
                     </p>
                   </button>
 
@@ -307,7 +549,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                       <span>Neue Entdeckungen</span>
                     </div>
                     <p className="text-[11px] text-stone-500 dark:text-slate-400 font-medium mt-0.5">
-                      Frische Abwechslung aus 20+ Rezepten
+                      Frische Ideen aus 40+ Familien-Rezepten
                     </p>
                   </button>
                 </div>
@@ -359,8 +601,8 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 </div>
               </div>
 
-              {/* Scope toggle */}
-              <div className="flex items-center justify-between pt-2 border-t border-stone-200/60 dark:border-slate-700 text-xs">
+              {/* Scope toggle & Synergy Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t border-stone-200/60 dark:border-slate-700 gap-2 text-xs">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-stone-700 dark:text-slate-300">
                   <input
                     type="checkbox"
@@ -370,9 +612,13 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                   />
                   <span>Bereits geplante Wochentage behalten (nur Lücken füllen)</span>
                 </label>
-                <span className="text-[11px] text-stone-400 dark:text-slate-500">
-                  7 Tage Abendessen
-                </span>
+
+                {totalTimeSaved > 0 && (
+                  <span className="inline-flex items-center gap-1 font-black text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/70 px-2.5 py-1 rounded-xl border border-amber-300 dark:border-amber-700 text-[11px]">
+                    <Zap className="w-3 h-3 fill-amber-500 text-amber-500" />
+                    <span>~{totalTimeSaved} Min. Zeitersparnis durch Vorkochen!</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -388,6 +634,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 {assignments.map((assignment, idx) => {
                   const r = assignment.recipe;
                   const isFav = Boolean(r.isFavorite);
+                  const syn = assignment.synergyConnection;
 
                   return (
                     <div
@@ -423,8 +670,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                             src={r.imageUrl}
                             alt={r.title}
                             onError={(e) => {
-                              // Fallback on image failure
-                              e.currentTarget.src =
+                              (e.currentTarget as HTMLImageElement).src =
                                 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
                             }}
                             className="w-full h-full object-cover"
@@ -437,11 +683,16 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleFavorite(r.id);
-                              // also update locally in assignment
                               setAssignments((prev) =>
                                 prev.map((a, i) =>
                                   i === idx
-                                    ? { ...a, recipe: { ...a.recipe, isFavorite: !a.recipe.isFavorite } }
+                                    ? {
+                                        ...a,
+                                        recipe: {
+                                          ...a.recipe,
+                                          isFavorite: !a.recipe.isFavorite,
+                                        },
+                                      }
                                     : a
                                 )
                               );
@@ -473,10 +724,30 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                             {r.title}
                           </h5>
                           <span className="text-[10px] text-stone-400 dark:text-slate-400 mt-0.5 block">
-                            {r.ingredients.length} Zutaten
+                            {r.ingredients.length} Zutaten • ca. {r.estimatedCost || 12} €
                           </span>
                         </div>
                       </div>
+
+                      {/* Synergy Badge if connected */}
+                      {syn && (
+                        <div
+                          className={`mt-2 p-1.5 rounded-xl border text-[9px] font-extrabold leading-tight ${
+                            syn.type === 'cook-extra'
+                              ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'
+                              : 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                            <span>
+                              {syn.type === 'cook-extra'
+                                ? `Doppelt ${syn.baseName} kochen`
+                                : `Nutzt ${syn.baseName} von gestern!`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Source tag */}
                       <div className="mt-2 pt-1.5 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between text-[10px] font-bold">
@@ -501,6 +772,73 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
               </div>
             </div>
 
+            {/* Step 3: Expandable Grocery & Budget Preview */}
+            <div className="duo-card p-3 sm:p-4 bg-emerald-50/70 dark:bg-emerald-950/40 border-2 border-emerald-200 dark:border-emerald-800/60 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                    🛒
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-black text-emerald-950 dark:text-emerald-200">
+                      Wocheneinkauf & Budget-Schätzung
+                    </h5>
+                    <p className="text-[11px] font-semibold text-emerald-800/80 dark:text-emerald-300/80">
+                      {consolidatedIngredients.length} zusammengeführte Zutaten für 7 Familien-Abendessen
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700 dark:text-emerald-400 block">
+                      Geschätzter Warenkorb
+                    </span>
+                    <span className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+                      ca. {totalEstimatedCost.toFixed(2).replace('.', ',')} €
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGroceryPreview(!showGroceryPreview)}
+                    className="p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 font-black text-xs flex items-center gap-1 shadow-2xs"
+                  >
+                    <span>{showGroceryPreview ? 'Schließen' : 'Details'}</span>
+                    {showGroceryPreview ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Accordion content */}
+              {showGroceryPreview && (
+                <div className="pt-3 border-t border-emerald-200/80 dark:border-emerald-800/80 animate-in fade-in">
+                  <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-semibold mb-2">
+                    Mehrfach vorkommende Zutaten (z.B. Zwiebeln, Knoblauch, Reis) wurden automatisch zu Vorratseinheiten gebündelt:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    {consolidatedIngredients.map((item, i) => (
+                      <div
+                        key={i}
+                        className="p-1.5 bg-white dark:bg-slate-800 rounded-lg border border-emerald-100 dark:border-slate-700 text-xs flex items-center justify-between"
+                      >
+                        <span className="font-bold text-stone-800 dark:text-stone-200 truncate">
+                          {item.name}
+                        </span>
+                        {item.amounts.length > 0 && (
+                          <span className="text-[10px] bg-emerald-100/70 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 px-1.5 py-0.2 rounded font-semibold shrink-0 ml-1">
+                            {item.amounts.join(' + ')}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer actions */}
@@ -513,7 +851,7 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
               />
               <ShoppingCart className="w-3.5 h-3.5" />
-              <span>Alle benötigten Zutaten direkt auf die Einkaufsliste setzen</span>
+              <span>Alle benötigten Zutaten direkt auf die Einkaufsliste setzen (~{Math.round(totalEstimatedCost)} €)</span>
             </label>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -530,11 +868,10 @@ export const AutoMealPlanModal: React.FC<AutoMealPlanModalProps> = ({
                 className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5"
               >
                 <Sparkles className="w-4 h-4 stroke-[2.5]" />
-                <span>Wochenplan übernehmen ✨</span>
+                <span>Wochenplan & Zutaten übernehmen ✨</span>
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </ModalPortal>

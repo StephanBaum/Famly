@@ -77,6 +77,12 @@ export interface Recipe {
   sourceType?: 'link' | 'photo' | 'describe' | 'manual';
   isFavorite?: boolean;
   theme?: 'healthy' | 'fresh' | 'warming' | 'quick' | 'kids';
+  mainProtein?: 'fish' | 'poultry' | 'meat' | 'vegetarian' | 'pasta';
+  estimatedCost?: number;
+  synergyBase?: 'rice' | 'potatoes' | 'veggies' | 'pasta' | 'chicken';
+  synergyRole?: 'cook-extra' | 'use-leftovers';
+  synergyTip?: string;
+  timeSavedMinutes?: number;
 }
 
 export interface MealPlanDay {

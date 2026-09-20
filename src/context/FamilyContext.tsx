@@ -16,6 +16,7 @@ import {
   StoreDefinition,
   Reward,
   RewardClaim,
+  GroceryCategory,
 } from '../types';
 import {
   subscribeToFamilyRealtime,
@@ -47,6 +48,14 @@ export interface RecipeSyncResult {
   skippedNames: string[];
 }
 
+export interface BatchRecipeSyncResult {
+  addedCount: number;
+  mergedCount: number;
+  estimatedTotalCost: number;
+  skippedCount: number;
+  skippedNames: string[];
+}
+
 interface FamilyContextType {
   members: FamilyMember[];
   loggedInMemberId: string | null;
@@ -59,14 +68,15 @@ interface FamilyContextType {
   currentMember: FamilyMember | undefined;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
   updateMember: (id: string, updates: Partial<FamilyMember>) => void;
-  
+  deleteMember: (id: string) => void;
+
   appointments: Appointment[];
-  addAppointment: (app: Omit<Appointment, 'id'>) => void;
+  addAppointment: (appointment: Omit<Appointment, 'id'>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
   deleteAppointment: (id: string) => void;
 
   recipes: Recipe[];
-  addRecipe: (recipe: Omit<Recipe, 'id'>) => Recipe;
+  addRecipe: (recipe: Omit<Recipe, 'id'> | Recipe) => Recipe;
   updateRecipe: (id: string, updates: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
   toggleFavoriteRecipe: (id: string) => void;
@@ -78,6 +88,7 @@ interface FamilyContextType {
     data: { title: string; recipeId?: string; chefId?: string }
   ) => void;
   addRecipeIngredientsToGrocery: (recipe: Recipe) => RecipeSyncResult;
+  addMultipleRecipesToGrocery: (recipes: Recipe[]) => BatchRecipeSyncResult;
 
   photos: PhotoMemory[];
   addPhoto: (photo: Omit<PhotoMemory, 'id' | 'likes'>) => void;
@@ -502,6 +513,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   };
 
+  const deleteMember = (id: string) => {
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+  };
+
   // Appointments
   const addAppointment = (app: Omit<Appointment, 'id'>) => {
     const newApp: Appointment = {
@@ -531,10 +546,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Recipes & Meal planning
-  const addRecipe = (rec: Omit<Recipe, 'id'>): Recipe => {
+  const addRecipe = (rec: Omit<Recipe, 'id'> | Recipe): Recipe => {
     const newRec: Recipe = {
       ...rec,
-      id: `r_${Date.now()}`,
+      id: 'id' in rec && rec.id ? rec.id : `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     };
     setRecipes((prev) => [newRec, ...prev]);
     return newRec;
@@ -671,6 +686,107 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     return {
       addedCount: toAdd.length,
+      skippedCount: skippedNames.length,
+      skippedNames,
+    };
+  };
+
+  const addMultipleRecipesToGrocery = (recipesList: Recipe[]): BatchRecipeSyncResult => {
+    const consolidatedMap = new Map<
+      string,
+      {
+        name: string;
+        amounts: string[];
+        store: string;
+        category?: GroceryCategory;
+        recipeTitles: string[];
+      }
+    >();
+    const skippedNames: string[] = [];
+    let mergedCount = 0;
+
+    recipesList.forEach((recipe) => {
+      recipe.ingredients.forEach((ing) => {
+        const stapleCheck = ing.name.toLowerCase().trim();
+        // True non-perishable basic seasonings & water
+        if (
+          stapleCheck === 'salz' ||
+          stapleCheck === 'meersalz' ||
+          stapleCheck === 'speisesalz' ||
+          stapleCheck === 'pfeffer' ||
+          stapleCheck === 'schwarzer pfeffer' ||
+          stapleCheck === 'wasser' ||
+          stapleCheck === 'leitungswasser'
+        ) {
+          if (!skippedNames.includes(ing.name)) {
+            skippedNames.push(ing.name);
+          }
+          return;
+        }
+
+        // Normalize key to merge identical items across days (e.g. "zwiebeln", "knoblauch")
+        const key = ing.name
+          .toLowerCase()
+          .replace(/^(frische[rsn]?|bio-|reife[rsn]?|gekochtes?|festkochende)\s+/i, '')
+          .replace(/\s*\([^)]*\)/g, '')
+          .trim();
+
+        if (consolidatedMap.has(key)) {
+          mergedCount++;
+          const existing = consolidatedMap.get(key)!;
+          if (ing.amount && !existing.amounts.includes(ing.amount)) {
+            existing.amounts.push(ing.amount);
+          }
+          if (!existing.recipeTitles.includes(recipe.title)) {
+            existing.recipeTitles.push(recipe.title);
+          }
+        } else {
+          consolidatedMap.set(key, {
+            name: ing.name,
+            amounts: ing.amount ? [ing.amount] : [],
+            store: predictStoreForItem(ing.name),
+            category: ing.category,
+            recipeTitles: [recipe.title],
+          });
+        }
+      });
+    });
+
+    const activeMember = currentMemberId === 'all' ? members[0]?.id : currentMemberId;
+    const toAdd: GroceryItem[] = Array.from(consolidatedMap.entries()).map(([_, val], idx) => {
+      let combinedAmount = val.amounts.join(' + ');
+      if (val.amounts.length > 1) {
+        combinedAmount = `${val.amounts.join(' + ')} (für ${val.recipeTitles.length} Gerichte)`;
+      }
+
+      return {
+        id: `g_batch_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+        name: val.name,
+        amount: combinedAmount || undefined,
+        store: val.store,
+        category: val.category,
+        checked: false,
+        addedByMemberId: activeMember,
+      };
+    });
+
+    if (toAdd.length > 0) {
+      setGroceries((prev) => [...toAdd, ...prev]);
+      confetti({
+        particleCount: 75,
+        spread: 75,
+        origin: { y: 0.8 },
+      });
+    }
+
+    const estimatedTotalCost = Math.round(
+      recipesList.reduce((sum, r) => sum + (r.estimatedCost || 13.5), 0) * 10
+    ) / 10;
+
+    return {
+      addedCount: toAdd.length,
+      mergedCount,
+      estimatedTotalCost,
       skippedCount: skippedNames.length,
       skippedNames,
     };
@@ -1297,6 +1413,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         currentMember,
         addMember,
         updateMember,
+        deleteMember,
         appointments,
         addAppointment,
         updateAppointment,
@@ -1309,6 +1426,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         mealPlans,
         setMealSlot,
         addRecipeIngredientsToGrocery,
+        addMultipleRecipesToGrocery,
         photos,
         addPhoto,
         togglePhotoLike,

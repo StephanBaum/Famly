@@ -91,6 +91,7 @@ export const MealPlannerView: React.FC = () => {
     mealPlans,
     setMealSlot,
     addRecipeIngredientsToGrocery,
+    addMultipleRecipesToGrocery,
     updateRecipe,
     deleteRecipe,
     toggleFavoriteRecipe,
@@ -145,27 +146,27 @@ export const MealPlannerView: React.FC = () => {
     assignments: Array<{ date: string; recipe: Recipe }>,
     syncGroceries: boolean
   ) => {
-    let newRecipesAdded = 0;
+    const recipesToSync: Recipe[] = [];
     assignments.forEach(({ date, recipe }) => {
       // If recipe is not already in the family recipes library, persist it
       if (!recipes.some((r) => r.id === recipe.id)) {
         addRecipe(recipe);
-        newRecipesAdded++;
       }
       setMealSlot(date, 'dinner', {
         title: recipe.title,
         recipeId: recipe.id,
       });
-      if (syncGroceries) {
-        addRecipeIngredientsToGrocery(recipe);
-      }
+      recipesToSync.push(recipe);
     });
 
-    setSyncFeedback(
-      syncGroceries
-        ? `Wochenplan gezaubert! 7 Tage belegt & Zutaten auf die Einkaufsliste gesetzt! 🪄🛒`
-        : `Wochenplan gezaubert! 7 Tage lecker belegt! 🪄`
-    );
+    if (syncGroceries) {
+      const syncRes = addMultipleRecipesToGrocery(recipesToSync);
+      setSyncFeedback(
+        `Wochenplan gezaubert! 7 Tage belegt & ${syncRes.addedCount} Zutaten (~${syncRes.estimatedTotalCost} €) gebündelt auf die Einkaufsliste gesetzt! 🪄🛒`
+      );
+    } else {
+      setSyncFeedback(`Wochenplan gezaubert! 7 Tage abwechslungsreich belegt! 🪄`);
+    }
     setTimeout(() => setSyncFeedback(null), 5000);
   };
 
@@ -440,6 +441,18 @@ export const MealPlannerView: React.FC = () => {
                             {dinnerRecipe?.category && (
                               <span className="capitalize px-2.5 py-1 rounded-lg font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
                                 {dinnerRecipe.category}
+                              </span>
+                            )}
+                            {dinnerRecipe?.estimatedCost && (
+                              <span className="px-2.5 py-1 rounded-lg font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                <span>🏷️</span>
+                                <span>~{dinnerRecipe.estimatedCost.toFixed(2)} €</span>
+                              </span>
+                            )}
+                            {dinnerRecipe?.synergyTip && (
+                              <span className="px-2.5 py-1 rounded-lg font-black bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                <span>⚡</span>
+                                <span>{dinnerRecipe.synergyTip}</span>
                               </span>
                             )}
                           </div>
@@ -745,11 +758,27 @@ export const MealPlannerView: React.FC = () => {
                                 </button>
                               )}
                             </div>
-                            {dinnerRecipe?.prepTime && (
-                              <span className="text-[10px] text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1 mt-1">
-                                <Clock className="w-2.5 h-2.5 text-teal-600" />
-                                {dinnerRecipe.prepTime}
-                              </span>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              {dinnerRecipe?.prepTime && (
+                                <span className="text-[10px] text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 text-teal-600" />
+                                  {dinnerRecipe.prepTime}
+                                </span>
+                              )}
+                              {dinnerRecipe?.estimatedCost && (
+                                <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                  ~{dinnerRecipe.estimatedCost.toFixed(0)}€
+                                </span>
+                              )}
+                            </div>
+                            {dinnerRecipe?.synergyTip && (
+                              <div
+                                title={dinnerRecipe.synergyTip}
+                                className="mt-1 text-[9px] font-black text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded flex items-center gap-1 truncate"
+                              >
+                                <span className="shrink-0">⚡</span>
+                                <span className="truncate">{dinnerRecipe.synergyTip}</span>
+                              </div>
                             )}
                           </div>
                         ) : (
