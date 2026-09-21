@@ -224,7 +224,7 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
                         btnClass = 'opacity-30 bg-stone-100 border-transparent';
                       }
                     } else if (isSelected) {
-                      btnClass = 'bg-amber-400 border-amber-500 border-b-4 text-stone-900 scale-[1.03] shadow-sm';
+                      btnClass = 'bg-[#FFC800] border-[#E5A500] border-b-4 text-[#262010] scale-[1.03] shadow-md ring-2 ring-amber-400';
                     }
 
                     return (
@@ -235,7 +235,7 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
                         disabled={isAnswerChecked && isCorrect}
                         className={`p-4 rounded-2xl text-base sm:text-lg font-black flex items-center justify-center gap-2 transition-all active:translate-y-1 select-none ${btnClass}`}
                       >
-                        <span>{option}</span>
+                        <span className={isSelected && !isAnswerChecked ? '!text-[#262010]' : ''}>{option}</span>
                         {isAnswerChecked && idx === currentQ.correctIndex && (
                           <Check className="w-5 h-5 text-white stroke-[3]" />
                         )}
