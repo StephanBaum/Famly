@@ -69,24 +69,28 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={logout}
-                  title={`${loggedInMember.name} (${loggedInMember.role}) - Tippen zum Wechseln`}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0 hover:scale-105 transition-transform"
-                  style={{
-                    backgroundColor: `${loggedInMember.color}20`,
-                    borderColor: `${loggedInMember.color}50`,
-                  }}
+                  title={`${loggedInMember.name} (${loggedInMember.role}) - Tippen zum Profilwechsel`}
+                  className="flex items-center gap-1.5 px-1.5 py-1 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-all text-left group"
                 >
-                  {loggedInMember.avatar}
-                </button>
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0 group-hover:scale-105 transition-transform"
+                    style={{
+                      backgroundColor: `${loggedInMember.color}20`,
+                      borderColor: `${loggedInMember.color}50`,
+                    }}
+                  >
+                    {loggedInMember.avatar}
+                  </div>
 
-                <div className="hidden md:block text-left px-1">
-                  <span className="block text-xs font-black text-stone-900 dark:text-white leading-tight">
-                    {loggedInMember.name}
-                  </span>
-                  <span className="block text-[10px] font-bold text-stone-400 dark:text-slate-400">
-                    {loggedInMember.role}
-                  </span>
-                </div>
+                  <div className="text-left leading-none max-w-[70px] sm:max-w-none">
+                    <span className="block text-xs font-black text-stone-900 dark:text-white truncate">
+                      {loggedInMember.name}
+                    </span>
+                    <span className="text-[9px] font-bold text-stone-400 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 flex items-center gap-0.5">
+                      Wechseln
+                    </span>
+                  </div>
+                </button>
 
                 {/* View toggle: My Tasks vs All Family */}
                 <button
@@ -103,11 +107,11 @@ export const Header: React.FC<HeaderProps> = ({
                   {currentMemberId === 'all' ? 'Alle' : 'Ich'}
                 </button>
 
-                {/* Switch Profile / Log Out (desktop) */}
+                {/* Switch Profile / Log Out */}
                 <button
                   onClick={logout}
-                  title="Familienmitglied wechseln / Abmelden"
-                  className="hidden sm:flex p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                  title="Profil wechseln / Abmelden"
+                  className="flex p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>

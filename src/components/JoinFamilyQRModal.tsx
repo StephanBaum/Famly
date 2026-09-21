@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import QRCode from 'qrcode';
+import React, { useState } from 'react';
 import { ModalPortal } from './ModalPortal';
 import { useFamily } from '../context/FamilyContext';
-import { X, Copy, Check, QrCode, Sparkles, Share2 } from 'lucide-react';
+import { QRCodeImage } from './QRCodeImage';
+import { X, Copy, Check, Sparkles, Share2 } from 'lucide-react';
 
 interface JoinFamilyQRModalProps {
   isOpen: boolean;
@@ -11,26 +11,10 @@ interface JoinFamilyQRModalProps {
 
 export const JoinFamilyQRModal: React.FC<JoinFamilyQRModalProps> = ({ isOpen, onClose }) => {
   const { familyName } = useFamily();
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const joinUrl = `${origin}/#join-family=${encodeURIComponent(familyName || 'family')}`;
-
-  useEffect(() => {
-    if (isOpen && joinUrl) {
-      QRCode.toDataURL(joinUrl, {
-        width: 320,
-        margin: 2,
-        color: {
-          dark: '#1e1b4b',
-          light: '#ffffff',
-        },
-      })
-        .then((url) => setQrDataUrl(url))
-        .catch((err) => console.warn('QR generation error:', err));
-    }
-  }, [isOpen, joinUrl]);
 
   if (!isOpen) return null;
 
@@ -85,19 +69,11 @@ export const JoinFamilyQRModal: React.FC<JoinFamilyQRModalProps> = ({ isOpen, on
 
           {/* QR Code Card */}
           <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 rounded-3xl border-2 border-amber-200/80 dark:border-amber-800/40 text-center space-y-3">
-            <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-amber-300 dark:border-amber-600 inline-block">
-              {qrDataUrl ? (
-                <img
-                  src={qrDataUrl}
-                  alt="QR-Code zum Beitreten"
-                  className="w-52 h-52 object-contain rounded-xl"
-                />
-              ) : (
-                <div className="w-52 h-52 flex items-center justify-center text-stone-400">
-                  <QrCode className="w-20 h-20 animate-pulse" />
-                </div>
-              )}
-            </div>
+            <QRCodeImage
+              value={joinUrl}
+              size={220}
+              className="border-2 border-amber-300 dark:border-amber-600 shadow-md"
+            />
 
             <div className="flex items-center gap-1.5 text-xs font-black text-amber-900 dark:text-amber-300">
               <Sparkles className="w-4 h-4 text-amber-500" />
