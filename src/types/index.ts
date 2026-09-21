@@ -41,6 +41,7 @@ export interface FamilyMember {
   choreStreak?: number;
   lastStreakDate?: string; // YYYY-MM-DD
   earnedBadges?: string[];
+  stars?: number;
 }
 
 export type AppointmentCategory = 'school' | 'health' | 'sports' | 'family' | 'work' | 'social';

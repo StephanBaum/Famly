@@ -20,6 +20,7 @@ import {
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
+import { DecisionMakerModal } from '../components/DecisionMakerModal';
 import { FamilyMember, Chore, isChoreRelevantForMember } from '../types';
 import { ModalPortal } from '../components/ModalPortal';
 
@@ -57,6 +58,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [childModalInitialEdit, setChildModalInitialEdit] = useState<boolean>(false);
   const [claimingChore, setClaimingChore] = useState<Chore | null>(null);
   const [weather, setWeather] = useState<FamilyWeather | null>(null);
+  const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
 
   useEffect(() => {
     fetchFamilyWeather()
@@ -255,6 +257,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
         </div>
+      </div>
+
+      {/* Open-Jev Family Decision Finder Banner */}
+      <div
+        onClick={() => setIsDecisionModalOpen(true)}
+        className="duo-card p-3.5 sm:p-4 bg-linear-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border-2 border-indigo-200 dark:border-indigo-900/60 rounded-3xl flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-700 transition-all group"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-black text-lg shadow-xs group-hover:scale-110 transition-transform shrink-0">
+            ⚖️
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white">
+                Familienrat & Entscheidungs-Finder
+              </h4>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black">
+                Open-Jev KI
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-500 dark:text-slate-400 truncate">
+              „Was kochen?“, „Wer macht welche Aufgabe?“, „Ausflugs-Finder“ schnell & objektiv entscheiden.
+            </p>
+          </div>
+        </div>
+        <button className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-black rounded-xl shrink-0 hidden xs:flex items-center gap-1 text-indigo-700 dark:text-indigo-300">
+          <span>Entscheiden</span>
+          <span>→</span>
+        </button>
       </div>
 
       {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) - Render only if kids exist */}
@@ -864,6 +895,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </ModalPortal>
       )}
+
+      {/* Open-Jev Decision Maker Modal */}
+      <DecisionMakerModal
+        isOpen={isDecisionModalOpen}
+        onClose={() => setIsDecisionModalOpen(false)}
+      />
 
     </div>
   );

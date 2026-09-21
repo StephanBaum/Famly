@@ -12,6 +12,7 @@ import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
 import { SettingsModal } from './components/SettingsModal';
+import { DecisionMakerModal } from './components/DecisionMakerModal';
 import { OnboardingView } from './views/OnboardingView';
 import { KidsView } from './views/KidsView';
 import { parseCloudConnectToken, saveSupabaseCredentials } from './services/supabase';
@@ -22,6 +23,7 @@ const MainAppContent: React.FC = () => {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isKidsMode, setIsKidsMode] = useState(false);
+  const [isDecisionOpen, setIsDecisionOpen] = useState(false);
   const [cloudConnectToast, setCloudConnectToast] = useState<string | null>(null);
 
   // Detect Cloud Connect token from URL on startup (e.g. #cloud_connect=...)
@@ -87,6 +89,7 @@ const MainAppContent: React.FC = () => {
         onQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleKidsMode={() => setIsKidsMode(true)}
+        onOpenDecision={() => setIsDecisionOpen(true)}
       />
 
       {/* Cloud Connect Toast Notification */}
@@ -150,6 +153,12 @@ const MainAppContent: React.FC = () => {
           setActiveTab(tab);
           setIsSettingsOpen(false);
         }}
+      />
+
+      {/* Open-Jev Family Decision Maker Modal */}
+      <DecisionMakerModal
+        isOpen={isDecisionOpen}
+        onClose={() => setIsDecisionOpen(false)}
       />
     </div>
   );

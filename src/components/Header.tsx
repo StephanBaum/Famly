@@ -10,6 +10,7 @@ import {
   Plus,
   LogOut,
   Settings,
+  Scale,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
@@ -20,6 +21,7 @@ interface HeaderProps {
   onQuickAdd: () => void;
   onOpenSettings: () => void;
   onToggleKidsMode?: () => void;
+  onOpenDecision?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onQuickAdd,
   onOpenSettings,
   onToggleKidsMode,
+  onOpenDecision,
 }) => {
   const {
     loggedInMember,
@@ -125,6 +128,18 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <span>🚀</span>
                 <span className="hidden sm:inline">Kids</span>
+              </button>
+            )}
+
+            {/* Open-Jev Decision Maker Button */}
+            {onOpenDecision && (
+              <button
+                onClick={onOpenDecision}
+                title="Familienrat & Entscheidungs-Finder (Open-Jev)"
+                className="px-2.5 py-1.5 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border-2 border-indigo-300 dark:border-indigo-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
+              >
+                <Scale className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="hidden sm:inline">Familienrat</span>
               </button>
             )}
 

@@ -14,6 +14,11 @@ import {
   testAIConnection,
   AIProvider,
 } from '../services/aiRecipeService';
+import {
+  checkVercelStorageStatus,
+  pullVercelFamilyState,
+  VercelSyncStatus,
+} from '../services/vercelSync';
 import { CloudConnectShareModal } from './CloudConnectShareModal';
 import { InstallAppBanner } from './InstallAppBanner';
 import schemaSql from '../../supabase/schema.sql?raw';
@@ -89,9 +94,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [aiTesting, setAiTesting] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
 
-  // Load existing credentials on mount / open
+  // Vercel Storage State
+  const [vercelStatus, setVercelStatus] = useState<VercelSyncStatus | null>(null);
+  const [isCheckingVercel, setIsCheckingVercel] = useState(false);
+  const [manualSyncStatus, setManualSyncStatus] = useState<string | null>(null);
+
+  // Load existing credentials and check Vercel status on mount / open
   useEffect(() => {
     if (isOpen) {
+      setIsCheckingVercel(true);
+      checkVercelStorageStatus(true).then((st) => {
+        setVercelStatus(st);
+        setIsCheckingVercel(false);
+      });
+
       const sbCfg = getSupabaseConfig();
       setSupabaseUrlInput(sbCfg.url);
       setSupabaseKeyInput(sbCfg.anonKey);
@@ -105,6 +121,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     }
   }, [isOpen]);
+
+  const handleManualVercelSync = async () => {
+    setIsCheckingVercel(true);
+    setManualSyncStatus('Synchronisiere mit Vercel Storage...');
+    const res = await pullVercelFamilyState();
+    setIsCheckingVercel(false);
+    if (res.success) {
+      setManualSyncStatus('✓ Daten erfolgreich mit Vercel Storage synchronisiert!');
+    } else {
+      setManualSyncStatus('ℹ️ Noch keine entfernten Daten in Vercel Storage vorhanden (oder offline).');
+    }
+    setTimeout(() => setManualSyncStatus(null), 4000);
+  };
 
   if (!isOpen) return null;
 
@@ -298,7 +327,102 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* PWA Homescreen App Installation */}
             <InstallAppBanner />
 
-            {/* Section 2: Cloud & Multi-Device Sync (Supabase BYOK) */}
+            {/* Section 2: Vercel Cloud Sync (Out of the Box) */}
+            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+                      vercelStatus?.isAvailable
+                        ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-400'
+                    }`}
+                  >
+                    {vercelStatus?.isAvailable ? <Cloud className="w-5 h-5" /> : <CloudOff className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                        Vercel Cloud Sync (Out of the Box)
+                      </h4>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          vercelStatus?.isAvailable
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                            : 'bg-stone-200 text-stone-700 dark:bg-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {vercelStatus?.isAvailable
+                          ? '🟢 Vercel Storage (Upstash Redis) Aktiv'
+                          : 'ℹ️ Lokaler Modus'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      {vercelStatus?.isAvailable
+                        ? 'Vollautomatische Synchronisierung aktiv! Alle Änderungen (Einkäufe, Aufgaben, Termine) werden live zwischen allen Geräten der Familie geteilt.'
+                        : 'Famly läuft lokal im Browser. Um die App ohne Keys auf allen Geräten zu synchronisieren, verbinde einfach Vercel Storage (Upstash Redis) im Vercel Dashboard.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {manualSyncStatus && (
+                <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-950/60 border border-blue-200 text-blue-900 dark:text-blue-200 text-xs font-bold animate-in fade-in">
+                  {manualSyncStatus}
+                </div>
+              )}
+
+              {/* Vercel Action Bar */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {vercelStatus?.isAvailable ? (
+                  <button
+                    type="button"
+                    onClick={handleManualVercelSync}
+                    disabled={isCheckingVercel}
+                    className="duo-btn duo-btn-blue px-3.5 py-2 text-xs font-black rounded-xl flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCheckingVercel ? 'animate-spin' : ''}`} />
+                    <span>Jetzt synchronisieren</span>
+                  </button>
+                ) : (
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 text-xs space-y-2 w-full">
+                    <p className="font-black text-stone-800 dark:text-white flex items-center justify-between">
+                      <span>1-Klick Setup im Vercel Dashboard (100% Kostenlos):</span>
+                      <a
+                        href="https://vercel.com/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-0.5 text-[11px]"
+                      >
+                        vercel.com <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-stone-600 dark:text-slate-300 text-[11px]">
+                      <li>Öffne dein Famly-Projekt auf <strong>vercel.com</strong></li>
+                      <li>Klicke auf den Tab <strong>Storage</strong> ➔ <strong>Create Database</strong></li>
+                      <li>Wähle <strong>Upstash Redis</strong> (Free Tier) & klicke <strong>Connect</strong></li>
+                      <li>Fertig! Vercel setzt alle Zugangsdaten automatisch.</li>
+                    </ol>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCheckingVercel(true);
+                        checkVercelStorageStatus(true).then((st) => {
+                          setVercelStatus(st);
+                          setIsCheckingVercel(false);
+                        });
+                      }}
+                      className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-bold rounded-xl mt-2 flex items-center gap-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isCheckingVercel ? 'animate-spin' : ''}`} />
+                      <span>Verbindung prüfen</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Optional Legacy Supabase Accordion */}
             <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
@@ -306,15 +430,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
                       currentSbConfig.isConfigured
                         ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-400'
+                        : 'bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-slate-400'
                     }`}
                   >
-                    {currentSbConfig.isConfigured ? <Cloud className="w-5 h-5" /> : <CloudOff className="w-5 h-5" />}
+                    <Key className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-black text-stone-900 dark:text-white">
-                        Cloud & Multi-Device Sync
+                        Alternative: Eigene Supabase-Datenbank (BYOK)
                       </h4>
                       <span
                         className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
@@ -323,17 +447,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             : 'bg-stone-200 text-stone-700 dark:bg-slate-700 dark:text-slate-300'
                         }`}
                       >
-                        {currentSbConfig.isConfigured
-                          ? currentSbConfig.isCustom
-                            ? '🟢 Eigene Cloud Aktiv'
-                            : '🟢 Cloud Aktiv (.env)'
-                          : 'ℹ️ Lokaler Offline-Modus'}
+                        {currentSbConfig.isConfigured ? '🟢 Verbunden' : 'Optional'}
                       </span>
                     </div>
                     <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      {currentSbConfig.isConfigured
-                        ? 'Echtzeit-Synchronisierung und Foto-Speicher sind aktiv! Alle Geräte greifen auf denselben Speicher zu.'
-                        : 'Aktuell speichert Famly lokal im Browser. Trage deine Supabase-Keys ein, um die App auf allen Handys der Familie zu synchronisieren.'}
+                      Falls du ein eigenes PostgreSQL-Backend mit Supabase bevorzugst, kannst du hier deine Supabase-Keys eintragen.
                     </p>
                   </div>
                 </div>

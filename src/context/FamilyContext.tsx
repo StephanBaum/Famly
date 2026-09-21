@@ -28,6 +28,12 @@ import {
   deleteAppointmentFromCloud,
 } from '../services/supabaseSync';
 import {
+  checkVercelStorageStatus,
+  pullVercelFamilyState,
+  pushVercelFamilyStateDebounced,
+  startVercelSyncListener,
+} from '../services/vercelSync';
+import {
   INITIAL_MEMBERS,
   INITIAL_RECIPES,
   INITIAL_MEAL_PLANS,
@@ -505,6 +511,63 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubscribe();
     };
   }, []);
+
+  // Vercel Storage (Upstash Redis) Out-of-the-Box Sync
+  useEffect(() => {
+    let isMounted = true;
+
+    // Initial check & pull
+    checkVercelStorageStatus().then((status) => {
+      if (status.isAvailable && isMounted) {
+        pullVercelFamilyState().then((res) => {
+          if (res.success && res.data && isMounted) {
+            if (Array.isArray(res.data.members) && res.data.members.length > 0) setMembers(res.data.members);
+            if (Array.isArray(res.data.appointments)) setAppointments(res.data.appointments);
+            if (Array.isArray(res.data.recipes) && res.data.recipes.length > 0) setRecipes(res.data.recipes);
+            if (Array.isArray(res.data.mealPlans)) setMealPlans(res.data.mealPlans);
+            if (Array.isArray(res.data.groceries)) setGroceries(res.data.groceries);
+            if (Array.isArray(res.data.chores)) setChores(res.data.chores);
+            if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
+            if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+          }
+        });
+      }
+    });
+
+    // Background listener across tabs / devices
+    const unsubscribe = startVercelSyncListener((remoteData) => {
+      if (!isMounted || !remoteData) return;
+      if (Array.isArray(remoteData.members) && remoteData.members.length > 0) setMembers(remoteData.members);
+      if (Array.isArray(remoteData.appointments)) setAppointments(remoteData.appointments);
+      if (Array.isArray(remoteData.recipes) && remoteData.recipes.length > 0) setRecipes(remoteData.recipes);
+      if (Array.isArray(remoteData.mealPlans)) setMealPlans(remoteData.mealPlans);
+      if (Array.isArray(remoteData.groceries)) setGroceries(remoteData.groceries);
+      if (Array.isArray(remoteData.chores)) setChores(remoteData.chores);
+      if (Array.isArray(remoteData.notes)) setNotes(remoteData.notes);
+      if (Array.isArray(remoteData.rewards)) setRewards(remoteData.rewards);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  // Auto-push state to Vercel Storage on changes (debounced)
+  useEffect(() => {
+    if (members.length === 0) return;
+    pushVercelFamilyStateDebounced({
+      members,
+      appointments,
+      recipes,
+      mealPlans,
+      groceries,
+      chores,
+      notes,
+      rewards,
+      earnedStars,
+    });
+  }, [members, appointments, recipes, mealPlans, groceries, chores, notes, rewards, earnedStars]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(stores));
