@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FamilyProvider, useFamily } from './context/FamilyContext';
 import { Header, ActiveTab } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -15,7 +15,6 @@ import { SettingsModal } from './components/SettingsModal';
 import { DecisionMakerModal } from './components/DecisionMakerModal';
 import { OnboardingView } from './views/OnboardingView';
 import { KidsView } from './views/KidsView';
-import { parseCloudConnectToken, saveSupabaseCredentials } from './services/supabase';
 
 const MainAppContent: React.FC = () => {
   const { loggedInMemberId, galleries, isOnboarded } = useFamily();
@@ -24,21 +23,6 @@ const MainAppContent: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isKidsMode, setIsKidsMode] = useState(false);
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
-  const [cloudConnectToast, setCloudConnectToast] = useState<string | null>(null);
-
-  // Detect Cloud Connect token from URL on startup (e.g. #cloud_connect=...)
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes('cloud_connect=')) {
-      const credentials = parseCloudConnectToken(hash);
-      if (credentials) {
-        saveSupabaseCredentials(credentials.url, credentials.anonKey);
-        setCloudConnectToast('🎉 Erfolgreich mit der Familien-Cloud verbunden! Alle Daten sind synchronisiert.');
-        window.location.hash = '';
-        setTimeout(() => setCloudConnectToast(null), 6000);
-      }
-    }
-  }, []);
 
   // Detect direct guest link for relatives: e.g. #guest-gallery=gal_1
   const [guestGalleryId, setGuestGalleryId] = useState<string | null>(() => {
@@ -91,21 +75,6 @@ const MainAppContent: React.FC = () => {
         onToggleKidsMode={() => setIsKidsMode(true)}
         onOpenDecision={() => setIsDecisionOpen(true)}
       />
-
-      {/* Cloud Connect Toast Notification */}
-      {cloudConnectToast && (
-        <div className="max-w-4xl mx-auto px-4 pt-3 w-full animate-in fade-in slide-in-from-top-3">
-          <div className="p-4 rounded-2xl bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-between gap-3">
-            <span>{cloudConnectToast}</span>
-            <button
-              onClick={() => setCloudConnectToast(null)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-black"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Content Area with Smooth Page Animation */}
       <main key={activeTab} className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 animate-page-enter">

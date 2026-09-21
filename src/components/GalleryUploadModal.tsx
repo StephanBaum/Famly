@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { GalleryAlbum } from '../types';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
-import { uploadPhotoToStorage } from '../services/supabase';
 import {
   X,
   Upload,
@@ -75,6 +74,15 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
     setCustomCaptionInput('');
   };
 
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const processFiles = async (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
     if (files.length === 0) return;
@@ -82,7 +90,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
     setIsUploading(true);
     try {
       for (const file of files) {
-        const url = await uploadPhotoToStorage(file, 'albums');
+        const url = await readFileAsDataUrl(file);
         const caption = file.name.replace(/\.[^/.]+$/, '');
         handleAddStagedPhoto(url, caption);
       }

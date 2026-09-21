@@ -19,15 +19,6 @@ import {
   GroceryCategory,
 } from '../types';
 import {
-  subscribeToFamilyRealtime,
-  syncGroceryToCloud,
-  deleteGroceryFromCloud,
-  syncChoreToCloud,
-  deleteChoreFromCloud,
-  syncAppointmentToCloud,
-  deleteAppointmentFromCloud,
-} from '../services/supabaseSync';
-import {
   checkVercelStorageStatus,
   pullVercelFamilyState,
   pushVercelFamilyStateDebounced,
@@ -457,61 +448,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem(STORAGE_KEYS.EARNED_STARS, JSON.stringify(earnedStars));
   }, [earnedStars]);
 
-  // Supabase Realtime Live-Sync Subscription
-  useEffect(() => {
-    const unsubscribe = subscribeToFamilyRealtime({
-      onGroceryChange: (eventType, item) => {
-        if (!item || !item.id) return;
-        if (eventType === 'DELETE') {
-          setGroceries((prev) => prev.filter((g) => g.id !== item.id));
-        } else {
-          setGroceries((prev) => {
-            const exists = prev.some((g) => g.id === item.id);
-            if (exists) {
-              return prev.map((g) => (g.id === item.id ? { ...g, ...item } : g));
-            } else {
-              return [item, ...prev];
-            }
-          });
-        }
-      },
-      onChoreChange: (eventType, chore) => {
-        if (!chore || !chore.id) return;
-        if (eventType === 'DELETE') {
-          setChores((prev) => prev.filter((c) => c.id !== chore.id));
-        } else {
-          setChores((prev) => {
-            const exists = prev.some((c) => c.id === chore.id);
-            if (exists) {
-              return prev.map((c) => (c.id === chore.id ? { ...c, ...chore } : c));
-            } else {
-              return [chore, ...prev];
-            }
-          });
-        }
-      },
-      onAppointmentChange: (eventType, appt) => {
-        if (!appt || !appt.id) return;
-        if (eventType === 'DELETE') {
-          setAppointments((prev) => prev.filter((a) => a.id !== appt.id));
-        } else {
-          setAppointments((prev) => {
-            const exists = prev.some((a) => a.id === appt.id);
-            if (exists) {
-              return prev.map((a) => (a.id === appt.id ? { ...a, ...appt } : a));
-            } else {
-              return [appt, ...prev];
-            }
-          });
-        }
-      },
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
   // Vercel Storage (Upstash Redis) Out-of-the-Box Sync
   useEffect(() => {
     let isMounted = true;
@@ -635,7 +571,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `a_${Date.now()}`,
     };
     setAppointments((prev) => [...prev, newApp]);
-    syncAppointmentToCloud(newApp);
   };
 
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
@@ -643,7 +578,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map((a) => {
         if (a.id === id) {
           const updated = { ...a, ...updates };
-          syncAppointmentToCloud(updated);
           return updated;
         }
         return a;
@@ -653,7 +587,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteAppointment = (id: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== id));
-    deleteAppointmentFromCloud(id);
   };
 
   // Recipes & Meal planning
@@ -1269,7 +1202,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         const updatedItem = { ...existing, amount: mergedAmount };
         updated[existingIdx] = updatedItem;
-        syncGroceryToCloud(updatedItem);
         return updated;
       }
 
@@ -1282,7 +1214,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         checked: false,
         addedByMemberId: currentMemberId === 'all' ? members[0]?.id : currentMemberId,
       };
-      syncGroceryToCloud(newItem);
       return [newItem, ...prev];
     });
   };
@@ -1301,7 +1232,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map((item) => {
         if (item.id === id) {
           const updated = { ...item, checked: !item.checked };
-          syncGroceryToCloud(updated);
           return updated;
         }
         return item;
@@ -1311,7 +1241,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteGrocery = (id: string) => {
     setGroceries((prev) => prev.filter((item) => item.id !== id));
-    deleteGroceryFromCloud(id);
   };
 
   const clearCheckedGroceries = (storeFilter?: string) => {
@@ -1325,7 +1254,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return true;
           }
         }
-        deleteGroceryFromCloud(item.id);
         return false;
       })
     );
@@ -1355,7 +1283,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       dueDate: dueDate ? dueDate.trim() : undefined,
     };
     setChores((prev) => [newChore, ...prev]);
-    syncChoreToCloud(newChore);
   };
 
   const updateChore = (id: string, updates: Partial<Omit<Chore, 'id'>>) => {
@@ -1366,7 +1293,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (updates.assignedMemberIds !== undefined && updates.assignedMemberId === undefined) {
             updated.assignedMemberId = updates.assignedMemberIds[0] || '';
           }
-          syncChoreToCloud(updated);
           return updated;
         }
         return chore;
@@ -1455,7 +1381,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             completedByMemberId: newCompleted ? beneficiaryId : undefined,
             completedAt: newCompleted ? new Date().toISOString() : undefined,
           };
-          syncChoreToCloud(updated);
           return updated;
         }
         return chore;
@@ -1465,7 +1390,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteChore = (id: string) => {
     setChores((prev) => prev.filter((chore) => chore.id !== id));
-    deleteChoreFromCloud(id);
     // Important: Earned stars are NEVER deleted! Once banked, stars belong to the child permanently.
   };
 

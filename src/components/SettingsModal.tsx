@@ -2,12 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
 import {
-  getSupabaseConfig,
-  saveSupabaseCredentials,
-  clearSupabaseCredentials,
-  testSupabaseConnection,
-} from '../services/supabase';
-import {
   getAIConfig,
   saveAIConfig,
   clearAIConfig,
@@ -19,9 +13,7 @@ import {
   pullVercelFamilyState,
   VercelSyncStatus,
 } from '../services/vercelSync';
-import { CloudConnectShareModal } from './CloudConnectShareModal';
 import { InstallAppBanner } from './InstallAppBanner';
-import schemaSql from '../../supabase/schema.sql?raw';
 import {
   X,
   Moon,
@@ -34,12 +26,9 @@ import {
   ChevronRight,
   Cloud,
   CloudOff,
-  QrCode,
   Eye,
   EyeOff,
   Sparkles,
-  Key,
-  Copy,
   ExternalLink,
   RefreshCw,
 } from 'lucide-react';
@@ -77,16 +66,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [importStatus, setImportStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Supabase BYOK State
-  const [showSupabaseForm, setShowSupabaseForm] = useState(false);
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState('');
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState('');
-  const [showSupabaseKey, setShowSupabaseKey] = useState(false);
-  const [supabaseTesting, setSupabaseTesting] = useState(false);
-  const [supabaseFeedback, setSupabaseFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
-
   // AI BYOK State
   const [aiProvider, setAiProvider] = useState<AIProvider>('gemini');
   const [aiKeyInput, setAiKeyInput] = useState('');
@@ -107,10 +86,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setVercelStatus(st);
         setIsCheckingVercel(false);
       });
-
-      const sbCfg = getSupabaseConfig();
-      setSupabaseUrlInput(sbCfg.url);
-      setSupabaseKeyInput(sbCfg.anonKey);
 
       const aiCfg = getAIConfig();
       if (aiCfg) {
@@ -182,47 +157,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // Supabase Handlers
-  const handleTestAndSaveSupabase = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supabaseUrlInput.trim() || !supabaseKeyInput.trim()) {
-      setSupabaseFeedback({ success: false, message: 'Bitte Projekt-URL und Anon Key eingeben.' });
-      return;
-    }
-
-    setSupabaseTesting(true);
-    setSupabaseFeedback(null);
-
-    const result = await testSupabaseConnection(supabaseUrlInput, supabaseKeyInput);
-    setSupabaseTesting(false);
-
-    if (result.success) {
-      saveSupabaseCredentials(supabaseUrlInput, supabaseKeyInput);
-      setSupabaseFeedback({ success: true, message: result.message });
-      setShowSupabaseForm(false);
-      setTimeout(() => setSupabaseFeedback(null), 4500);
-    } else {
-      setSupabaseFeedback({ success: false, message: result.message });
-    }
-  };
-
-  const handleClearSupabase = () => {
-    if (window.confirm('Möchtest du die Supabase-Cloud-Verbindung wirklich trennen? Famly läuft danach wieder im lokalen Offline-Modus.')) {
-      clearSupabaseCredentials();
-      setSupabaseUrlInput('');
-      setSupabaseKeyInput('');
-      setShowSupabaseForm(false);
-      setSupabaseFeedback({ success: true, message: 'Cloud-Verbindung getrennt. Lokaler Modus aktiv.' });
-      setTimeout(() => setSupabaseFeedback(null), 3000);
-    }
-  };
-
-  const handleCopySchemaSql = () => {
-    navigator.clipboard.writeText(schemaSql);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 3000);
-  };
-
   // AI Handlers
   const handleTestAndSaveAI = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,7 +187,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTimeout(() => setAiFeedback(null), 3000);
   };
 
-  const currentSbConfig = getSupabaseConfig();
   const currentAiConfig = getAIConfig();
 
   return (
@@ -422,191 +355,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Optional Legacy Supabase Accordion */}
-            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <div
-                    className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
-                      currentSbConfig.isConfigured
-                        ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <Key className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-black text-stone-900 dark:text-white">
-                        Alternative: Eigene Supabase-Datenbank (BYOK)
-                      </h4>
-                      <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                          currentSbConfig.isConfigured
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                            : 'bg-stone-200 text-stone-700 dark:bg-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {currentSbConfig.isConfigured ? '🟢 Verbunden' : 'Optional'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      Falls du ein eigenes PostgreSQL-Backend mit Supabase bevorzugst, kannst du hier deine Supabase-Keys eintragen.
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Feedback Message */}
-              {supabaseFeedback && (
-                <div
-                  className={`p-3 rounded-xl text-xs font-bold flex items-start gap-2 animate-in fade-in ${
-                    supabaseFeedback.success
-                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                      : 'bg-rose-100 text-rose-900 border border-rose-300'
-                  }`}
-                >
-                  <span>{supabaseFeedback.success ? '✓' : '⚠️'}</span>
-                  <span>{supabaseFeedback.message}</span>
-                </div>
-              )}
-
-              {/* Action Bar when Connected */}
-              {currentSbConfig.isConfigured && !showSupabaseForm && (
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsShareModalOpen(true)}
-                    className="duo-btn duo-btn-green px-3.5 py-2 text-xs font-black rounded-xl flex items-center gap-1.5"
-                  >
-                    <QrCode className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>Zugang per QR-Code teilen</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSupabaseForm(true)}
-                    className="duo-btn duo-btn-white px-3 py-2 text-xs font-bold rounded-xl text-stone-700 dark:text-slate-300"
-                  >
-                    Zugangsdaten bearbeiten
-                  </button>
-
-                  {currentSbConfig.isCustom && (
-                    <button
-                      type="button"
-                      onClick={handleClearSupabase}
-                      className="px-3 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
-                    >
-                      Trennen
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* BYOK Input Form */}
-              {(!currentSbConfig.isConfigured || showSupabaseForm) && (
-                <form onSubmit={handleTestAndSaveSupabase} className="mt-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-stone-800 dark:text-white flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-emerald-600" />
-                      Supabase Zugangsdaten (Bring Your Own Key)
-                    </span>
-                    {showSupabaseForm && currentSbConfig.isConfigured && (
-                      <button
-                        type="button"
-                        onClick={() => setShowSupabaseForm(false)}
-                        className="text-[11px] font-bold text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
-                      >
-                        Abbrechen
-                      </button>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
-                      Supabase Projekt-URL
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://xyzcompany.supabase.co"
-                      value={supabaseUrlInput}
-                      onChange={(e) => setSupabaseUrlInput(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-mono bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
-                      Supabase Anon Public Key (öffentlich & sicher im Browser)
-                    </label>
-                    <div className="relative flex items-center">
-                      <input
-                        type={showSupabaseKey ? 'text' : 'password'}
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                        value={supabaseKeyInput}
-                        onChange={(e) => setSupabaseKeyInput(e.target.value)}
-                        required
-                        className="w-full px-3 py-2 pr-10 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-mono bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSupabaseKey(!showSupabaseKey)}
-                        className="absolute right-2.5 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1"
-                      >
-                        {showSupabaseKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleCopySchemaSql}
-                      className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
-                    >
-                      {copiedSql ? <Check className="w-3 h-3 text-emerald-600 stroke-[3]" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedSql ? 'SQL-Skript kopiert!' : '📋 SQL-Skript (schema.sql) kopieren'}</span>
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="submit"
-                        disabled={supabaseTesting}
-                        className="duo-btn duo-btn-green px-4 py-2 text-xs font-black rounded-xl flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        {supabaseTesting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                        <span>{supabaseTesting ? 'Teste Verbindung...' : 'Verbindung testen & speichern'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              )}
-
-              {/* Instructions Guide */}
-              {!currentSbConfig.isConfigured && !showSupabaseForm && (
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-stone-800 dark:text-slate-200">
-                      So einfach richtest du deine kostenlose Cloud ein:
-                    </p>
-                    <a
-                      href="https://supabase.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-black text-emerald-600 hover:underline flex items-center gap-0.5"
-                    >
-                      supabase.com <ExternalLink className="w-2.5 h-2.5 inline" />
-                    </a>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-1 text-stone-600 dark:text-slate-300 text-[11px]">
-                    <li>Kostenloses Projekt auf <strong>supabase.com</strong> erstellen.</li>
-                    <li>Das Schema im SQL Editor ausführen (nutze oben den Button <em>„SQL-Skript kopieren“</em>).</li>
-                    <li>Projekt-URL und Anon-Key hier eintragen – fertig!</li>
-                  </ol>
-                </div>
-              )}
-            </div>
 
             {/* Section 3: Smart AI Recipe Assistant (BYOK) */}
             <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">
@@ -966,12 +715,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
       </ModalPortal>
-
-      {/* Cloud Connect QR Sharing Modal */}
-      <CloudConnectShareModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-      />
     </>
   );
 };

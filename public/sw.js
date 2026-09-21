@@ -37,9 +37,9 @@ self.addEventListener('fetch', (event) => {
   // Ignore chrome extensions or non-http requests
   if (!event.request.url.startsWith('http')) return;
 
-  // For API requests (Supabase, Gemini, OpenAI), don't cache
+  // For API requests (/api/, Gemini, OpenAI), don't cache
   if (
-    event.request.url.includes('supabase.co') ||
+    event.request.url.includes('/api/') ||
     event.request.url.includes('googleapis.com') ||
     event.request.url.includes('api.openai.com')
   ) {
