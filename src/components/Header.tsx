@@ -46,24 +46,16 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between gap-1.5 sm:gap-3">
           
           {/* Brand */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-base sm:text-xl shadow-xs shrink-0 animate-pop-in">
-              🏡
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight shrink-0">
-                Famly
+            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-base sm:text-xl shadow-xs shrink-0 animate-pop-in">
+                🏡
+              </div>
+              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight truncate">
+                {familyName
+                  ? (familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`)
+                  : 'Famly'}
               </h1>
-              {familyName && (
-                <>
-                  <span className="text-stone-300 dark:text-slate-600 font-bold shrink-0">•</span>
-                  <span className="text-xs sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight truncate max-w-[95px] xs:max-w-[130px] sm:max-w-none">
-                    {familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`}
-                  </span>
-                </>
-              )}
             </div>
-          </div>
 
           {/* Right Side: Logged-in Profile Badge & Actions */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
