@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFamily } from '../context/FamilyContext';
-import { Appointment, AppointmentCategory, Chore, FamilyMember, isChoreRelevantForMember, isChoreOnDate } from '../types';
+import {
+  Appointment,
+  AppointmentCategory,
+  RecurrenceFrequency,
+  Chore,
+  FamilyMember,
+  isChoreRelevantForMember,
+  isChoreOnDate,
+  isAppointmentOnDate,
+  detectAppointmentConflicts,
+} from '../types';
 import { ModalPortal } from '../components/ModalPortal';
 import { CHORE_FREQUENCY_MAP } from '../components/chores/ChoresTab';
+import { downloadICalendarFile } from '../utils/icalExport';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -16,6 +27,9 @@ import {
   CheckCircle2,
   Circle,
   Sparkles,
+  Download,
+  AlertTriangle,
+  Repeat,
 } from 'lucide-react';
 import {
   format,
@@ -86,6 +100,10 @@ export const CalendarView: React.FC = () => {
   const [formCategory, setFormCategory] = useState<AppointmentCategory>('family');
   const [formMembers, setFormMembers] = useState<string[]>([]);
   const [formNotes, setFormNotes] = useState('');
+  const [formRecurrence, setFormRecurrence] = useState<RecurrenceFrequency>('none');
+  const [formRecurrenceDays, setFormRecurrenceDays] = useState<number[]>([]);
+  const [formRecurrenceEndDate, setFormRecurrenceEndDate] = useState<string>('');
+  const [icalExportToast, setIcalExportToast] = useState<string | null>(null);
 
   // Date navigation
   const nextPeriod = () => {
@@ -145,10 +163,24 @@ export const CalendarView: React.FC = () => {
     if (selectedCategory === 'chores_only') {
       return [];
     }
-    const dateStr = format(dayDate, 'yyyy-MM-dd');
     return filteredAppointments
-      .filter((a) => a.date === dateStr)
+      .filter((a) => isAppointmentOnDate(a, dayDate))
       .sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  // Conflicts on selectedDay
+  const selectedDayAppointments = getDayAppointments(selectedDay);
+  const selectedDayConflicts = useMemo(() => {
+    return detectAppointmentConflicts(selectedDayAppointments);
+  }, [selectedDayAppointments]);
+
+  const handleExportICal = () => {
+    const appsToExport = currentMemberId === 'all'
+      ? appointments
+      : appointments.filter((a) => a.memberIds.includes(currentMemberId));
+    downloadICalendarFile(appsToExport, members, 'Famly Kalender', 'famly-kalender.ics');
+    setIcalExportToast('📅 Kalenderdatei (.ics) heruntergeladen! Bereit zum Import in Apple & Google Calendar.');
+    setTimeout(() => setIcalExportToast(null), 5000);
   };
 
   const handleChoreToggle = (chore: Chore) => {
@@ -252,6 +284,9 @@ export const CalendarView: React.FC = () => {
     setFormCategory('family');
     setFormMembers(currentMemberId === 'all' ? [members[0]?.id || 'm1'] : [currentMemberId]);
     setFormNotes('');
+    setFormRecurrence('none');
+    setFormRecurrenceDays([]);
+    setFormRecurrenceEndDate('');
     setIsModalOpen(true);
   };
 
@@ -265,6 +300,9 @@ export const CalendarView: React.FC = () => {
     setFormCategory(app.category);
     setFormMembers(app.memberIds);
     setFormNotes(app.notes || '');
+    setFormRecurrence(app.recurrence || 'none');
+    setFormRecurrenceDays(app.recurrenceDays || []);
+    setFormRecurrenceEndDate(app.recurrenceEndDate || '');
     setIsModalOpen(true);
   };
 
@@ -272,28 +310,27 @@ export const CalendarView: React.FC = () => {
     e.preventDefault();
     if (!formTitle.trim() || formMembers.length === 0) return;
 
+    const payload = {
+      title: formTitle.trim(),
+      date: formDate,
+      time: formTime,
+      durationMinutes: Number(formDuration),
+      location: formLocation.trim() || undefined,
+      category: formCategory,
+      memberIds: formMembers,
+      notes: formNotes.trim() || undefined,
+      recurrence: formRecurrence !== 'none' ? formRecurrence : undefined,
+      recurrenceDays:
+        (formRecurrence === 'weekly' || formRecurrence === 'biweekly') && formRecurrenceDays.length > 0
+          ? formRecurrenceDays
+          : undefined,
+      recurrenceEndDate: formRecurrence !== 'none' && formRecurrenceEndDate ? formRecurrenceEndDate : undefined,
+    };
+
     if (editingAppId) {
-      updateAppointment(editingAppId, {
-        title: formTitle.trim(),
-        date: formDate,
-        time: formTime,
-        durationMinutes: Number(formDuration),
-        location: formLocation.trim() || undefined,
-        category: formCategory,
-        memberIds: formMembers,
-        notes: formNotes.trim() || undefined,
-      });
+      updateAppointment(editingAppId, payload);
     } else {
-      addAppointment({
-        title: formTitle.trim(),
-        date: formDate,
-        time: formTime,
-        durationMinutes: Number(formDuration),
-        location: formLocation.trim() || undefined,
-        category: formCategory,
-        memberIds: formMembers,
-        notes: formNotes.trim() || undefined,
-      });
+      addAppointment(payload);
     }
     setIsModalOpen(false);
   };
@@ -319,6 +356,19 @@ export const CalendarView: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* iCal Export Toast Notification */}
+      {icalExportToast && (
+        <div className="p-4 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <span>{icalExportToast}</span>
+          <button
+            onClick={() => setIcalExportToast(null)}
+            className="px-2.5 py-1 rounded-lg bg-blue-700 hover:bg-blue-800 text-xs font-black"
+          >
+            OK
+          </button>
+        </div>
+      )}
+
       {/* Top Header & Controls */}
       <div className="duo-card flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 border-2 border-stone-200 dark:border-slate-800">
         
@@ -352,6 +402,13 @@ export const CalendarView: React.FC = () => {
 
           {/* Quick Add on mobile right top */}
           <div className="flex items-center gap-1.5 sm:hidden shrink-0">
+            <button
+              onClick={handleExportICal}
+              className="p-2 text-stone-600 dark:text-slate-300 bg-stone-100 dark:bg-slate-800 rounded-xl hover:bg-stone-200"
+              title="iCal Export"
+            >
+              <Download className="w-4 h-4" />
+            </button>
             <button
               onClick={() => openAddChoreModal(selectedDayStr)}
               className="duo-btn duo-btn-amber px-2.5 py-1.5 text-xs font-black rounded-xl shadow-xs flex items-center gap-1 whitespace-nowrap"
@@ -416,6 +473,14 @@ export const CalendarView: React.FC = () => {
 
           {/* Add appointment & chore buttons (desktop) */}
           <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={handleExportICal}
+              className="duo-btn duo-btn-white px-3 py-2 text-xs font-black rounded-xl shadow-xs flex items-center whitespace-nowrap text-stone-700 dark:text-slate-200 border border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-800"
+              title="Kalender im iCal (.ics) Format herunterladen"
+            >
+              <Download className="w-4 h-4 mr-1.5 stroke-[2.5]" />
+              <span>iCal (.ics)</span>
+            </button>
             <button
               onClick={() => openAddChoreModal(selectedDayStr)}
               className="duo-btn duo-btn-amber px-3 py-2 text-xs font-black rounded-xl shadow-xs flex items-center whitespace-nowrap"
@@ -626,11 +691,14 @@ export const CalendarView: React.FC = () => {
                         app.memberIds.includes(m.id)
                       );
 
+                      const hasConflict = selectedDayConflicts.has(app.id);
+                      const conflictDetails = selectedDayConflicts.get(app.id);
+
                       return (
                         <div
                           key={app.id}
                           onClick={() => openEditModal(app)}
-                          className={`p-2.5 rounded-2xl border-2 cursor-pointer transition-all hover:shadow-xs ${conf.bg} ${conf.border} space-y-1`}
+                          className={`p-2.5 rounded-2xl border-2 cursor-pointer transition-all hover:shadow-xs ${conf.bg} ${conf.border} space-y-1.5`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -640,6 +708,20 @@ export const CalendarView: React.FC = () => {
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${conf.text} bg-white/60 dark:bg-slate-900/60`}>
                                 {conf.icon} {conf.label}
                               </span>
+                              {app.recurrence && app.recurrence !== 'none' && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 flex items-center gap-1">
+                                  <Repeat className="w-2.5 h-2.5" />
+                                  <span>
+                                    {app.recurrence === 'weekly'
+                                      ? 'Wöchentlich'
+                                      : app.recurrence === 'biweekly'
+                                      ? 'Alle 2 Wo.'
+                                      : app.recurrence === 'daily'
+                                      ? 'Täglich'
+                                      : 'Monatlich'}
+                                  </span>
+                                </span>
+                              )}
                             </div>
                             <div className="flex -space-x-1 shrink-0">
                               {assignedMembers.map((m) => (
@@ -653,6 +735,13 @@ export const CalendarView: React.FC = () => {
                               ))}
                             </div>
                           </div>
+
+                          {hasConflict && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500 text-white font-black text-[10px] animate-pulse">
+                              <AlertTriangle className="w-3 h-3 shrink-0" />
+                              <span>Zeitkonflikt mit {conflictDetails?.[0]?.appointmentA.id === app.id ? conflictDetails?.[0]?.appointmentB.title : conflictDetails?.[0]?.appointmentA.title}</span>
+                            </div>
+                          )}
 
                           <h4 className="text-xs font-black text-stone-900 dark:text-white leading-snug">
                             {app.title}
@@ -893,6 +982,9 @@ export const CalendarView: React.FC = () => {
                             className={`px-1.5 py-0.5 rounded-lg border text-[11px] leading-tight font-bold flex items-center justify-between gap-1 shadow-2xs cursor-pointer hover:scale-102 transition-transform ${conf.bg} ${conf.border} ${conf.text}`}
                           >
                             <div className="truncate flex items-center gap-1">
+                              {app.recurrence && app.recurrence !== 'none' && (
+                                <Repeat className="w-2.5 h-2.5 shrink-0 opacity-75" />
+                              )}
                               <span className="font-extrabold text-[9px] opacity-75">{app.time}</span>
                               <span className="truncate">{app.title}</span>
                             </div>
@@ -1002,6 +1094,8 @@ export const CalendarView: React.FC = () => {
                         const assignedMembers = members.filter((m) =>
                           app.memberIds.includes(m.id)
                         );
+                        const hasConflict = selectedDayConflicts.has(app.id);
+                        const conflictDetails = selectedDayConflicts.get(app.id);
 
                         return (
                           <div
@@ -1010,13 +1104,27 @@ export const CalendarView: React.FC = () => {
                             className={`p-3 rounded-2xl border-2 cursor-pointer transition-all hover:shadow-xs ${conf.bg} ${conf.border} space-y-1.5`}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-xs font-extrabold px-2 py-0.5 rounded-md bg-white/90 dark:bg-slate-900/90 text-stone-800 dark:text-slate-200">
                                   ⏰ {app.time} ({app.durationMinutes || 60} Min.)
                                 </span>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${conf.text} bg-white/60 dark:bg-slate-900/60`}>
                                   {conf.icon} {conf.label}
                                 </span>
+                                {app.recurrence && app.recurrence !== 'none' && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 flex items-center gap-1">
+                                    <Repeat className="w-3 h-3" />
+                                    <span>
+                                      {app.recurrence === 'weekly'
+                                        ? 'Wöchentlich'
+                                        : app.recurrence === 'biweekly'
+                                        ? 'Alle 2 Wochen'
+                                        : app.recurrence === 'daily'
+                                        ? 'Täglich'
+                                        : 'Monatlich'}
+                                    </span>
+                                  </span>
+                                )}
                               </div>
                               <div className="flex -space-x-1 shrink-0">
                                 {assignedMembers.map((m) => (
@@ -1030,6 +1138,13 @@ export const CalendarView: React.FC = () => {
                                 ))}
                               </div>
                             </div>
+
+                            {hasConflict && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500 text-white font-black text-xs animate-pulse">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                <span>Zeitkonflikt mit {conflictDetails?.[0]?.appointmentA.id === app.id ? conflictDetails?.[0]?.appointmentB.title : conflictDetails?.[0]?.appointmentA.title} ({conflictDetails?.[0]?.timeRange})</span>
+                              </div>
+                            )}
 
                             <h4 className="text-sm font-black text-stone-900 dark:text-white">
                               {app.title}
@@ -1544,6 +1659,83 @@ export const CalendarView: React.FC = () => {
                   onChange={(e) => setFormLocation(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                 />
+              </div>
+
+              {/* Wiederholung */}
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/60 rounded-2xl border border-stone-200 dark:border-slate-700 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <Repeat className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Wiederholung</span>
+                    </label>
+                    <select
+                      value={formRecurrence}
+                      onChange={(e) => setFormRecurrence(e.target.value as RecurrenceFrequency)}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                    >
+                      <option value="none">Einmalig</option>
+                      <option value="daily">Täglich</option>
+                      <option value="weekly">Wöchentlich</option>
+                      <option value="biweekly">Alle 2 Wochen</option>
+                      <option value="monthly">Monatlich</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase mb-1">
+                      Wiederholen bis (optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={formRecurrenceEndDate}
+                      onChange={(e) => setFormRecurrenceEndDate(e.target.value)}
+                      disabled={formRecurrence === 'none'}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                {(formRecurrence === 'weekly' || formRecurrence === 'biweekly') && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-stone-500 dark:text-slate-400 mb-1">
+                      An folgenden Wochentagen wiederholen:
+                    </label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {[
+                        { dayNum: 1, label: 'Mo' },
+                        { dayNum: 2, label: 'Di' },
+                        { dayNum: 3, label: 'Mi' },
+                        { dayNum: 4, label: 'Do' },
+                        { dayNum: 5, label: 'Fr' },
+                        { dayNum: 6, label: 'Sa' },
+                        { dayNum: 0, label: 'So' },
+                      ].map(({ dayNum, label }) => {
+                        const isDaySelected = formRecurrenceDays.includes(dayNum);
+                        return (
+                          <button
+                            key={dayNum}
+                            type="button"
+                            onClick={() => {
+                              setFormRecurrenceDays((prev) =>
+                                prev.includes(dayNum)
+                                  ? prev.filter((d) => d !== dayNum)
+                                  : [...prev, dayNum]
+                              );
+                            }}
+                            className={`py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                              isDaySelected
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-white dark:bg-slate-700 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-600 hover:bg-stone-100'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Multi-member Selection */}

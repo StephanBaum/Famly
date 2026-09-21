@@ -4,7 +4,7 @@ import App from './App';
 import './index.css';
 
 // Register PWA Service Worker for offline capability & fast launch
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator && (import.meta.env.PROD || window.location.protocol === 'https:')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')

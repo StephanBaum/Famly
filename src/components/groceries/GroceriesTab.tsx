@@ -15,6 +15,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface GroceriesTabProps {
   groceries: GroceryItem[];
@@ -194,6 +195,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   };
 
   const handleCheckItem = (id: string, name: string) => {
+    triggerHaptic('light');
     onToggleGrocery(id);
     setLastToggledItem({ id, name });
     setTimeout(() => {
@@ -202,6 +204,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
 
     // If this completed the last open item in the view, trigger celebratory confetti!
     if (uncheckedGroceries.length === 1 && uncheckedGroceries[0].id === id) {
+      triggerHaptic('celebration');
       try {
         confetti({
           particleCount: 60,

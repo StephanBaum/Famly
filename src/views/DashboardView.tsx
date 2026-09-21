@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFamily } from '../context/FamilyContext';
+import { fetchFamilyWeather, FamilyWeather } from '../services/weatherService';
 import {
   Calendar,
   Clock,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
   PartyPopper,
   Shirt,
+  CloudSun,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -54,6 +56,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedChildForModal, setSelectedChildForModal] = useState<FamilyMember | null>(null);
   const [childModalInitialEdit, setChildModalInitialEdit] = useState<boolean>(false);
   const [claimingChore, setClaimingChore] = useState<Chore | null>(null);
+  const [weather, setWeather] = useState<FamilyWeather | null>(null);
+
+  useEffect(() => {
+    fetchFamilyWeather()
+      .then((data) => setWeather(data))
+      .catch(() => {});
+  }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -167,8 +176,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
+        {/* Morning Weather & Family Advice Briefing */}
+        {weather && (
+          <div className="mt-5 p-4 bg-white/80 dark:bg-slate-800/80 rounded-2xl border-2 border-amber-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <span className="text-3xl p-2 bg-amber-100 dark:bg-slate-700 rounded-2xl shrink-0">
+                {weather.icon}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white">
+                    {weather.temperature}°C • {weather.condition}
+                  </span>
+                  {weather.tempMax !== undefined && weather.tempMin !== undefined && (
+                    <span className="text-xs font-bold text-stone-400 dark:text-slate-400">
+                      (Max {weather.tempMax}° / Min {weather.tempMin}°)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-stone-600 dark:text-slate-300 font-bold mt-0.5 truncate sm:whitespace-normal">
+                  💡 {weather.familyTip}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/70 dark:bg-slate-700/60 text-[11px] font-black text-amber-900 dark:text-amber-200 shrink-0">
+              <CloudSun className="w-3.5 h-3.5 text-amber-600" />
+              <span>Familien-Wetter</span>
+            </div>
+          </div>
+        )}
+
         {/* Chunky 4-stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
           
           <div
             onClick={() => onNavigate('calendar')}

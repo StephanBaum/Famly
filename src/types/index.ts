@@ -38,9 +38,13 @@ export interface FamilyMember {
   pin?: string; // 4-digit login passcode
   childDetails?: ChildDetails;
   customFields?: CustomInfoField[]; // Custom fields for adults or kids
+  choreStreak?: number;
+  lastStreakDate?: string; // YYYY-MM-DD
+  earnedBadges?: string[];
 }
 
 export type AppointmentCategory = 'school' | 'health' | 'sports' | 'family' | 'work' | 'social';
+export type RecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
 export interface Appointment {
   id: string;
@@ -52,7 +56,117 @@ export interface Appointment {
   memberIds: string[]; // which family members are attending
   category: AppointmentCategory;
   notes?: string;
+  recurrence?: RecurrenceFrequency;
+  recurrenceEndDate?: string; // YYYY-MM-DD
+  recurrenceDays?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
 }
+
+export const isAppointmentOnDate = (appointment: Appointment, dateInput: Date | string): boolean => {
+  const dateObj = typeof dateInput === 'string' ? new Date(dateInput + 'T00:00:00') : dateInput;
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const targetDateStr = `${year}-${month}-${day}`;
+
+  if (!appointment.recurrence || appointment.recurrence === 'none') {
+    return appointment.date === targetDateStr;
+  }
+
+  // If target date is before the start date, it cannot occur
+  if (targetDateStr < appointment.date) {
+    return false;
+  }
+
+  // If recurrence end date is set and target is after end date
+  if (appointment.recurrenceEndDate && targetDateStr > appointment.recurrenceEndDate) {
+    return false;
+  }
+
+  const startObj = new Date(appointment.date + 'T00:00:00');
+  const diffDays = Math.round((dateObj.getTime() - startObj.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (appointment.recurrence === 'daily') {
+    return diffDays >= 0;
+  }
+
+  if (appointment.recurrence === 'weekly') {
+    if (appointment.recurrenceDays && appointment.recurrenceDays.length > 0) {
+      return appointment.recurrenceDays.includes(dateObj.getDay());
+    }
+    return dateObj.getDay() === startObj.getDay();
+  }
+
+  if (appointment.recurrence === 'biweekly') {
+    const diffWeeks = Math.floor(diffDays / 7);
+    const dayMatches = appointment.recurrenceDays && appointment.recurrenceDays.length > 0
+      ? appointment.recurrenceDays.includes(dateObj.getDay())
+      : dateObj.getDay() === startObj.getDay();
+    return dayMatches && diffWeeks % 2 === 0;
+  }
+
+  if (appointment.recurrence === 'monthly') {
+    return dateObj.getDate() === startObj.getDate();
+  }
+
+  return false;
+};
+
+export interface AppointmentConflict {
+  appointmentA: Appointment;
+  appointmentB: Appointment;
+  memberId: string;
+  timeRange: string;
+}
+
+export const detectAppointmentConflicts = (
+  appointmentsOnDate: Appointment[]
+): Map<string, AppointmentConflict[]> => {
+  // Returns a map of appointmentId -> conflicts
+  const conflictMap = new Map<string, AppointmentConflict[]>();
+
+  // Filter timed appointments (exclude "All Day" or invalid)
+  const timed = appointmentsOnDate.filter((a) => a.time && a.time !== 'All Day' && a.time.includes(':'));
+
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i];
+      const b = timed[j];
+
+      // Check shared members
+      const sharedMembers = a.memberIds.filter((id) => b.memberIds.includes(id));
+      if (sharedMembers.length === 0) continue;
+
+      // Calculate time overlap
+      const [hA, mA] = a.time.split(':').map(Number);
+      const startMinA = hA * 60 + mA;
+      const endMinA = startMinA + (a.durationMinutes || 60);
+
+      const [hB, mB] = b.time.split(':').map(Number);
+      const startMinB = hB * 60 + mB;
+      const endMinB = startMinB + (b.durationMinutes || 60);
+
+      // Overlap condition: startMinA < endMinB && startMinB < endMinA
+      if (startMinA < endMinB && startMinB < endMinA) {
+        const conflict: AppointmentConflict = {
+          appointmentA: a,
+          appointmentB: b,
+          memberId: sharedMembers[0],
+          timeRange: `${a.time} - ${b.time}`,
+        };
+
+        const existingA = conflictMap.get(a.id) || [];
+        existingA.push(conflict);
+        conflictMap.set(a.id, existingA);
+
+        const existingB = conflictMap.get(b.id) || [];
+        existingB.push(conflict);
+        conflictMap.set(b.id, existingB);
+      }
+    }
+  }
+
+  return conflictMap;
+};
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner';
 

@@ -1334,6 +1334,47 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 ...s,
                 [beneficiaryId]: (s[beneficiaryId] || 0) + (chore.stars || 0),
               }));
+
+              const todayStr = new Date().toISOString().split('T')[0];
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+              setMembers((prevMembers) =>
+                prevMembers.map((m) => {
+                  if (m.id !== beneficiaryId) return m;
+
+                  let streak = m.choreStreak || 0;
+                  if (m.lastStreakDate === yesterdayStr) {
+                    streak += 1;
+                  } else if (m.lastStreakDate !== todayStr) {
+                    streak = 1;
+                  }
+
+                  const existingBadges = m.earnedBadges || [];
+                  const newBadges = [...existingBadges];
+                  if (streak >= 3 && !newBadges.includes('🔥 3-Tage-Serie')) {
+                    newBadges.push('🔥 3-Tage-Serie');
+                  }
+                  if (streak >= 7 && !newBadges.includes('⚡ 7-Tage-Champion')) {
+                    newBadges.push('⚡ 7-Tage-Champion');
+                  }
+                  const totalStars = (earnedStars[m.id] || 0) + (chore.stars || 0);
+                  if (totalStars >= 15 && !newBadges.includes('⭐ Sternen-Profi')) {
+                    newBadges.push('⭐ Sternen-Profi');
+                  }
+                  if (totalStars >= 50 && !newBadges.includes('👑 Alltags-Held')) {
+                    newBadges.push('👑 Alltags-Held');
+                  }
+
+                  return {
+                    ...m,
+                    choreStreak: streak,
+                    lastStreakDate: todayStr,
+                    earnedBadges: newBadges,
+                  };
+                })
+              );
             }
           } else {
             // Uncompleting a chore reverts the earned stars for whoever completed it

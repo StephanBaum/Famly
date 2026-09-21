@@ -13,6 +13,7 @@ import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingView } from './views/OnboardingView';
+import { KidsView } from './views/KidsView';
 import { parseCloudConnectToken, saveSupabaseCredentials } from './services/supabase';
 
 const MainAppContent: React.FC = () => {
@@ -20,6 +21,7 @@ const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isKidsMode, setIsKidsMode] = useState(false);
   const [cloudConnectToast, setCloudConnectToast] = useState<string | null>(null);
 
   // Detect Cloud Connect token from URL on startup (e.g. #cloud_connect=...)
@@ -71,6 +73,11 @@ const MainAppContent: React.FC = () => {
     return <LoginView />;
   }
 
+  // If Kids Mode is active, render dedicated Kids View
+  if (isKidsMode) {
+    return <KidsView onExitKidsMode={() => setIsKidsMode(false)} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FA] dark:bg-[#0c1222] text-stone-900 dark:text-slate-100 font-sans pb-24 sm:pb-8 transition-colors">
       {/* Sticky Header with Logged-in Profile, Theme & Quick Add */}
@@ -79,6 +86,7 @@ const MainAppContent: React.FC = () => {
         setActiveTab={setActiveTab}
         onQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onToggleKidsMode={() => setIsKidsMode(true)}
       />
 
       {/* Cloud Connect Toast Notification */}

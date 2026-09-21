@@ -20,6 +20,7 @@ import { WeeklyGridView } from '../components/meal-planner/WeeklyGridView';
 import { RecipeDetailModal } from '../components/meal-planner/RecipeDetailModal';
 import { SlotEditModal, EditingSlotState } from '../components/meal-planner/SlotEditModal';
 import { RecipeBoxTab } from '../components/meal-planner/RecipeBoxTab';
+import { FridgeLeftoversModal } from '../components/meal-planner/FridgeLeftoversModal';
 
 export const MealPlannerView: React.FC = () => {
   const {
@@ -45,6 +46,7 @@ export const MealPlannerView: React.FC = () => {
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAutoPlanModalOpen, setIsAutoPlanModalOpen] = useState(false);
+  const [isLeftoversModalOpen, setIsLeftoversModalOpen] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   // Rolling Planning Horizon: 'today-7' (7 days starting Today), 'today-14' (14 days starting Today), or 'calendar' (Mon-Sun)
@@ -234,6 +236,16 @@ export const MealPlannerView: React.FC = () => {
           >
             <Sparkles className="w-4 h-4 fill-white stroke-[2.5]" />
             <span>Woche zaubern ✨</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsLeftoversModalOpen(true)}
+            className="duo-btn duo-btn-amber px-3.5 py-2 text-xs font-black rounded-2xl flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
+            title="Finde das passende Gericht aus deinen aktuellen Vorräten"
+          >
+            <span>🥕</span>
+            <span>Resteverwerter</span>
           </button>
 
           <button
@@ -581,6 +593,25 @@ export const MealPlannerView: React.FC = () => {
         recipes={recipes}
         onApplyPlan={handleApplyAutoPlan}
         onToggleFavorite={toggleFavoriteRecipe}
+      />
+
+      {/* Fridge Leftovers Modal */}
+      <FridgeLeftoversModal
+        isOpen={isLeftoversModalOpen}
+        onClose={() => setIsLeftoversModalOpen(false)}
+        recipes={recipes}
+        onSelectForDinner={(recipe) => {
+          setMealSlot(todayDateStr, 'dinner', {
+            title: recipe.title,
+            recipeId: recipe.id,
+            chefId: members[0]?.id,
+          });
+          setSyncFeedback(`🎉 "${recipe.title}" als heutiges Abendessen eingeplant!`);
+          setTimeout(() => setSyncFeedback(null), 4000);
+        }}
+        onAddCustomRecipe={(recipe) => {
+          addRecipe(recipe);
+        }}
       />
     </div>
   );

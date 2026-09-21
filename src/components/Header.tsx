@@ -19,6 +19,7 @@ interface HeaderProps {
   setActiveTab: (tab: ActiveTab) => void;
   onQuickAdd: () => void;
   onOpenSettings: () => void;
+  onToggleKidsMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onQuickAdd,
   onOpenSettings,
+  onToggleKidsMode,
 }) => {
   const {
     loggedInMember,
@@ -112,6 +114,18 @@ export const Header: React.FC<HeaderProps> = ({
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
+            )}
+
+            {/* Kids Mode Toggle Button */}
+            {onToggleKidsMode && (
+              <button
+                onClick={onToggleKidsMode}
+                title="Kindgerechte Spiel- & Belohnungsansicht"
+                className="px-2.5 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
+              >
+                <span>🚀</span>
+                <span className="hidden sm:inline">Kids</span>
+              </button>
             )}
 
             {/* Settings & Data Button */}
