@@ -181,6 +181,7 @@ export interface FamilyContextType {
   toggleDarkMode: () => void;
   familyName: string;
   setFamilyName: (name: string) => void;
+  joinFamilyFromCloud: () => Promise<boolean>;
 
   // Data Management
   exportAllData: () => string;
@@ -457,7 +458,17 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (status.isAvailable && isMounted) {
         pullVercelFamilyState().then((res) => {
           if (res.success && res.data && isMounted) {
-            if (Array.isArray(res.data.members) && res.data.members.length > 0) setMembers(res.data.members);
+            if (res.data.familyName && typeof res.data.familyName === 'string') {
+              setFamilyName(res.data.familyName);
+            }
+            if (Array.isArray(res.data.members) && res.data.members.length > 0) {
+              setMembers(res.data.members);
+              // Auto-onboard this device if a family already exists in cloud storage
+              setIsOnboarded(true);
+              localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
+            }
+            if (Array.isArray(res.data.galleries) && res.data.galleries.length > 0) setGalleries(res.data.galleries);
+            if (Array.isArray(res.data.photos)) setPhotos(res.data.photos);
             if (Array.isArray(res.data.appointments)) setAppointments(res.data.appointments);
             if (Array.isArray(res.data.recipes) && res.data.recipes.length > 0) setRecipes(res.data.recipes);
             if (Array.isArray(res.data.mealPlans)) setMealPlans(res.data.mealPlans);
@@ -473,7 +484,16 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Background listener across tabs / devices
     const unsubscribe = startVercelSyncListener((remoteData) => {
       if (!isMounted || !remoteData) return;
-      if (Array.isArray(remoteData.members) && remoteData.members.length > 0) setMembers(remoteData.members);
+      if (remoteData.familyName && typeof remoteData.familyName === 'string') {
+        setFamilyName(remoteData.familyName);
+      }
+      if (Array.isArray(remoteData.members) && remoteData.members.length > 0) {
+        setMembers(remoteData.members);
+        setIsOnboarded(true);
+        localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
+      }
+      if (Array.isArray(remoteData.galleries)) setGalleries(remoteData.galleries);
+      if (Array.isArray(remoteData.photos)) setPhotos(remoteData.photos);
       if (Array.isArray(remoteData.appointments)) setAppointments(remoteData.appointments);
       if (Array.isArray(remoteData.recipes) && remoteData.recipes.length > 0) setRecipes(remoteData.recipes);
       if (Array.isArray(remoteData.mealPlans)) setMealPlans(remoteData.mealPlans);
@@ -493,17 +513,45 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (members.length === 0) return;
     pushVercelFamilyStateDebounced({
+      familyName,
       members,
       appointments,
       recipes,
       mealPlans,
+      photos,
+      galleries,
       groceries,
       chores,
       notes,
       rewards,
       earnedStars,
     });
-  }, [members, appointments, recipes, mealPlans, groceries, chores, notes, rewards, earnedStars]);
+  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars]);
+
+  const joinFamilyFromCloud = async (): Promise<boolean> => {
+    try {
+      const res = await pullVercelFamilyState();
+      if (res.success && res.data && Array.isArray(res.data.members) && res.data.members.length > 0) {
+        if (res.data.familyName) setFamilyName(res.data.familyName);
+        setMembers(res.data.members);
+        if (Array.isArray(res.data.galleries)) setGalleries(res.data.galleries);
+        if (Array.isArray(res.data.photos)) setPhotos(res.data.photos);
+        if (Array.isArray(res.data.appointments)) setAppointments(res.data.appointments);
+        if (Array.isArray(res.data.recipes)) setRecipes(res.data.recipes);
+        if (Array.isArray(res.data.mealPlans)) setMealPlans(res.data.mealPlans);
+        if (Array.isArray(res.data.groceries)) setGroceries(res.data.groceries);
+        if (Array.isArray(res.data.chores)) setChores(res.data.chores);
+        if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
+        if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+        setIsOnboarded(true);
+        localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
+        return true;
+      }
+    } catch (e) {
+      console.warn('joinFamilyFromCloud error:', e);
+    }
+    return false;
+  };
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(stores));
@@ -1781,6 +1829,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleDarkMode,
         familyName,
         setFamilyName,
+        joinFamilyFromCloud,
         exportAllData,
         importAllData,
       }}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { GalleryAlbum } from '../types';
 import { ModalPortal } from './ModalPortal';
 import {
@@ -27,12 +28,28 @@ export const GalleryShareModal: React.FC<GalleryShareModalProps> = ({
   onToggleShare,
 }) => {
   const [copied, setCopied] = useState(false);
-
-  if (!isOpen || !gallery) return null;
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   // Build the relative/guest link
-  const origin = window.location.origin;
-  const guestUrl = `${origin}/#guest-gallery=${gallery.id}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const guestUrl = gallery ? `${origin}/#guest-gallery=${gallery.id}` : '';
+
+  useEffect(() => {
+    if (isOpen && guestUrl) {
+      QRCode.toDataURL(guestUrl, {
+        width: 280,
+        margin: 1,
+        color: {
+          dark: '#1e1b4b',
+          light: '#ffffff',
+        },
+      })
+        .then((url) => setQrDataUrl(url))
+        .catch((err) => console.warn('QR generation error:', err));
+    }
+  }, [isOpen, guestUrl]);
+
+  if (!isOpen || !gallery) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(guestUrl);
@@ -131,11 +148,14 @@ export const GalleryShareModal: React.FC<GalleryShareModalProps> = ({
           </div>
         </div>
 
-        {/* Simulated QR Code for phone scan */}
+        {/* Real Scannable QR Code for phone scan */}
         <div className="bg-gradient-to-br from-indigo-50/70 to-purple-50/70 dark:from-indigo-950/40 dark:to-purple-950/40 p-4 rounded-2xl border-2 border-indigo-100 dark:border-indigo-900/50 flex items-center gap-4">
-          <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-2xl p-2 border-2 border-indigo-200 dark:border-indigo-700 shadow-xs flex flex-col items-center justify-center shrink-0">
-            <QrCode className="w-14 h-14 text-indigo-900 dark:text-indigo-400" />
-            <span className="text-[8px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase">Scannen</span>
+          <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-2xl p-1.5 border-2 border-indigo-200 dark:border-indigo-700 shadow-xs flex flex-col items-center justify-center shrink-0">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="Album QR-Code" className="w-full h-full object-contain rounded-lg" />
+            ) : (
+              <QrCode className="w-12 h-12 text-indigo-900 dark:text-indigo-400 animate-pulse" />
+            )}
           </div>
           <div>
             <h5 className="text-xs font-black text-indigo-950 dark:text-indigo-200">Verwandten direkt vor Ort zeigen</h5>

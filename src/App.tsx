@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FamilyProvider, useFamily } from './context/FamilyContext';
 import { Header, ActiveTab } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -15,15 +15,19 @@ import { SettingsModal } from './components/SettingsModal';
 import { FamilyAssistantModal } from './components/FamilyAssistantModal';
 import { OnboardingView } from './views/OnboardingView';
 import { KidsView } from './views/KidsView';
+import { JoinFamilyQRModal } from './components/JoinFamilyQRModal';
+import { pullVercelFamilyState } from './services/vercelSync';
 
 const MainAppContent: React.FC = () => {
-  const { loggedInMemberId, galleries, isOnboarded } = useFamily();
+  const { loggedInMemberId, galleries, isOnboarded, joinFamilyFromCloud } = useFamily();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isKidsMode, setIsKidsMode] = useState(false);
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
+  const [isJoinQROpen, setIsJoinQROpen] = useState(false);
   const [settingsScrollToAI, setSettingsScrollToAI] = useState(false);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
 
   const handleOpenSettingsForAI = () => {
     setIsDecisionOpen(false);
@@ -33,6 +37,7 @@ const MainAppContent: React.FC = () => {
 
   // Detect direct guest link for relatives: e.g. #guest-gallery=gal_1
   const [guestGalleryId, setGuestGalleryId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
     const hash = window.location.hash;
     if (hash.startsWith('#guest-gallery=')) {
       return hash.replace('#guest-gallery=', '');
@@ -40,19 +45,94 @@ const MainAppContent: React.FC = () => {
     return null;
   });
 
+  // Listen for hash changes (e.g. guest gallery or join family)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#guest-gallery=')) {
+        setGuestGalleryId(hash.replace('#guest-gallery=', ''));
+      } else if (hash.startsWith('#join-family')) {
+        joinFamilyFromCloud().then((success) => {
+          if (success) {
+            window.location.hash = '';
+          }
+        });
+      }
+    };
+
+    window.addEventListener('hashchange', handleHash);
+
+    // Initial check on load for join
+    if (window.location.hash.startsWith('#join-family')) {
+      joinFamilyFromCloud().then((success) => {
+        if (success) {
+          window.location.hash = '';
+        }
+      });
+    }
+
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [joinFamilyFromCloud]);
+
   const sharedGuestGallery = guestGalleryId
     ? galleries.find((g) => g.id === guestGalleryId || g.shareCode === guestGalleryId)
     : null;
 
-  if (sharedGuestGallery) {
+  // Try to pull remote galleries if guest opened link but state isn't ready
+  useEffect(() => {
+    if (guestGalleryId && !sharedGuestGallery) {
+      setIsGuestLoading(true);
+      pullVercelFamilyState().finally(() => {
+        setIsGuestLoading(false);
+      });
+    }
+  }, [guestGalleryId, sharedGuestGallery]);
+
+  // If visiting via guest link, handle guest viewer directly without ever redirecting to Onboarding!
+  if (guestGalleryId) {
+    if (sharedGuestGallery) {
+      return (
+        <GuestGalleryViewer
+          gallery={sharedGuestGallery}
+          onClose={() => {
+            window.location.hash = '';
+            setGuestGalleryId(null);
+          }}
+        />
+      );
+    }
+
     return (
-      <GuestGalleryViewer
-        gallery={sharedGuestGallery}
-        onClose={() => {
-          window.location.hash = '';
-          setGuestGalleryId(null);
-        }}
-      />
+      <div className="min-h-screen bg-[#0F172A] text-white flex flex-col items-center justify-center p-6 text-center select-none">
+        {isGuestLoading ? (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-500/20 border-2 border-indigo-400 flex items-center justify-center text-3xl mx-auto animate-bounce">
+              📸
+            </div>
+            <h2 className="text-xl font-black">Lade Fotoalbum für dich...</h2>
+            <p className="text-xs text-slate-400">Verbindung zu Famly wird hergestellt</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-w-sm animate-in fade-in">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-500/20 border-2 border-indigo-400 flex items-center justify-center text-3xl mx-auto">
+              💌
+            </div>
+            <h2 className="text-xl font-black">Album nicht gefunden</h2>
+            <p className="text-xs text-slate-400">
+              Dieses Fotoalbum existiert nicht oder die Freigabe wurde beendet.
+            </p>
+            <button
+              onClick={() => {
+                window.location.hash = '';
+                setGuestGalleryId(null);
+              }}
+              className="duo-btn duo-btn-white px-5 py-2.5 rounded-xl text-xs font-bold text-stone-900"
+            >
+              Zur Startseite
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -81,6 +161,7 @@ const MainAppContent: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleKidsMode={() => setIsKidsMode(true)}
         onOpenDecision={() => setIsDecisionOpen(true)}
+        onOpenJoinQR={() => setIsJoinQROpen(true)}
       />
 
       {/* Main Content Area with Smooth Page Animation */}
@@ -141,6 +222,12 @@ const MainAppContent: React.FC = () => {
         isOpen={isDecisionOpen}
         onClose={() => setIsDecisionOpen(false)}
         onOpenSettings={handleOpenSettingsForAI}
+      />
+
+      {/* Join Family / Connect Device QR Modal */}
+      <JoinFamilyQRModal
+        isOpen={isJoinQROpen}
+        onClose={() => setIsJoinQROpen(false)}
       />
     </div>
   );

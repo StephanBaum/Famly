@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { FamilyMember } from '../types';
-import { Plus, Edit2, Calendar, Shirt, HeartPulse } from 'lucide-react';
+import { Plus, Edit2, Calendar, Shirt, HeartPulse, QrCode } from 'lucide-react';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
 import { ModalPortal } from '../components/ModalPortal';
+import { JoinFamilyQRModal } from '../components/JoinFamilyQRModal';
 
 const AVATAR_OPTIONS = ['👩‍💼', '👨‍💻', '👦', '👧', '👵', '👴', '👶', '🐶', '🐱', '⚽', '🎨', '🚀', '🌟', '📚'];
 const COLOR_OPTIONS = ['#EC4899', '#0D9488', '#F59E0B', '#8B5CF6', '#3B82F6', '#10B981', '#F43F5E', '#6366F1'];
@@ -12,6 +13,7 @@ export const FamilyMembersView: React.FC = () => {
   const { members, addMember, updateMember, loggedInMemberId } = useFamily();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isJoinQROpen, setIsJoinQROpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [selectedDetailsMember, setSelectedDetailsMember] = useState<FamilyMember | null>(null);
   const [detailsInitialEditMode, setDetailsInitialEditMode] = useState<boolean>(false);
@@ -91,13 +93,24 @@ export const FamilyMembersView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl"
-        >
-          <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-          <span>Mitglied hinzufügen</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsJoinQROpen(true)}
+            className="duo-btn duo-btn-white px-3.5 py-2.5 text-xs font-black rounded-2xl flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
+          >
+            <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Gerät verbinden (QR)</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            className="duo-btn duo-btn-purple px-4 py-2.5 text-xs font-black rounded-2xl"
+          >
+            <Plus className="w-4 h-4 mr-1 stroke-[3]" />
+            <span>Mitglied hinzufügen</span>
+          </button>
+        </div>
       </div>
 
       {/* Members Grid */}
@@ -491,6 +504,12 @@ export const FamilyMembersView: React.FC = () => {
           </div>
         </ModalPortal>
       )}
+
+      {/* Join Family / Connect Device QR Modal */}
+      <JoinFamilyQRModal
+        isOpen={isJoinQROpen}
+        onClose={() => setIsJoinQROpen(false)}
+      />
     </div>
   );
 };

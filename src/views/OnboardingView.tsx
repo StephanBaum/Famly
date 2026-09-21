@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { FamilyMember } from '../types';
+import { pullVercelFamilyState } from '../services/vercelSync';
+import { Sparkles, QrCode } from 'lucide-react';
 
 interface NewMemberDraft {
   idTemp: string;
@@ -26,7 +28,27 @@ const COLOR_PALETTES = [
 const EMOJI_PRESETS = ['👩', '👨', '👧', '👦', '👶', '👵', '👴', '🐶', '🐱', '⚽', '🎨', '🚀', '🌟', '🧁'];
 
 export const OnboardingView: React.FC = () => {
-  const { completeOnboarding, loadDemoData, isDarkMode, toggleDarkMode } = useFamily();
+  const { completeOnboarding, loadDemoData, isDarkMode, toggleDarkMode, joinFamilyFromCloud } = useFamily();
+  const [cloudFamilyName, setCloudFamilyName] = useState<string | null>(null);
+  const [isJoiningCloud, setIsJoiningCloud] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check if cloud storage already has an active family
+    pullVercelFamilyState().then((res) => {
+      if (res.success && res.data && Array.isArray(res.data.members) && res.data.members.length > 0) {
+        setCloudFamilyName(res.data.familyName || 'Bestehende Familie');
+      }
+    });
+  }, []);
+
+  const handleJoinCloud = async () => {
+    setIsJoiningCloud(true);
+    const success = await joinFamilyFromCloud();
+    if (!success) {
+      setIsJoiningCloud(false);
+      alert('Konnte Familiendaten nicht laden. Bitte prüfe deine Internetverbindung.');
+    }
+  };
 
   // Wizard Steps: 0 = Welcome / Choice, 1 = Family Name, 2 = Members, 3 = Preferences
   const [step, setStep] = useState<number>(0);
@@ -177,13 +199,51 @@ export const OnboardingView: React.FC = () => {
               Euer gemeinsamer Familien-Hub für Termine, Essensplanung, Einkaufslisten, Kinderpass und die schönsten Momente.
             </p>
 
-            <div className="mt-8 space-y-3">
+            {/* Detected Cloud Family Quick-Join Banner */}
+            {cloudFamilyName && (
+              <div className="mt-6 mb-2 p-5 rounded-3xl bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-400 dark:border-emerald-600 text-center space-y-3 animate-pop-in">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-xs">
+                  🏡
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-200/70 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200">
+                    <Sparkles className="w-3 h-3" /> Cloud-Synchronisation aktiv
+                  </span>
+                  <h3 className="text-lg font-black text-emerald-950 dark:text-emerald-100 mt-1">
+                    {cloudFamilyName.toLowerCase().startsWith('familie') ? cloudFamilyName : `Familie ${cloudFamilyName}`} gefunden!
+                  </h3>
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold mt-0.5">
+                    Dieses Gerät direkt mit eurem Familien-Hub verknüpfen?
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleJoinCloud}
+                  disabled={isJoiningCloud}
+                  className="duo-btn duo-btn-green w-full py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <span>{isJoiningCloud ? 'Synchronisiere...' : `🚀 Jetzt ${cloudFamilyName} beitreten`}</span>
+                </button>
+              </div>
+            )}
+
+            <div className="mt-6 space-y-3">
               <button
                 onClick={() => setStep(1)}
                 className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-extrabold text-base sm:text-lg shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
               >
-                <span>👨‍👩‍👧‍👦 Eigene Familie einrichten</span>
+                <span>👨‍👩‍👧‍👦 Eigene Familie neu einrichten</span>
                 <span className="text-xl">➔</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleJoinCloud}
+                disabled={isJoiningCloud}
+                className="w-full py-3.5 px-6 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 active:scale-[0.98] text-indigo-900 dark:text-indigo-200 font-bold text-sm sm:text-base border-2 border-indigo-200 dark:border-indigo-800 transition-all flex items-center justify-center gap-2"
+              >
+                <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Bestehender Familie beitreten (Cloud Sync)</span>
               </button>
 
               <div className="relative py-2 flex items-center justify-center">
@@ -195,7 +255,7 @@ export const OnboardingView: React.FC = () => {
 
               <button
                 onClick={loadDemoData}
-                className="w-full py-3.5 px-6 rounded-2xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 active:scale-[0.98] text-stone-700 dark:text-slate-200 font-bold text-sm sm:text-base border border-stone-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-6 rounded-2xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 active:scale-[0.98] text-stone-700 dark:text-slate-200 font-bold text-xs sm:text-sm border border-stone-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2"
               >
                 <span>✨ Erstmal mit Beispieldaten umsehen</span>
               </button>

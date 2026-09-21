@@ -11,6 +11,7 @@ import {
   LogOut,
   Settings,
   Sparkles,
+  QrCode,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
@@ -22,6 +23,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onToggleKidsMode?: () => void;
   onOpenDecision?: () => void;
+  onOpenJoinQR?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onToggleKidsMode,
   onOpenDecision,
+  onOpenJoinQR,
 }) => {
   const {
     loggedInMember,
@@ -132,6 +135,19 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
                 <span className="hidden sm:inline">Assistent</span>
+              </button>
+            )}
+
+            {/* Join Family / Connect Device QR Button */}
+            {onOpenJoinQR && (
+              <button
+                type="button"
+                onClick={onOpenJoinQR}
+                title="Gerät verbinden & Familie per QR-Code beitreten"
+                className="px-2.5 py-1.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border-2 border-indigo-200 dark:border-indigo-800 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
+              >
+                <QrCode className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.5]" />
+                <span className="hidden sm:inline">QR-Code</span>
               </button>
             )}
 
