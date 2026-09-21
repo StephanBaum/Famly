@@ -2,8 +2,14 @@ import { Redis } from '@upstash/redis';
 import { Index } from '@upstash/vector';
 
 function getRedisClient(): Redis | null {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.REDIS_URL;
+  const token =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.REDIS_TOKEN;
   if (!url || !token) return null;
   try {
     return new Redis({ url, token });
@@ -13,8 +19,14 @@ function getRedisClient(): Redis | null {
 }
 
 function getVectorIndex(): Index | null {
-  const url = process.env.UPSTASH_VECTOR_REST_URL;
-  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
+  const url =
+    process.env.UPSTASH_VECTOR_REST_URL ||
+    process.env.VECTOR_REST_API_URL ||
+    process.env.UPSTASH_VECTOR_URL;
+  const token =
+    process.env.UPSTASH_VECTOR_REST_TOKEN ||
+    process.env.VECTOR_REST_API_TOKEN ||
+    process.env.UPSTASH_VECTOR_TOKEN;
   if (!url || !token) return null;
   try {
     return new Index({ url, token });

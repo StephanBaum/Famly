@@ -1,8 +1,14 @@
 import { Index } from '@upstash/vector';
 
 function getVectorIndex(): Index | null {
-  const url = process.env.UPSTASH_VECTOR_REST_URL;
-  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
+  const url =
+    process.env.UPSTASH_VECTOR_REST_URL ||
+    process.env.VECTOR_REST_API_URL ||
+    process.env.UPSTASH_VECTOR_URL;
+  const token =
+    process.env.UPSTASH_VECTOR_REST_TOKEN ||
+    process.env.VECTOR_REST_API_TOKEN ||
+    process.env.UPSTASH_VECTOR_TOKEN;
   if (!url || !token) return null;
   try {
     return new Index({ url, token });
