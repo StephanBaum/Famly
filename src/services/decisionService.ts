@@ -1,4 +1,6 @@
 import { Recipe, FamilyMember, Chore, Appointment, MealPlanDay } from '../types';
+import { getAIConfig, resolveGeminiFlashModel } from './aiRecipeService';
+import { formatMemoriesForPrompt } from './familyMemoryService';
 
 export interface DecisionOption {
   id: string;
@@ -303,32 +305,261 @@ export function decideActivity(
 }
 
 /**
- * Generic Free-Choice Decision Finder
+ * Autonomous AI Deliberation Engine powered by Gemini 3+ Flash.
+ * Takes a family dilemma, consults family members, schedules, and long-term memories,
+ * formulates 3 tailored options itself, and computes genuine trade-offs.
+ */
+export async function decideAutonomous(
+  question: string,
+  familyData: {
+    familyName: string;
+    members: FamilyMember[];
+    appointments: Appointment[];
+    chores: Chore[];
+    recipes: Recipe[];
+    mealPlans: MealPlanDay[];
+  }
+): Promise<DecisionResult> {
+  const cleanQuestion = question.trim() || 'Was unternehmen wir als Familie?';
+  const aiConfig = getAIConfig();
+  const memoriesContext = formatMemoriesForPrompt(cleanQuestion);
+
+  const membersInfo = (familyData.members || [])
+    .map((m) => `${m.name} (${m.role}${m.isChild ? ', Kind' : ''})`)
+    .join(', ');
+
+  const prompt = `
+Du bist ein moderner, intelligenter Familienrat-Moderator für Familie ${familyData.familyName || 'Familie'}.
+Die Familie hat folgendes Dilemma / folgende Frage eingereicht:
+"${cleanQuestion}"
+
+FAMILIENKONTEXT:
+- Mitglieder: ${membersInfo || 'Familie'}
+- Bekannte Vorlieben & Langzeit-Gedächtnis:
+${memoriesContext}
+
+DEINE AUFGABE:
+1. Erfinde selbstständig genau 3 unterschiedliche, kreative und machbare Optionen (die Familie muss keine Optionen vorgeben).
+2. Bewerte jede Option objektiv mit realistischen Vorteilen ("pros") und Nachteilen ("cons").
+3. Vergib jeder Option einen passenden Eignungs-Score von 1 bis 100 (unterschiedlich gewichtet nach Machbarkeit, Familienfreude und Aufwand).
+4. Bestimme die Gewinner-Option und begründe in 1-2 Sätzen ("summary"), warum diese Option für die Familie aktuell der beste Konsens ist.
+
+Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
+{
+  "summary": "Begründung für die Familie...",
+  "options": [
+    {
+      "id": "opt_1",
+      "title": "Konkreter Titel von Option 1",
+      "badge": "z.B. Größter Spaß / Wetterfest / Entspannt",
+      "score": 88,
+      "pros": ["Vorteil 1", "Vorteil 2"],
+      "cons": ["Möglicher Nachteil"]
+    },
+    {
+      "id": "opt_2",
+      "title": "Konkreter Titel von Option 2",
+      "badge": "z.B. Kreativ & Aktiv",
+      "score": 76,
+      "pros": ["Vorteil 1"],
+      "cons": ["Nachteil"]
+    },
+    {
+      "id": "opt_3",
+      "title": "Konkreter Titel von Option 3",
+      "badge": "z.B. Schnell & Sparsam",
+      "score": 65,
+      "pros": ["Vorteil 1"],
+      "cons": ["Nachteil"]
+    }
+  ],
+  "winnerId": "opt_1"
+}
+`.trim();
+
+  if (aiConfig?.apiKey && aiConfig.provider === 'gemini') {
+    try {
+      const model = await resolveGeminiFlashModel(aiConfig.apiKey);
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${aiConfig.apiKey}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            response_mime_type: 'application/json',
+            temperature: 0.4,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed.options) && parsed.options.length > 0) {
+            const rawOpts = parsed.options.map((o: any, idx: number) => ({
+              id: o.id || `opt_${idx}`,
+              title: o.title || `Option ${idx + 1}`,
+              badge: o.badge,
+              rawWeight: typeof o.score === 'number' ? Math.max(1, o.score) : 50,
+              pros: Array.isArray(o.pros) ? o.pros : [],
+              cons: Array.isArray(o.cons) ? o.cons : [],
+            }));
+
+            const calibrated = calibrateScores(rawOpts);
+            const winner =
+              calibrated.find((c) => c.id === parsed.winnerId) || calibrated[0];
+
+            return {
+              mode: 'custom',
+              question: cleanQuestion,
+              winner,
+              options: calibrated,
+              summary: parsed.summary || `${winner.title} hat die höchste Übereinstimmung (${winner.percentage}%).`,
+              timestamp: Date.now(),
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Autonomous AI decision failed, falling back to smart local deliberation:', e);
+    }
+  }
+
+  // Smart Contextual Local Fallback Engine (Topic-aware, never blindly picking #2)
+  const q = cleanQuestion.toLowerCase();
+  let fallbackOptions: Array<{ title: string; badge: string; rawWeight: number; pros: string[]; cons: string[] }> = [];
+
+  if (q.includes('film') || q.includes('kino') || q.includes('video') || q.includes('serie')) {
+    fallbackOptions = [
+      {
+        title: 'Animationsfilm / Familienhit (z.B. Pixar oder Disney Klassiker)',
+        badge: '🍿 Beliebt bei allen Altersgruppen',
+        rawWeight: 88,
+        pros: ['Gute Laune garantiert', 'Für jüngere Kinder bestens geeignet'],
+        cons: ['Eventuell schon einmal gesehen'],
+      },
+      {
+        title: 'Spannendes Familien-Naturabenteuer (z.B. BBC Erdmännchen / Unsere Erde)',
+        badge: '🌍 Faszinierend & Lehrreich',
+        rawWeight: 78,
+        pros: ['Faszinierende Bilder', 'Gemeinsamer Gesprächsstoff'],
+        cons: ['Braucht etwas mehr Aufmerksamkeit'],
+      },
+      {
+        title: 'Humorvoller Comedy-Klassiker (z.B. Paddington oder Nachts im Museum)',
+        badge: '😂 Viel zum Lachen',
+        rawWeight: 82,
+        pros: ['Sehr unterhaltsam für Eltern & Kids', 'Kurzweilig'],
+        cons: ['Teilweise etwas temporeich'],
+      },
+    ];
+  } else if (q.includes('regen') || q.includes('schlecht') || q.includes('wetter') || q.includes('drinnen')) {
+    fallbackOptions = [
+      {
+        title: 'Großer Familien-Spielemarathon mit Snack-Buffet',
+        badge: '🎲 Gemütlich & Wetterunabhängig',
+        rawWeight: 86,
+        pros: ['Kein Verlassen des Hauses nötig', 'Stärkt das Gemeinschaftsgefühl'],
+        cons: ['Benötigt Einigung auf Spielregeln'],
+      },
+      {
+        title: 'Kreatives Back- oder Kochprojekt (z.B. Waffeln oder Mini-Pizzen)',
+        badge: '🍕 Lecker & Interaktiv',
+        rawWeight: 84,
+        pros: ['Kinder können aktiv mithelfen', 'Sofortiges leckeres Ergebnis'],
+        cons: ['Etwas Aufräumarbeit in der Küche'],
+      },
+      {
+        title: 'Ausflug in Hallenbad, Museum oder Indoor-Spielplatz',
+        badge: '⚡ Viel Bewegung',
+        rawWeight: 72,
+        pros: ['Kinder powern sich aus', 'Besonderes Erlebnis'],
+        cons: ['Eintrittskosten und Anfahrt'],
+      },
+    ];
+  } else {
+    fallbackOptions = [
+      {
+        title: 'Gemeinsame Aktivität mit klarem Zeitfenster (z.B. 1,5 Stunden)',
+        badge: '⚖️ Ausgewogener Konsens',
+        rawWeight: 85,
+        pros: ['Verbindet die Familie ohne Überforderung', 'Lässt Raum für freie Zeit danach'],
+        cons: ['Braucht feste Absprache'],
+      },
+      {
+        title: 'Gezielte Aufteilung: Jeder wählt einen Teil des Nachmittags',
+        badge: '🤝 Fair für alle',
+        rawWeight: 79,
+        pros: ['Niemand fühlt sich übergangen', 'Große Vielfalt'],
+        cons: ['Erfordert Zeitmanagement'],
+      },
+      {
+        title: 'Spontaner Ausflug ins Grüne mit Picknick',
+        badge: '🌲 Frische Luft',
+        rawWeight: 75,
+        pros: ['Abschalten vom Alltag', 'Gut für Gesundheit & Bewegung'],
+        cons: ['Abhängig vom aktuellen Wetter'],
+      },
+    ];
+  }
+
+  const calibrated = calibrateScores(
+    fallbackOptions.map((o, idx) => ({
+      id: `local_opt_${idx}`,
+      title: o.title,
+      badge: o.badge,
+      rawWeight: o.rawWeight,
+      pros: o.pros,
+      cons: o.cons,
+    }))
+  );
+
+  const winner = calibrated[0];
+  return {
+    mode: 'custom',
+    question: cleanQuestion,
+    winner,
+    options: calibrated,
+    summary: `${winner.title} bietet die beste Balance für die Familie (${winner.percentage}% Empfehlung).`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Generic Free-Choice Decision Finder (Legacy compat)
  */
 export function decideCustom(
   question: string,
   optionsList: string[]
 ): DecisionResult {
-  const cleanOptions = optionsList.filter((o) => o.trim().length > 0);
+  const cleanOptions = optionsList.filter((o) => o && o.trim().length > 0);
   if (cleanOptions.length === 0) {
     cleanOptions.push('Option A', 'Option B');
   }
 
   const rawOptions = cleanOptions.map((opt, i) => {
-    // Generate balanced baseline with slight pseudo-probabilistic differentiation
-    const baseWeight = 1.0 + (Math.sin(i + 1) * 0.2);
     return {
       id: `custom-${i}`,
       title: opt.trim(),
       badge: `Option ${i + 1}`,
-      rawWeight: Math.max(0.1, baseWeight),
+      rawWeight: Math.max(0.1, 1.0 - i * 0.15),
       pros: ['Klar strukturierte Option'],
       cons: [],
     };
   });
 
   const calibrated = calibrateScores(rawOptions);
-  const winner = calibrated[0];
+  const winner = calibrated[0] || {
+    id: 'default',
+    title: cleanOptions[0] || 'Empfehlung',
+    score: 1.0,
+    percentage: 100,
+    pros: [],
+    cons: [],
+  };
 
   return {
     mode: 'custom',
@@ -339,3 +570,4 @@ export function decideCustom(
     timestamp: Date.now(),
   };
 }
+
