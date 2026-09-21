@@ -320,7 +320,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
               onClick={() => setActiveTab('chat')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
                 activeTab === 'chat'
-                  ? 'bg-amber-500 text-white shadow-xs'
+                  ? 'bg-amber-400 text-stone-900 shadow-xs'
                   : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -333,7 +333,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
               onClick={() => setActiveTab('scheduler')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
                 activeTab === 'scheduler'
-                  ? 'bg-amber-500 text-white shadow-xs'
+                  ? 'bg-amber-400 text-stone-900 shadow-xs'
                   : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -351,7 +351,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
               onClick={() => setActiveTab('meals')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
                 activeTab === 'meals'
-                  ? 'bg-amber-500 text-white shadow-xs'
+                  ? 'bg-amber-400 text-stone-900 shadow-xs'
                   : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -364,7 +364,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
               onClick={() => setActiveTab('custom')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
                 activeTab === 'custom'
-                  ? 'bg-amber-500 text-white shadow-xs'
+                  ? 'bg-amber-400 text-stone-900 shadow-xs'
                   : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -440,7 +440,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
                       <div
                         className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                           msg.role === 'user'
-                            ? 'bg-amber-500 text-white font-medium rounded-tr-xs'
+                            ? 'bg-amber-400 text-stone-950 font-semibold rounded-tr-xs shadow-xs'
                             : 'bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-slate-100 rounded-tl-xs border border-stone-200/60 dark:border-slate-700'
                         }`}
                       >

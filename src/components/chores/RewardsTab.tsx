@@ -95,7 +95,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({
                     </div>
                   </div>
                   {isSelected && (
-                    <span className="text-[10px] font-black uppercase bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                    <span className="text-[10px] font-black uppercase bg-amber-400 text-stone-900 px-2 py-0.5 rounded-full shadow-2xs">
                       Aktiv
                     </span>
                   )}

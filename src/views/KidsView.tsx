@@ -159,7 +159,7 @@ export const KidsView: React.FC<KidsViewProps> = ({ onExitKidsMode }) => {
             onClick={() => setCategoryFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
               categoryFilter === 'all'
-                ? 'bg-amber-500 text-white shadow-xs'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
                 : 'bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 border border-stone-200 dark:border-slate-700'
             }`}
           >
@@ -181,7 +181,7 @@ export const KidsView: React.FC<KidsViewProps> = ({ onExitKidsMode }) => {
             onClick={() => setCategoryFilter('math')}
             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
               categoryFilter === 'math'
-                ? 'bg-amber-500 text-white shadow-xs'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
                 : 'bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 border border-stone-200 dark:border-slate-700'
             }`}
           >

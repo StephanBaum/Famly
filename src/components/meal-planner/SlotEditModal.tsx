@@ -489,7 +489,7 @@ export const SlotEditModal: React.FC<SlotEditModalProps> = ({
                           </span>
                         </div>
                         {isChef && (
-                          <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                          <span className="w-4 h-4 rounded-full bg-amber-400 text-stone-900 flex items-center justify-center text-[10px] font-black shrink-0">
                             ✓
                           </span>
                         )}

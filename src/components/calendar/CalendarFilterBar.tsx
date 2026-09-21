@@ -37,7 +37,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
           onClick={() => onSelectCategory(selectedCategory === 'chores_only' ? 'all' : 'chores_only')}
           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 shrink-0 ${
             selectedCategory === 'chores_only'
-              ? 'bg-amber-500 text-white shadow-xs'
+              ? 'bg-amber-400 text-stone-900 font-extrabold shadow-xs'
               : 'bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-slate-700 border border-stone-200 dark:border-slate-700'
           }`}
         >

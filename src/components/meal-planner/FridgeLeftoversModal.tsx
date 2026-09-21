@@ -175,7 +175,7 @@ export const FridgeLeftoversModal: React.FC<FridgeLeftoversModalProps> = ({
                       onClick={() => toggleIngredient(item.name)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border ${
                         isSelected
-                          ? 'bg-amber-500 text-white border-amber-600 shadow-2xs scale-102 font-black'
+                          ? 'bg-amber-400 text-stone-900 border-amber-500 shadow-2xs scale-102 font-black'
                           : 'bg-stone-50 dark:bg-slate-800 text-stone-700 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:bg-stone-100'
                       }`}
                     >
