@@ -13,6 +13,7 @@ import { decideCustom } from '../services/decisionService';
 import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import confetti from 'canvas-confetti';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   X,
   MessageSquare,
@@ -43,8 +44,7 @@ interface ChatMessage {
   timestamp: number;
 }
 
-export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
-  isOpen,
+const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   onClose,
   initialTab = 'chat',
 }) => {
@@ -61,6 +61,14 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
     addGrocery,
   } = useFamily();
 
+  // Defensively guard all data arrays against null/undefined
+  const safeMembers = Array.isArray(members) ? members.filter(Boolean) : [];
+  const safeAppointments = Array.isArray(appointments) ? appointments.filter(Boolean) : [];
+  const safeChores = Array.isArray(chores) ? chores.filter(Boolean) : [];
+  const safeRecipes = Array.isArray(recipes) ? recipes.filter(Boolean) : [];
+  const safeMealPlans = Array.isArray(mealPlans) ? mealPlans.filter(Boolean) : [];
+  const safeGroceries = Array.isArray(groceries) ? groceries.filter(Boolean) : [];
+
   const [activeTab, setActiveTab] = useState<'chat' | 'scheduler' | 'meals' | 'custom'>(initialTab);
 
   // Chat State
@@ -68,7 +76,7 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
     {
       id: 'm_welcome',
       role: 'assistant',
-      text: `Hallo Familie ${familyName}! 👋 Ich bin euer Famly-Assistent. Ich kenne all eure Termine, Aufgaben, den Essensplan und eure Einkaufsliste. Wie kann ich euch heute helfen?`,
+      text: `Hallo Familie ${familyName || ''}! 👋 Ich bin euer Famly-Assistent. Ich kenne all eure Termine, Aufgaben, den Essensplan und eure Einkaufsliste. Wie kann ich euch heute helfen?`,
       timestamp: Date.now(),
     },
   ]);
@@ -88,12 +96,12 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
 
   // Compute chore schedule proposals dynamically
   const choreProposals: ChoreScheduleProposal[] = useMemo(() => {
-    return generateChoreCalendarProposals(chores, appointments, members, 7);
-  }, [chores, appointments, members]);
+    return generateChoreCalendarProposals(safeChores, safeAppointments, safeMembers, 7);
+  }, [safeChores, safeAppointments, safeMembers]);
 
   // Today string
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todayPlan = mealPlans.find((mp) => mp.date === todayStr);
+  const todayPlan = safeMealPlans.find((mp) => mp && mp.date === todayStr);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -101,8 +109,6 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, activeTab]);
-
-  if (!isOpen) return null;
 
   // Handle Chat Submit
   const handleSendChat = async (textToSend?: string) => {
@@ -125,13 +131,13 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
       const response = await queryFamilyAssistant(
         query,
         {
-          familyName,
-          members,
-          appointments,
-          chores,
-          recipes,
-          mealPlans,
-          groceries,
+          familyName: familyName || 'Familie',
+          members: safeMembers,
+          appointments: safeAppointments,
+          chores: safeChores,
+          recipes: safeRecipes,
+          mealPlans: safeMealPlans,
+          groceries: safeGroceries,
         },
         history
       );
@@ -236,8 +242,7 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
   }, [customQuestion, customOptionsText]);
 
   return (
-    <ModalPortal>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto scrollbar-none animate-in fade-in">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto scrollbar-none animate-in fade-in">
         <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in zoom-in-95 my-auto text-stone-900 dark:text-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
           
           {/* Header */}
@@ -597,7 +602,7 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
                       Für heute Abend ist noch kein Gericht im Essensplan eingetragen!
                     </p>
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {recipes.slice(0, 3).map((rec) => (
+                      {safeRecipes.slice(0, 3).map((rec) => (
                         <button
                           key={rec.id}
                           type="button"
@@ -631,7 +636,7 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
                     const targetDate = addDays(new Date(), dayOffset);
                     const dStr = format(targetDate, 'yyyy-MM-dd');
                     const dayName = format(targetDate, 'EEEE', { locale: de });
-                    const plan = mealPlans.find((mp) => mp.date === dStr);
+                    const plan = safeMealPlans.find((mp) => mp && mp.date === dStr);
                     const hasDinner = Boolean(plan?.dinner?.title);
 
                     return (
@@ -656,7 +661,7 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const randomRecipe = recipes[Math.floor(Math.random() * recipes.length)] || recipes[0];
+                              const randomRecipe = safeRecipes[Math.floor(Math.random() * safeRecipes.length)] || safeRecipes[0];
                               if (randomRecipe) {
                                 setMealSlot(dStr, 'dinner', {
                                   title: randomRecipe.title,
@@ -756,6 +761,17 @@ export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = ({
 
         </div>
       </div>
+  );
+};
+
+export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = (props) => {
+  if (!props.isOpen) return null;
+
+  return (
+    <ModalPortal>
+      <ErrorBoundary fallbackTitle="Der Famly-Assistent konnte nicht geladen werden">
+        <FamilyAssistantModalContent {...props} />
+      </ErrorBoundary>
     </ModalPortal>
   );
 };

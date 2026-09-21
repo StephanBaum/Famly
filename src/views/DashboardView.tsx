@@ -22,16 +22,19 @@ import { de } from 'date-fns/locale';
 import { ChildDetailsModal } from '../components/ChildDetailsModal';
 import { FamilyAssistantModal } from '../components/FamilyAssistantModal';
 import { FamilyMember, Chore, isChoreRelevantForMember } from '../types';
+import { ActiveTab } from '../components/Header';
 import { ModalPortal } from '../components/ModalPortal';
 
 interface DashboardViewProps {
-  onNavigate: (tab: 'calendar' | 'meals' | 'photos' | 'lists' | 'members') => void;
+  onNavigate: (tab: ActiveTab) => void;
   onOpenAddAppointment: () => void;
+  onOpenAssistant?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   onOpenAddAppointment,
+  onOpenAssistant,
 }) => {
   const {
     members,
@@ -261,7 +264,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Famly KI-Assistent & Smart-Planer Banner */}
       <div
-        onClick={() => setIsDecisionModalOpen(true)}
+        onClick={() => {
+          if (onOpenAssistant) {
+            onOpenAssistant();
+          } else {
+            setIsDecisionModalOpen(true);
+          }
+        }}
         className="duo-card p-3.5 sm:p-4 bg-linear-to-r from-amber-500/15 via-orange-500/10 to-rose-500/10 dark:from-amber-950/40 dark:via-orange-950/40 dark:to-rose-950/40 border-2 border-amber-300 dark:border-amber-900/60 rounded-3xl flex items-center justify-between gap-3 cursor-pointer hover:border-amber-400 dark:hover:border-amber-700 transition-all group"
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -896,11 +905,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </ModalPortal>
       )}
 
-      {/* Famly AI Assistant & Smart-Planer Modal */}
-      <FamilyAssistantModal
-        isOpen={isDecisionModalOpen}
-        onClose={() => setIsDecisionModalOpen(false)}
-      />
+      {/* Famly AI Assistant & Smart-Planer Modal (fallback when not mounted at root) */}
+      {!onOpenAssistant && (
+        <FamilyAssistantModal
+          isOpen={isDecisionModalOpen}
+          onClose={() => setIsDecisionModalOpen(false)}
+        />
+      )}
 
     </div>
   );

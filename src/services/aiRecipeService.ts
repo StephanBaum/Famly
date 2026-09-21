@@ -39,6 +39,75 @@ export const clearAIConfig = (): void => {
   }
 };
 
+export const GEMINI_FLASH_CANDIDATES = [
+  'gemini-3.8-flash',
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-3.0-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash',
+];
+
+let cachedGeminiModel: string | null = null;
+
+/**
+ * Dynamically resolves the latest, cheapest available Gemini Flash model supported by the API key,
+ * prioritizing Gemini 3+ Flash series.
+ */
+export const resolveGeminiFlashModel = async (apiKey: string): Promise<string> => {
+  const cleanKey = apiKey.trim();
+  if (cachedGeminiModel) return cachedGeminiModel;
+
+  try {
+    const listRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`
+    );
+    if (listRes.ok) {
+      const data = await listRes.json();
+      const models: Array<{ name: string; supportedGenerationMethods?: string[] }> =
+        data.models || [];
+
+      // Filter for models supporting generateContent
+      const supported = models
+        .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m) => m.name.replace(/^models\//, ''));
+
+      // 1. Prioritize any Gemini 3+ Flash model available on the user's key
+      const gemini3Flash = supported.find(
+        (name) => name.toLowerCase().includes('gemini-3') && name.toLowerCase().includes('flash')
+      );
+      if (gemini3Flash) {
+        cachedGeminiModel = gemini3Flash;
+        return gemini3Flash;
+      }
+
+      // 2. Pick from ordered priority list (latest cheapest flash first)
+      for (const candidate of GEMINI_FLASH_CANDIDATES) {
+        if (supported.includes(candidate)) {
+          cachedGeminiModel = candidate;
+          return candidate;
+        }
+      }
+
+      // 3. Fallback: Any supported flash model
+      const anyFlash = supported.find((name) => name.toLowerCase().includes('flash'));
+      if (anyFlash) {
+        cachedGeminiModel = anyFlash;
+        return anyFlash;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not query Gemini ListModels endpoint:', e);
+  }
+
+  // Default to Gemini 3.8 Flash (the latest cheapest flash model)
+  cachedGeminiModel = 'gemini-3.8-flash';
+  return cachedGeminiModel;
+};
+
 /**
  * Live test of the AI API key with a fast ping request
  */
@@ -53,18 +122,48 @@ export const testAIConnection = async (
 
   try {
     if (provider === 'gemini') {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`;
+      const model = await resolveGeminiFlashModel(cleanKey);
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Ping. Antworte mit: OK' }] }],
+          contents: [{ parts: [{ text: 'Ping. Antworte kurz mit OK' }] }],
         }),
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         const errMsg = errorData?.error?.message || `HTTP ${res.status}`;
+
+        // If the resolved model returned 404 or unsupported, cycle through remaining flash candidates
+        let workingModel: string | null = null;
+        for (const candidate of GEMINI_FLASH_CANDIDATES) {
+          if (candidate === model) continue;
+          try {
+            const altEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${cleanKey}`;
+            const altRes = await fetch(altEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: 'Ping' }] }],
+              }),
+            });
+            if (altRes.ok) {
+              workingModel = candidate;
+              cachedGeminiModel = candidate;
+              break;
+            }
+          } catch {}
+        }
+
+        if (workingModel) {
+          return {
+            success: true,
+            message: `✓ Verbindung erfolgreich! Google Gemini (${workingModel}) ist einsatzbereit.`,
+          };
+        }
+
         return {
           success: false,
           message: `Gemini API-Fehler: ${errMsg}. Prüfe deinen Google AI Studio Key.`,
@@ -73,7 +172,7 @@ export const testAIConnection = async (
 
       return {
         success: true,
-        message: '✓ Verbindung erfolgreich! Google Gemini 1.5 Flash ist einsatzbereit.',
+        message: `✓ Verbindung erfolgreich! Google Gemini (${model}) ist einsatzbereit.`,
       };
     } else {
       // OpenAI
@@ -161,7 +260,8 @@ export const generateRecipeWithAI = async (params: {
   let rawJsonText = '';
 
   if (provider === 'gemini') {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const model = await resolveGeminiFlashModel(apiKey);
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const parts: any[] = [{ text: RECIPE_JSON_PROMPT }];
 

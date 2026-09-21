@@ -82,6 +82,7 @@ const MainAppContent: React.FC = () => {
           <DashboardView
             onNavigate={(tab) => setActiveTab(tab)}
             onOpenAddAppointment={() => setActiveTab('calendar')}
+            onOpenAssistant={() => setIsDecisionOpen(true)}
           />
         )}
 

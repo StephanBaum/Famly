@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Register PWA Service Worker for offline capability & fast launch
 if ('serviceWorker' in navigator && (import.meta.env.PROD || window.location.protocol === 'https:')) {
@@ -15,6 +16,9 @@ if ('serviceWorker' in navigator && (import.meta.env.PROD || window.location.pro
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );
+

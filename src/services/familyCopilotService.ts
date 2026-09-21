@@ -7,7 +7,7 @@ import {
   GroceryItem,
   isAppointmentOnDate,
 } from '../types';
-import { getAIConfig } from './aiRecipeService';
+import { getAIConfig, resolveGeminiFlashModel } from './aiRecipeService';
 import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -19,6 +19,18 @@ export interface CopilotFamilyData {
   recipes: Recipe[];
   mealPlans: MealPlanDay[];
   groceries: GroceryItem[];
+}
+
+export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): CopilotFamilyData {
+  return {
+    familyName: data?.familyName || 'Familie',
+    members: Array.isArray(data?.members) ? data.members.filter(Boolean) : [],
+    appointments: Array.isArray(data?.appointments) ? data.appointments.filter(Boolean) : [],
+    chores: Array.isArray(data?.chores) ? data.chores.filter(Boolean) : [],
+    recipes: Array.isArray(data?.recipes) ? data.recipes.filter(Boolean) : [],
+    mealPlans: Array.isArray(data?.mealPlans) ? data.mealPlans.filter(Boolean) : [],
+    groceries: Array.isArray(data?.groceries) ? data.groceries.filter(Boolean) : [],
+  };
 }
 
 export interface CopilotAction {
@@ -36,7 +48,8 @@ export interface CopilotResponse {
 /**
  * Builds a structured text snapshot of current family data for LLM context.
  */
-function buildFamilyContextSummary(data: CopilotFamilyData): string {
+function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
+  const data = normalizeCopilotData(inputData);
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const todayGerman = format(today, 'EEEE, d. MMMM yyyy', { locale: de });
@@ -126,8 +139,9 @@ ${uncheckedGroceries || 'Einkaufsliste ist leer'}
  */
 export function queryLocalFamilyAssistant(
   query: string,
-  data: CopilotFamilyData
+  inputData: CopilotFamilyData
 ): CopilotResponse {
+  const data = normalizeCopilotData(inputData);
   const q = query.toLowerCase().trim();
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
@@ -390,7 +404,8 @@ ${systemContext}
     let rawResponse = '';
 
     if (aiConfig.provider === 'gemini') {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${aiConfig.apiKey}`;
+      const model = await resolveGeminiFlashModel(aiConfig.apiKey);
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${aiConfig.apiKey}`;
 
       const contents = [
         {
