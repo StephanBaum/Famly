@@ -12,7 +12,7 @@ import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
 import { SettingsModal } from './components/SettingsModal';
-import { DecisionMakerModal } from './components/DecisionMakerModal';
+import { FamilyAssistantModal } from './components/FamilyAssistantModal';
 import { OnboardingView } from './views/OnboardingView';
 import { KidsView } from './views/KidsView';
 
@@ -124,8 +124,8 @@ const MainAppContent: React.FC = () => {
         }}
       />
 
-      {/* Open-Jev Family Decision Maker Modal */}
-      <DecisionMakerModal
+      {/* Famly AI Assistant & Smart-Planer Modal */}
+      <FamilyAssistantModal
         isOpen={isDecisionOpen}
         onClose={() => setIsDecisionOpen(false)}
       />

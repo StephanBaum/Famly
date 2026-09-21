@@ -1,4 +1,4 @@
-import { Recipe, FamilyMember, Chore, Appointment } from '../types';
+import { Recipe, FamilyMember, Chore, Appointment, MealPlanDay } from '../types';
 
 export interface DecisionOption {
   id: string;
@@ -47,14 +47,48 @@ function calibrateScores(options: Array<{ rawWeight: number } & Omit<DecisionOpt
 
 /**
  * Open-Jev System 1 Dinner Decider
- * Fast, objective decision for "Was kochen wir heute Abend?"
+ * Checks weekly meal plan first to avoid conflicts, or proposes for open days.
  */
 export function decideMeal(
   candidateRecipes: Recipe[],
   pantryIngredients: string[],
   todaysAppointments: Appointment[] = [],
-  maxTimeMinutes: number = 45
+  maxTimeMinutes: number = 45,
+  mealPlans: MealPlanDay[] = [],
+  targetDateStr?: string
 ): DecisionResult {
+  const activeDate = targetDateStr || new Date().toISOString().split('T')[0];
+  const existingPlan = mealPlans.find((mp) => mp.date === activeDate);
+
+  // If a meal is already scheduled in the meal plan for this date, honor it!
+  if (existingPlan?.dinner?.title) {
+    const matchingRecipe = candidateRecipes.find(
+      (r) => r.id === existingPlan.dinner?.recipeId || r.title.toLowerCase() === existingPlan.dinner?.title.toLowerCase()
+    );
+
+    const plannedOption: DecisionOption = {
+      id: matchingRecipe?.id || 'planned_meal',
+      title: existingPlan.dinner.title,
+      score: 1.0,
+      percentage: 100,
+      badge: '🗓️ Laut Essensplan',
+      pros: [
+        'Bereits fest im Familien-Essensplan eingetragen',
+        matchingRecipe ? `Zubereitungszeit: ${matchingRecipe.prepTime}` : 'Planmäßiges Gericht',
+      ],
+      cons: [],
+      payload: matchingRecipe || { id: 'planned', title: existingPlan.dinner.title },
+    };
+
+    return {
+      mode: 'dinner',
+      question: `Was kochen wir heute (${activeDate})?`,
+      winner: plannedOption,
+      options: [plannedOption],
+      summary: `Für heute ist laut Essensplan bereits "${existingPlan.dinner.title}" vorgesehen.`,
+      timestamp: Date.now(),
+    };
+  }
   const hasLateAppt = todaysAppointments.some((a) => {
     const hour = parseInt(a.time.split(':')[0] || '12', 10);
     return hour >= 16;

@@ -10,7 +10,7 @@ import {
   Plus,
   LogOut,
   Settings,
-  Scale,
+  Sparkles,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
@@ -131,15 +131,15 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Open-Jev Decision Maker Button */}
+            {/* Famly Assistant & Smart-Planer Button */}
             {onOpenDecision && (
               <button
                 onClick={onOpenDecision}
-                title="Familienrat & Entscheidungs-Finder (Open-Jev)"
-                className="px-2.5 py-1.5 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border-2 border-indigo-300 dark:border-indigo-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
+                title="Famly Assistent & Smart-Planer (Chat & Aufgaben einplanen)"
+                className="px-2.5 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
               >
-                <Scale className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="hidden sm:inline">Familienrat</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+                <span className="hidden sm:inline">Assistent</span>
               </button>
             )}
 
