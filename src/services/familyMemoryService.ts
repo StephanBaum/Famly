@@ -46,6 +46,7 @@ export function getFamilyMemories(): FamilyMemory[] {
 
 /**
  * Saves a new persistent fact to the family long-term memory
+ * and syncs to Upstash Vector in background if available
  */
 export function addFamilyMemory(
   text: string,
@@ -54,7 +55,7 @@ export function addFamilyMemory(
 ): FamilyMemory {
   const current = getFamilyMemories();
   const cleanText = text.trim();
-  
+
   // Avoid exact duplicates
   const existing = current.find((m) => m.text.toLowerCase() === cleanText.toLowerCase());
   if (existing) return existing;
@@ -68,19 +69,34 @@ export function addFamilyMemory(
   };
 
   const updated = [newMemory, ...current].slice(0, 100); // cap at 100 memories
+
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(STORAGE_KEY_MEMORIES, JSON.stringify(updated));
     } catch (e) {
       console.warn('Failed to save family memory:', e);
     }
+
+    // Async sync to Upstash Vector endpoint
+    fetch('/api/memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newMemory.id,
+        content: newMemory.text,
+        category: newMemory.category,
+        tags: [newMemory.category],
+      }),
+    }).catch(() => {
+      // Non-blocking background sync
+    });
   }
 
   return newMemory;
 }
 
 /**
- * Deletes a memory item
+ * Deletes a memory item locally and from Upstash Vector
  */
 export function deleteFamilyMemory(id: string): void {
   const current = getFamilyMemories();
@@ -91,11 +107,18 @@ export function deleteFamilyMemory(id: string): void {
     } catch (e) {
       console.warn('Failed to delete family memory:', e);
     }
+
+    // Async delete from Upstash Vector
+    fetch(`/api/memory?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).catch(() => {
+      // Non-blocking
+    });
   }
 }
 
 /**
- * Performs fast semantic keyword scoring to find relevant memories for a prompt/question
+ * Performs fast local keyword/frequency scoring
  */
 export function getRelevantMemories(query: string, maxItems: number = 6): FamilyMemory[] {
   const memories = getFamilyMemories();
@@ -129,10 +152,47 @@ export function getRelevantMemories(query: string, maxItems: number = 6): Family
 }
 
 /**
+ * Performs true semantic vector search via Upstash Vector (with local fallback)
+ */
+export async function getSemanticMemoriesAsync(
+  query: string,
+  maxItems: number = 6
+): Promise<FamilyMemory[]> {
+  try {
+    const res = await fetch(`/api/memory?query=${encodeURIComponent(query)}&topK=${maxItems}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.configured && Array.isArray(data.memories) && data.memories.length > 0) {
+        return data.memories.map((m: any) => ({
+          id: m.id,
+          text: m.content,
+          category: m.category || 'general',
+          importance: 4,
+          createdAt: m.createdAt || Date.now(),
+        }));
+      }
+    }
+  } catch {
+    // Fallback to local
+  }
+
+  return getRelevantMemories(query, maxItems);
+}
+
+/**
  * Formats memories into a concise text block for LLM prompting
  */
 export function formatMemoriesForPrompt(query?: string): string {
   const list = query ? getRelevantMemories(query, 6) : getFamilyMemories().slice(0, 8);
+  if (list.length === 0) return 'Keine besonderen Erinnerungen hinterlegt.';
+  return list.map((m) => ` - [${m.category}] ${m.text}`).join('\n');
+}
+
+/**
+ * Formats memories with async Upstash Vector support for rich AI prompt injection
+ */
+export async function formatMemoriesForPromptAsync(query?: string): Promise<string> {
+  const list = query ? await getSemanticMemoriesAsync(query, 6) : getFamilyMemories().slice(0, 8);
   if (list.length === 0) return 'Keine besonderen Erinnerungen hinterlegt.';
   return list.map((m) => ` - [${m.category}] ${m.text}`).join('\n');
 }

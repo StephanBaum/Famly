@@ -24,6 +24,7 @@ import { FamilyAssistantModal } from '../components/FamilyAssistantModal';
 import { FamilyMember, Chore, isChoreRelevantForMember } from '../types';
 import { ActiveTab } from '../components/Header';
 import { ModalPortal } from '../components/ModalPortal';
+import { DailyBriefingCard } from '../components/DailyBriefingCard';
 
 interface DashboardViewProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -145,7 +146,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      
+      {/* Autonomous KI-Morgenbriefing (Upstash Workflow / Gemini 3+ Flash) */}
+      <DailyBriefingCard />
+
       {/* Duolingo-style Cheerful Welcome Header */}
       <div className="duo-card p-6 bg-gradient-to-br from-amber-50 via-rose-50 to-emerald-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-2 border-stone-200 dark:border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

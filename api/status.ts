@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { Index } from '@upstash/vector';
 
 function getRedisClient(): Redis | null {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -6,6 +7,17 @@ function getRedisClient(): Redis | null {
   if (!url || !token) return null;
   try {
     return new Redis({ url, token });
+  } catch {
+    return null;
+  }
+}
+
+function getVectorIndex(): Index | null {
+  const url = process.env.UPSTASH_VECTOR_REST_URL;
+  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
+  if (!url || !token) return null;
+  try {
+    return new Index({ url, token });
   } catch {
     return null;
   }
@@ -23,31 +35,66 @@ export default async function handler(_req: any, res: any) {
   }
 
   const redis = getRedisClient();
+  let redisStatus = {
+    configured: false,
+    message: 'Upstash Redis nicht verbunden.',
+  };
 
-  if (!redis) {
-    return res.status(200).json({
-      configured: false,
-      provider: 'none',
-      message: 'Vercel Storage ist noch nicht verbunden. Klicke im Vercel Dashboard auf "Storage" -> "Upstash Redis" -> "Connect".',
-      timestamp: Date.now(),
-    });
+  if (redis) {
+    try {
+      await redis.ping();
+      redisStatus = {
+        configured: true,
+        message: 'Upstash Redis ist aktiv & verbunden.',
+      };
+    } catch (err: any) {
+      redisStatus = {
+        configured: false,
+        message: `Fehler bei Redis-Verbindung: ${err?.message || 'Unbekannt'}`,
+      };
+    }
   }
 
-  try {
-    // Ping redis to ensure connection works
-    await redis.ping();
-    return res.status(200).json({
-      configured: true,
-      provider: 'upstash_redis',
-      message: 'Vercel Storage (Upstash Redis) ist aktiv und bereit.',
-      timestamp: Date.now(),
-    });
-  } catch (err: any) {
-    return res.status(200).json({
-      configured: false,
-      provider: 'error',
-      message: `Fehler beim Verbinden mit Vercel Storage: ${err?.message || 'Unbekannt'}`,
-      timestamp: Date.now(),
-    });
+  const vector = getVectorIndex();
+  let vectorStatus = {
+    configured: false,
+    message: 'Upstash Vector nicht verbunden.',
+  };
+
+  if (vector) {
+    try {
+      const info = await vector.info();
+      vectorStatus = {
+        configured: true,
+        message: `Upstash Vector aktiv (${info.vectorCount || 0} Vektoren indiziert).`,
+      };
+    } catch (err: any) {
+      vectorStatus = {
+        configured: false,
+        message: `Vector-Verbindungsfehler: ${err?.message || 'Unbekannt'}`,
+      };
+    }
   }
+
+  const qstashToken = process.env.QSTASH_TOKEN;
+  const qstashStatus = {
+    configured: Boolean(qstashToken),
+    message: qstashToken
+      ? 'Upstash QStash / Workflow ist aktiv für Hintergrund-Routinen.'
+      : 'Upstash QStash nicht verbunden.',
+  };
+
+  const isAnyConfigured = redisStatus.configured || vectorStatus.configured || qstashStatus.configured;
+
+  return res.status(200).json({
+    configured: redisStatus.configured,
+    provider: redisStatus.configured ? 'upstash_redis' : 'none',
+    message: redisStatus.message,
+    services: {
+      redis: redisStatus,
+      vector: vectorStatus,
+      qstash: qstashStatus,
+    },
+    timestamp: Date.now(),
+  });
 }

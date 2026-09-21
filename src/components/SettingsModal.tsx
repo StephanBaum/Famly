@@ -304,6 +304,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         ? 'Vollautomatische Synchronisierung aktiv! Alle Änderungen (Einkäufe, Aufgaben, Termine) werden live zwischen allen Geräten der Familie geteilt.'
                         : 'Famly läuft lokal im Browser. Um die App ohne Keys auf allen Geräten zu synchronisieren, verbinde einfach Vercel Storage (Upstash Redis) im Vercel Dashboard.'}
                     </p>
+
+                    {/* Upstash Suite Ecosystem Badges */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2.5">
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/70 dark:border-slate-700 text-xs">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${vercelStatus?.isAvailable ? 'bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900' : 'bg-stone-300 dark:bg-slate-600'}`} />
+                        <div className="min-w-0">
+                          <p className="font-black text-[11px] text-stone-800 dark:text-stone-200 truncate">Upstash Redis</p>
+                          <p className="text-[10px] text-stone-500 dark:text-slate-400 truncate">{vercelStatus?.isAvailable ? 'Echtzeit-Sync' : 'Lokaler Modus'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/70 dark:border-slate-700 text-xs">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${vercelStatus?.services?.vector?.configured ? 'bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900' : 'bg-amber-400'}`} />
+                        <div className="min-w-0">
+                          <p className="font-black text-[11px] text-stone-800 dark:text-stone-200 truncate">Upstash Vector</p>
+                          <p className="text-[10px] text-stone-500 dark:text-slate-400 truncate">{vercelStatus?.services?.vector?.configured ? 'Vector-Speicher' : 'Lokales Gedächtnis'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/70 dark:border-slate-700 text-xs">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${vercelStatus?.services?.qstash?.configured ? 'bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900' : 'bg-purple-400'}`} />
+                        <div className="min-w-0">
+                          <p className="font-black text-[11px] text-stone-800 dark:text-stone-200 truncate">QStash / Workflow</p>
+                          <p className="text-[10px] text-stone-500 dark:text-slate-400 truncate">{vercelStatus?.services?.qstash?.configured ? 'Auto-Briefings' : 'Client-Routinen'}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

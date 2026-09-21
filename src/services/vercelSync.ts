@@ -1,8 +1,18 @@
+export interface UpstashServiceStatus {
+  configured: boolean;
+  message: string;
+}
+
 export interface VercelSyncStatus {
   isAvailable: boolean;
   provider: 'upstash_redis' | 'none' | 'error';
   message: string;
   lastChecked: number;
+  services?: {
+    redis?: UpstashServiceStatus;
+    vector?: UpstashServiceStatus;
+    qstash?: UpstashServiceStatus;
+  };
 }
 
 let cachedStatus: VercelSyncStatus = {
@@ -45,6 +55,7 @@ export const checkVercelStorageStatus = async (force = false): Promise<VercelSyn
       isAvailable: Boolean(data.configured),
       provider: data.provider || 'none',
       message: data.message || '',
+      services: data.services,
       lastChecked: now,
     };
     return cachedStatus;
