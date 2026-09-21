@@ -37,12 +37,14 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigateTab: (tab: any) => void;
+  initialScrollToAI?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   onNavigateTab,
+  initialScrollToAI = false,
 }) => {
   const {
     isDarkMode,
@@ -94,8 +96,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       } else {
         setAiKeyInput('');
       }
+
+      if (initialScrollToAI) {
+        setTimeout(() => {
+          const el = document.getElementById('settings-ai-section');
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialScrollToAI]);
 
   const handleManualVercelSync = async () => {
     setIsCheckingVercel(true);
@@ -358,7 +367,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
 
             {/* Section 3: Smart AI Recipe Assistant (BYOK) */}
-            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">
+            <div id="settings-ai-section" className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5 scroll-mt-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
                   <div
@@ -373,7 +382,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-black text-stone-900 dark:text-white">
-                        Smarter KI-Rezept-Assistent
+                        Smarter KI-Rezept- & Familien-Assistent
                       </h4>
                       <span
                         className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
@@ -383,7 +392,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         }`}
                       >
                         {currentAiConfig
-                          ? `🟢 ${currentAiConfig.provider === 'gemini' ? 'Google Gemini 1.5 Flash' : 'OpenAI GPT-4o'} aktiv`
+                          ? `🟢 ${currentAiConfig.provider === 'gemini' ? 'Google Gemini 3+ Flash' : 'OpenAI GPT-4o'} aktiv`
                           : 'ℹ️ Lokaler Heuristik-Modus'}
                       </span>
                     </div>

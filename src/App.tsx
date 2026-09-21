@@ -23,6 +23,13 @@ const MainAppContent: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isKidsMode, setIsKidsMode] = useState(false);
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
+  const [settingsScrollToAI, setSettingsScrollToAI] = useState(false);
+
+  const handleOpenSettingsForAI = () => {
+    setIsDecisionOpen(false);
+    setSettingsScrollToAI(true);
+    setIsSettingsOpen(true);
+  };
 
   // Detect direct guest link for relatives: e.g. #guest-gallery=gal_1
   const [guestGalleryId, setGuestGalleryId] = useState<string | null>(() => {
@@ -118,7 +125,11 @@ const MainAppContent: React.FC = () => {
       {/* Settings & Data Management Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          setSettingsScrollToAI(false);
+        }}
+        initialScrollToAI={settingsScrollToAI}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
           setIsSettingsOpen(false);
@@ -129,6 +140,7 @@ const MainAppContent: React.FC = () => {
       <FamilyAssistantModal
         isOpen={isDecisionOpen}
         onClose={() => setIsDecisionOpen(false)}
+        onOpenSettings={handleOpenSettingsForAI}
       />
     </div>
   );

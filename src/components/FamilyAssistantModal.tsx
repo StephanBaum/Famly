@@ -14,6 +14,8 @@ import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import confetti from 'canvas-confetti';
 import { ErrorBoundary } from './ErrorBoundary';
+import { MarkdownMessage } from './MarkdownMessage';
+import { getAIConfig } from '../services/aiRecipeService';
 import {
   X,
   MessageSquare,
@@ -28,12 +30,14 @@ import {
   RefreshCw,
   ShoppingCart,
   CalendarCheck,
+  Key,
 } from 'lucide-react';
 
 interface FamilyAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: 'chat' | 'scheduler' | 'meals' | 'custom';
+  onOpenSettings?: () => void;
 }
 
 interface ChatMessage {
@@ -47,6 +51,7 @@ interface ChatMessage {
 const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   onClose,
   initialTab = 'chat',
+  onOpenSettings,
 }) => {
   const {
     familyName,
@@ -70,6 +75,9 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   const safeGroceries = Array.isArray(groceries) ? groceries.filter(Boolean) : [];
 
   const [activeTab, setActiveTab] = useState<'chat' | 'scheduler' | 'meals' | 'custom'>(initialTab);
+
+  const aiConfig = getAIConfig();
+  const hasApiKey = Boolean(aiConfig?.apiKey && aiConfig.apiKey.trim().length > 0);
 
   // Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => [
@@ -180,6 +188,10 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     } else if (action.type === 'SCHEDULE_CHORE') {
       // switch to scheduler tab
       setActiveTab('scheduler');
+      return;
+    } else if (action.type === 'NAVIGATE') {
+      onClose();
+      onOpenSettings?.();
       return;
     }
 
@@ -344,6 +356,37 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
           {/* TAB 1: FRAG FAMLY (CHAT) */}
           {activeTab === 'chat' && (
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              {/* Notice when API key is missing */}
+              {!hasApiKey && (
+                <div className="mx-4 sm:mx-5 mt-3 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 flex items-center justify-between gap-2.5 shrink-0 animate-in fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 flex items-center justify-center text-sm font-black shrink-0">
+                      <Key className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-black text-stone-900 dark:text-white truncate">
+                        Google Gemini 3+ Flash Key einrichten
+                      </h5>
+                      <p className="text-[11px] text-stone-600 dark:text-slate-300">
+                        Aktuell im lokalen Modus. Verbinde deinen kostenlosen Key für smarte KI-Antworten.
+                      </p>
+                    </div>
+                  </div>
+                  {onOpenSettings && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenSettings();
+                      }}
+                      className="duo-btn duo-btn-amber px-3 py-1.5 text-xs font-black rounded-xl whitespace-nowrap shrink-0"
+                    >
+                      Key eingeben ➔
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Message Stream */}
               <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5 scrollbar-thin">
                 {chatMessages.map((msg) => (
@@ -365,13 +408,13 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
 
                     <div className="space-y-2">
                       <div
-                        className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-line ${
+                        className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                           msg.role === 'user'
                             ? 'bg-amber-500 text-white font-medium rounded-tr-xs'
                             : 'bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-slate-100 rounded-tl-xs border border-stone-200/60 dark:border-slate-700'
                         }`}
                       >
-                        {msg.text}
+                        <MarkdownMessage text={msg.text} isUser={msg.role === 'user'} />
                       </div>
 
                       {/* Attached Action Cards */}
