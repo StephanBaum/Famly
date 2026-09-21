@@ -11,7 +11,7 @@ import {
 } from '../../services/kidsEducationService';
 import confetti from 'canvas-confetti';
 import { triggerHaptic } from '../../utils/haptics';
-import { X, Check, ArrowRight, Sparkles, Lightbulb } from 'lucide-react';
+import { X, Check, ArrowRight, Sparkles } from 'lucide-react';
 
 interface KidLessonPlayerModalProps {
   isOpen: boolean;
@@ -28,9 +28,9 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
   memberId,
   onLessonFinished,
 }) => {
+  // Always load 4 questions for this round
   const questions: EducationalQuestion[] = React.useMemo(() => {
-    const pool = getQuestionsForLesson(memberId, lesson.category);
-    return pool.slice(0, 3);
+    return getQuestionsForLesson(memberId, lesson.category);
   }, [memberId, lesson]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -39,9 +39,30 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
   const [isCorrect, setIsCorrect] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // Interactive Counting State (child can tap individual items on screen!)
+  const [tappedItemIndices, setTappedItemIndices] = useState<Set<number>>(new Set());
+
   if (!isOpen) return null;
 
-  const currentQ = questions[currentIndex];
+  const currentQ = questions[currentIndex] || questions[0];
+
+  // Split visualPrompt into individual items if space-separated
+  const visualItems = currentQ?.visualPrompt
+    ? currentQ.visualPrompt.split(/\s+/).filter(Boolean)
+    : [];
+
+  const handleTapVisualItem = (index: number) => {
+    triggerHaptic('light');
+    setTappedItemIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   const handleSelectOption = (idx: number) => {
     if (isAnswerChecked) return;
@@ -59,8 +80,8 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
     if (correct) {
       triggerHaptic('success');
       confetti({
-        particleCount: 60,
-        spread: 70,
+        particleCount: 70,
+        spread: 80,
         origin: { y: 0.6 },
       });
     } else {
@@ -74,13 +95,14 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
       setSelectedOption(null);
       setIsAnswerChecked(false);
       setIsCorrect(false);
+      setTappedItemIndices(new Set());
     } else {
       // Lesson finished!
       setIsCompleted(true);
       triggerHaptic('celebration');
       confetti({
-        particleCount: 100,
-        spread: 90,
+        particleCount: 120,
+        spread: 100,
         origin: { y: 0.5 },
       });
 
@@ -106,21 +128,32 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full shadow-2xl border-4 border-amber-300 dark:border-amber-700 animate-in zoom-in-95 my-auto text-stone-900 dark:text-slate-100 flex flex-col overflow-hidden relative">
+      <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border-4 border-amber-300 dark:border-amber-700 animate-in zoom-in-95 my-auto text-stone-900 dark:text-slate-100 flex flex-col overflow-hidden relative">
           
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-slate-800 flex items-center justify-between bg-stone-50/80 dark:bg-slate-800/40">
+          <div className="p-3.5 sm:p-4 border-b border-stone-100 dark:border-slate-800 flex items-center justify-between bg-stone-50/80 dark:bg-slate-800/40">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{lesson.emoji}</span>
+              <span className="text-3xl animate-bounce-subtle">{lesson.emoji}</span>
               <div>
-                <h3 className="text-sm sm:text-base font-black text-stone-900 dark:text-white">
+                <h3 className="text-base font-black text-stone-900 dark:text-white">
                   {lesson.title}
                 </h3>
                 {!isCompleted && (
-                  <span className="text-[11px] font-bold text-stone-400">
-                    Frage {currentIndex + 1} von {questions.length}
-                  </span>
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    {questions.map((_, qIdx) => (
+                      <div
+                        key={qIdx}
+                        className={`w-3 h-3 rounded-full transition-all ${
+                          qIdx < currentIndex
+                            ? 'bg-emerald-500 scale-105'
+                            : qIdx === currentIndex
+                            ? 'bg-amber-400 scale-125'
+                            : 'bg-stone-200 dark:bg-slate-700'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -135,50 +168,63 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
           </div>
 
           {/* Body Content */}
-          <div className="p-5 sm:p-6 space-y-5">
+          <div className="p-5 space-y-4">
             {!isCompleted ? (
               <>
-                {/* Progress Bar */}
-                <div className="w-full bg-stone-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-amber-500 h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${((currentIndex + (isAnswerChecked && isCorrect ? 1 : 0)) / questions.length) * 100}%`,
-                    }}
-                  />
-                </div>
-
-                {/* Visual Prompt / Emoji */}
-                <div className="text-center py-2 space-y-2">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-amber-100 dark:bg-amber-950/60 mx-auto flex items-center justify-center text-3xl sm:text-4xl shadow-xs border-2 border-amber-300">
-                    {currentQ.emoji}
-                  </div>
-                  {currentQ.visualPrompt && (
-                    <div className="text-2xl sm:text-3xl font-black tracking-widest py-1 animate-bounce">
-                      {currentQ.visualPrompt}
-                    </div>
-                  )}
-                  <h2 className="text-base sm:text-lg font-black text-stone-900 dark:text-white leading-snug">
+                {/* Big Question Prompt (Short & Visual) */}
+                <div className="text-center space-y-2">
+                  <h2 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white">
                     {currentQ.question}
                   </h2>
+
+                  {/* Interactive Tappable Item Playground */}
+                  {visualItems.length > 0 && (
+                    <div className="py-2">
+                      <div className="flex flex-wrap items-center justify-center gap-2 p-3 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border-2 border-dashed border-amber-300">
+                        {visualItems.map((item, itemIdx) => {
+                          const isTapped = tappedItemIndices.has(itemIdx);
+                          return (
+                            <button
+                              key={itemIdx}
+                              type="button"
+                              onClick={() => handleTapVisualItem(itemIdx)}
+                              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all select-none ${
+                                isTapped
+                                  ? 'bg-amber-300 scale-110 shadow-sm ring-2 ring-amber-500'
+                                  : 'bg-white dark:bg-slate-800 hover:scale-105 shadow-2xs'
+                              }`}
+                            >
+                              <span>{item}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {tappedItemIndices.size > 0 && (
+                        <span className="text-[11px] font-black text-amber-800 dark:text-amber-300 mt-1 inline-block">
+                          Getippt: {tappedItemIndices.size} gezählt! ⭐
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Multiple Choice Options */}
-                <div className="space-y-2.5">
+                {/* Big Tactile Choice Buttons (Low text, high visual punch) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   {currentQ.options.map((option, idx) => {
                     const isSelected = selectedOption === idx;
-                    let btnStyle = 'duo-btn duo-btn-white border-2 border-stone-200 dark:border-slate-700';
+                    let btnClass = 'bg-stone-50 dark:bg-slate-800 border-2 border-b-4 border-stone-200 dark:border-slate-700 text-stone-800 dark:text-white hover:border-amber-400';
 
                     if (isAnswerChecked) {
                       if (idx === currentQ.correctIndex) {
-                        btnStyle = 'duo-btn duo-btn-green border-2 border-emerald-500 text-white';
+                        btnClass = 'bg-emerald-500 border-emerald-600 border-b-4 text-white scale-[1.02] shadow-sm';
                       } else if (isSelected && !isCorrect) {
-                        btnStyle = 'duo-btn duo-btn-rose border-2 border-rose-500 text-white animate-shake';
+                        btnClass = 'bg-rose-500 border-rose-600 border-b-4 text-white animate-shake';
                       } else {
-                        btnStyle = 'opacity-40 duo-btn duo-btn-white';
+                        btnClass = 'opacity-30 bg-stone-100 border-transparent';
                       }
                     } else if (isSelected) {
-                      btnStyle = 'duo-btn duo-btn-amber border-2 border-amber-500 text-white scale-[1.02]';
+                      btnClass = 'bg-amber-400 border-amber-500 border-b-4 text-stone-900 scale-[1.03] shadow-sm';
                     }
 
                     return (
@@ -187,7 +233,7 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
                         type="button"
                         onClick={() => handleSelectOption(idx)}
                         disabled={isAnswerChecked && isCorrect}
-                        className={`w-full p-3.5 sm:p-4 rounded-2xl text-sm sm:text-base font-black text-left flex items-center justify-between transition-all ${btnStyle}`}
+                        className={`p-4 rounded-2xl text-base sm:text-lg font-black flex items-center justify-center gap-2 transition-all active:translate-y-1 select-none ${btnClass}`}
                       >
                         <span>{option}</span>
                         {isAnswerChecked && idx === currentQ.correctIndex && (
@@ -198,57 +244,59 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
                   })}
                 </div>
 
-                {/* Fun Fact Card (shown once answered) */}
+                {/* Animated Mascot Fact Card (Short & Fun) */}
                 {isAnswerChecked && (
                   <div
-                    className={`p-4 rounded-2xl border text-xs sm:text-sm space-y-1 animate-in fade-in ${
+                    className={`p-3.5 rounded-2xl border-2 flex items-center gap-3 animate-in fade-in ${
                       isCorrect
                         ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-950 dark:text-emerald-200'
                         : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 text-amber-950 dark:text-amber-200'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 font-black">
-                      <Lightbulb className="w-4 h-4 text-amber-500" />
-                      <span>{isCorrect ? '🎉 Klasse gemacht! Wusstest du schon?' : '💡 Fast! Wusstest du schon?'}</span>
+                    <span className="text-3xl shrink-0">{isCorrect ? '🥳' : '💡'}</span>
+                    <div className="text-xs">
+                      <p className="font-black">
+                        {isCorrect ? 'Super gelöst!' : 'Tipp:'}
+                      </p>
+                      <p className="font-medium text-stone-700 dark:text-slate-200">
+                        {currentQ.funFact}
+                      </p>
                     </div>
-                    <p className="leading-relaxed font-medium">
-                      {currentQ.funFact}
-                    </p>
                   </div>
                 )}
               </>
             ) : (
-              /* Completion Screen */
+              /* Round Finished Celebration Card */
               <div className="text-center py-6 space-y-4">
-                <div className="w-20 h-20 rounded-3xl bg-amber-400 text-white mx-auto flex items-center justify-center text-4xl shadow-md animate-bounce">
-                  🏆
+                <div className="w-20 h-20 rounded-3xl bg-amber-400 text-white mx-auto flex items-center justify-center text-5xl shadow-md animate-bounce">
+                  ⭐
                 </div>
                 <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white">
-                    Lektion gemeistert!
+                  <h2 className="text-2xl font-black text-stone-900 dark:text-white">
+                    Super geschafft!
                   </h2>
-                  <p className="text-xs sm:text-sm font-semibold text-stone-500 dark:text-slate-400">
-                    Du hast alle Fragen super beantwortet!
+                  <p className="text-xs font-semibold text-stone-500 dark:text-slate-400">
+                    Du hast alle 4 Fragen dieser Runde gemeistert!
                   </p>
                 </div>
 
-                <div className="inline-flex items-center gap-2 p-3 px-5 rounded-2xl bg-amber-100 dark:bg-amber-950/60 border-2 border-amber-300 text-amber-900 dark:text-amber-200 text-sm font-black">
-                  <Sparkles className="w-5 h-5 text-amber-600" />
-                  <span>+{lesson.xpReward} XP Wissens-Punkte verdient!</span>
+                <div className="inline-flex items-center gap-2 p-3 px-5 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 border-2 border-emerald-300 text-emerald-900 dark:text-emerald-200 text-sm font-black">
+                  <Sparkles className="w-5 h-5 text-emerald-600" />
+                  <span>+{lesson.xpReward} XP Wissens-Punkte gesammelt!</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Action Footer */}
-          <div className="p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/40 border-t border-stone-100 dark:border-slate-800 flex justify-end">
+          <div className="p-3.5 sm:p-4 bg-stone-50 dark:bg-slate-800/40 border-t border-stone-100 dark:border-slate-800 flex justify-end">
             {!isCompleted ? (
               !isAnswerChecked ? (
                 <button
                   type="button"
                   onClick={handleCheckAnswer}
                   disabled={selectedOption === null}
-                  className="w-full duo-btn duo-btn-green py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="w-full duo-btn duo-btn-green py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 disabled:opacity-40 shadow-xs"
                 >
                   <span>Prüfen</span>
                   <Check className="w-4 h-4 stroke-[3]" />
@@ -257,9 +305,9 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="w-full duo-btn duo-btn-amber py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
+                  className="w-full duo-btn duo-btn-amber py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-xs"
                 >
-                  <span>{currentIndex < questions.length - 1 ? 'Nächste Frage' : 'Lektion abschließen'}</span>
+                  <span>{currentIndex < questions.length - 1 ? 'Nächste Frage' : 'Runde beenden'}</span>
                   <ArrowRight className="w-4 h-4 stroke-[3]" />
                 </button>
               )
@@ -267,9 +315,9 @@ export const KidLessonPlayerModal: React.FC<KidLessonPlayerModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full duo-btn duo-btn-green py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
+                className="w-full duo-btn duo-btn-green py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-xs"
               >
-                <span>Zurück zum Lernpfad</span>
+                <span>Zurück zu den Spielen</span>
                 <Check className="w-4 h-4 stroke-[3]" />
               </button>
             )}
