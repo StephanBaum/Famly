@@ -30,7 +30,7 @@ export const DashboardChoresCard: React.FC<DashboardChoresCardProps> = ({
           </div>
         </div>
         <button
-          onClick={() => onNavigate('lists')}
+          onClick={() => onNavigate('calendar')}
           className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-extrabold rounded-xl shrink-0 whitespace-nowrap"
         >
           <span>Alle Aufgaben</span>
@@ -42,7 +42,7 @@ export const DashboardChoresCard: React.FC<DashboardChoresCardProps> = ({
           <span className="text-2xl mb-1 block">✨</span>
           <p className="text-xs font-bold text-stone-600 dark:text-slate-300">Keine offenen Aufgaben für heute.</p>
           <button
-            onClick={() => onNavigate('lists')}
+            onClick={() => onNavigate('calendar')}
             className="mt-2 text-xs font-black text-amber-600 dark:text-amber-400 hover:underline"
           >
             + Erste Aufgabe eintragen

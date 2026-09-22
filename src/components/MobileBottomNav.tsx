@@ -16,7 +16,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
     { id: 'dashboard', label: 'Heute', icon: <Home className="w-5 h-5" /> },
     { id: 'calendar', label: 'Kalender', icon: <Calendar className="w-5 h-5" /> },
     { id: 'meals', label: 'Essen', icon: <Utensils className="w-5 h-5" /> },
-    { id: 'lists', label: 'Einkauf', icon: <ShoppingCart className="w-5 h-5" />, badge: uncheckedGroceriesCount },
+    { id: 'groceries', label: 'Einkauf', icon: <ShoppingCart className="w-5 h-5" />, badge: uncheckedGroceriesCount },
     { id: 'photos', label: 'Momente', icon: <Camera className="w-5 h-5" /> },
     { id: 'members', label: 'Familie', icon: <Users className="w-5 h-5" /> },
   ];
@@ -27,7 +27,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, set
       style={{ paddingBottom: 'calc(0.35rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
+        const isActive = activeTab === tab.id || (tab.id === 'groceries' && activeTab === 'lists');
         return (
           <button
             key={tab.id}

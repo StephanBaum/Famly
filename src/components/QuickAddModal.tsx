@@ -17,11 +17,12 @@ import { VoiceInputModal } from './VoiceInputModal';
 import { parseUniversalInput } from '../utils/universalParser';
 import { format } from 'date-fns';
 import { startVoiceRecognition, VoiceSession } from '../services/voiceRecognitionService';
+import { ActiveTab } from './Header';
 
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigateTab?: (tab: 'calendar' | 'meals' | 'photos' | 'lists') => void;
+  onNavigateTab?: (tab: ActiveTab) => void;
 }
 
 type QuickType = 'smart' | 'event' | 'grocery' | 'chore' | 'note';

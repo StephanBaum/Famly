@@ -35,6 +35,8 @@ import { CalendarAgendaView } from '../components/calendar/CalendarAgendaView';
 import { AppointmentModal } from '../components/calendar/AppointmentModal';
 import { CalendarChoreModal } from '../components/calendar/CalendarChoreModal';
 import { CalendarClaimModal } from '../components/calendar/CalendarClaimModal';
+import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { ChoresAndRewardsSection } from '../components/chores/ChoresAndRewardsSection';
 
 export const CalendarView: React.FC = () => {
   const {
@@ -56,6 +58,7 @@ export const CalendarView: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
   const [selectedCategory, setSelectedCategory] = useState<AppointmentCategory | 'all' | 'chores_only'>('all');
+  const [calendarTab, setCalendarTab] = useState<'calendar' | 'chores'>('calendar');
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -258,113 +261,149 @@ export const CalendarView: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header & Controls */}
-      <CalendarHeader
-        currentDate={currentDate}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        onPrevPeriod={prevPeriod}
-        onNextPeriod={nextPeriod}
-        onGoToToday={goToToday}
-        onExportICal={handleExportICal}
-        onOpenAddAppointment={() => openAddAppointmentModal()}
-        onOpenAddChore={() => openAddChoreModal()}
-        appointmentCount={filteredAppointments.length}
-        choreCount={relevantChores.length}
-        selectedCategory={selectedCategory}
-        icalExportToast={icalExportToast}
-        onDismissToast={() => setIcalExportToast(null)}
-      />
+      {/* Calendar vs Chores Sub-Tab Switch */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1.5 rounded-2xl border-2 border-stone-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setCalendarTab('calendar')}
+            className={`duo-btn px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 ${
+              calendarTab === 'calendar'
+                ? 'duo-btn-blue shadow-2xs'
+                : 'text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white'
+            }`}
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span>📅 Termine & Kalender</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCalendarTab('chores')}
+            className={`duo-btn px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 ${
+              calendarTab === 'chores'
+                ? 'duo-btn-amber shadow-2xs'
+                : 'text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>✨ Aufgaben & Belohnungen ({chores.length})</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Filter Bar */}
-      <CalendarFilterBar
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        currentMemberId={currentMemberId}
-        members={members}
-      />
-
-      {/* View Mode: Month */}
-      {viewMode === 'month' && (
+      {calendarTab === 'calendar' ? (
         <>
-          {/* Mobile View: Week Strip + Selected Day Schedule */}
-          <div className="sm:hidden space-y-4">
-            <CalendarWeekStrip
-              selectedDay={selectedDay}
-              onSelectDay={(day) => {
-                setSelectedDay(day);
-                if (!isSameMonth(day, currentDate)) setCurrentDate(day);
-              }}
-              onPrevWeek={prevWeek}
-              onNextWeek={nextWeek}
-              getDayAppointments={getDayAppointments}
-              getDayChores={getDayChores}
-            />
-            <CalendarDayDetails
-              selectedDay={selectedDay}
-              selectedCategory={selectedCategory}
-              appointments={selectedDayAppointments}
-              chores={getDayChores(selectedDay)}
-              members={members}
-              conflicts={selectedDayConflicts}
-              onOpenAddAppointment={openAddAppointmentModal}
-              onOpenAddChore={openAddChoreModal}
-              onEditAppointment={openEditAppointmentModal}
-              onToggleChore={handleChoreToggle}
-              onEditChore={openEditChoreModal}
-              onDeleteChore={handleDeleteChore}
-              isMobile={true}
-            />
-          </div>
+          {/* Header & Controls */}
+          <CalendarHeader
+            currentDate={currentDate}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            onPrevPeriod={prevPeriod}
+            onNextPeriod={nextPeriod}
+            onGoToToday={goToToday}
+            onExportICal={handleExportICal}
+            onOpenAddAppointment={() => openAddAppointmentModal()}
+            onOpenAddChore={() => openAddChoreModal()}
+            appointmentCount={filteredAppointments.length}
+            choreCount={relevantChores.length}
+            selectedCategory={selectedCategory}
+            icalExportToast={icalExportToast}
+            onDismissToast={() => setIcalExportToast(null)}
+          />
 
-          {/* Desktop View: Month Grid + Selected Day Details */}
-          <div className="hidden sm:block space-y-4">
-            <CalendarMonthGrid
-              currentDate={currentDate}
-              selectedDay={selectedDay}
-              calendarDays={calendarDays}
-              members={members}
-              getDayAppointments={getDayAppointments}
-              getDayChores={getDayChores}
-              onSelectDay={setSelectedDay}
-              onOpenAddAppointment={openAddAppointmentModal}
-              onOpenAddChore={openAddChoreModal}
-              onOpenEditAppointment={openEditAppointmentModal}
-              onToggleChore={handleChoreToggle}
-            />
-            <CalendarDayDetails
-              selectedDay={selectedDay}
+          {/* Filter Bar */}
+          <CalendarFilterBar
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            currentMemberId={currentMemberId}
+            members={members}
+          />
+
+          {/* View Mode: Month */}
+          {viewMode === 'month' && (
+            <>
+              {/* Mobile View: Week Strip + Selected Day Schedule */}
+              <div className="sm:hidden space-y-4">
+                <CalendarWeekStrip
+                  selectedDay={selectedDay}
+                  onSelectDay={(day) => {
+                    setSelectedDay(day);
+                    if (!isSameMonth(day, currentDate)) setCurrentDate(day);
+                  }}
+                  onPrevWeek={prevWeek}
+                  onNextWeek={nextWeek}
+                  getDayAppointments={getDayAppointments}
+                  getDayChores={getDayChores}
+                />
+                <CalendarDayDetails
+                  selectedDay={selectedDay}
+                  selectedCategory={selectedCategory}
+                  appointments={selectedDayAppointments}
+                  chores={getDayChores(selectedDay)}
+                  members={members}
+                  conflicts={selectedDayConflicts}
+                  onOpenAddAppointment={openAddAppointmentModal}
+                  onOpenAddChore={openAddChoreModal}
+                  onEditAppointment={openEditAppointmentModal}
+                  onToggleChore={handleChoreToggle}
+                  onEditChore={openEditChoreModal}
+                  onDeleteChore={handleDeleteChore}
+                  isMobile={true}
+                />
+              </div>
+
+              {/* Desktop View: Month Grid + Selected Day Details */}
+              <div className="hidden sm:block space-y-4">
+                <CalendarMonthGrid
+                  currentDate={currentDate}
+                  selectedDay={selectedDay}
+                  calendarDays={calendarDays}
+                  members={members}
+                  getDayAppointments={getDayAppointments}
+                  getDayChores={getDayChores}
+                  onSelectDay={setSelectedDay}
+                  onOpenAddAppointment={openAddAppointmentModal}
+                  onOpenAddChore={openAddChoreModal}
+                  onOpenEditAppointment={openEditAppointmentModal}
+                  onToggleChore={handleChoreToggle}
+                />
+                <CalendarDayDetails
+                  selectedDay={selectedDay}
+                  selectedCategory={selectedCategory}
+                  appointments={selectedDayAppointments}
+                  chores={getDayChores(selectedDay)}
+                  members={members}
+                  conflicts={selectedDayConflicts}
+                  onOpenAddAppointment={openAddAppointmentModal}
+                  onOpenAddChore={openAddChoreModal}
+                  onEditAppointment={openEditAppointmentModal}
+                  onToggleChore={handleChoreToggle}
+                  onEditChore={openEditChoreModal}
+                  onDeleteChore={handleDeleteChore}
+                  isMobile={false}
+                />
+              </div>
+            </>
+          )}
+
+          {/* View Mode: Agenda */}
+          {viewMode === 'agenda' && (
+            <CalendarAgendaView
               selectedCategory={selectedCategory}
-              appointments={selectedDayAppointments}
-              chores={getDayChores(selectedDay)}
+              filteredAppointments={filteredAppointments}
+              relevantChores={relevantChores}
               members={members}
-              conflicts={selectedDayConflicts}
-              onOpenAddAppointment={openAddAppointmentModal}
-              onOpenAddChore={openAddChoreModal}
+              onOpenAddChore={() => openAddChoreModal()}
               onEditAppointment={openEditAppointmentModal}
+              onDeleteAppointment={handleDeleteAppointment}
               onToggleChore={handleChoreToggle}
               onEditChore={openEditChoreModal}
               onDeleteChore={handleDeleteChore}
-              isMobile={false}
             />
-          </div>
+          )}
         </>
-      )}
-
-      {/* View Mode: Agenda */}
-      {viewMode === 'agenda' && (
-        <CalendarAgendaView
-          selectedCategory={selectedCategory}
-          filteredAppointments={filteredAppointments}
-          relevantChores={relevantChores}
-          members={members}
-          onOpenAddChore={() => openAddChoreModal()}
-          onEditAppointment={openEditAppointmentModal}
-          onDeleteAppointment={handleDeleteAppointment}
-          onToggleChore={handleChoreToggle}
-          onEditChore={openEditChoreModal}
-          onDeleteChore={handleDeleteChore}
-        />
+      ) : (
+        <ChoresAndRewardsSection />
       )}
 
       {/* Appointment Modal */}

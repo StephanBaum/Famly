@@ -64,7 +64,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemStore, setNewItemStore] = useState('Rewe');
   const [lastToggledItem, setLastToggledItem] = useState<{ id: string; name: string } | null>(null);
-  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   type TimeframeFilter = 'all' | 'soon' | 'later';
   const [timeframeFilter, setTimeframeFilter] = useState<TimeframeFilter>('all');
 
@@ -185,11 +185,6 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
       return days !== null && days > 3;
     });
   }, [sortedUncheckedGroceries]);
-
-  // Mathematically accurate progress calculation
-  const totalItems = filteredGroceries.length;
-  const completedItems = checkedGroceries.length;
-  const percentComplete = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -420,18 +415,14 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
       )}
 
 
-      {/* STORE RUN SELECTOR PILLS */}
-      <div className="duo-card p-3 sm:p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
-        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
-          <span className="text-xs font-black text-stone-400 dark:text-slate-400 uppercase tracking-wider mr-1 shrink-0">
-            Laden:
-          </span>
-
+      {/* UNIFIED STREAMLINED FILTER & ACTIONS BAR */}
+      <div className="duo-card p-2.5 sm:p-3 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-0.5">
           {/* All Stores button */}
           <button
             type="button"
             onClick={() => onSelectStore('all')}
-            className={`duo-btn px-3.5 py-2 rounded-2xl text-xs font-black transition-all whitespace-nowrap shrink-0 ${
+            className={`duo-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all whitespace-nowrap shrink-0 ${
               selectedStore === 'all' ? 'duo-btn-green' : 'duo-btn-white'
             }`}
           >
@@ -450,7 +441,7 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                 key={store.id}
                 type="button"
                 onClick={() => onSelectStore(store.name)}
-                className={`duo-btn px-3 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`duo-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 whitespace-nowrap shrink-0 ${
                   isSelected
                     ? store.name.toLowerCase().includes('rewe')
                       ? 'duo-btn-rose'
@@ -462,15 +453,17 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
               >
                 <span>{store.icon}</span>
                 <span>{store.name}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected
-                      ? 'bg-white/30 text-white'
-                      : 'bg-stone-200 dark:bg-slate-700 text-stone-700 dark:text-slate-200'
-                  }`}
-                >
-                  {openCount}
-                </span>
+                {openCount > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      isSelected
+                        ? 'bg-white/30 text-white'
+                        : 'bg-stone-200 dark:bg-slate-700 text-stone-700 dark:text-slate-200'
+                    }`}
+                  >
+                    {openCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -478,29 +471,69 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
           <button
             type="button"
             onClick={onOpenStoreModal}
-            className="duo-btn duo-btn-white px-3 py-2 text-xs font-extrabold rounded-2xl text-stone-500 dark:text-slate-300 whitespace-nowrap shrink-0"
-            title="Eigenen Laden hinzufügen (z.B. Aldi, Edeka, Bauhaus)"
+            className="duo-btn duo-btn-white px-2 py-1.5 text-xs font-bold rounded-xl text-stone-400 hover:text-stone-700 dark:text-slate-400 whitespace-nowrap shrink-0"
+            title="Eigenen Laden hinzufügen"
           >
             + Laden
           </button>
+
+          {/* Timeframe pill filters inside the same bar */}
+          {groceries.some((g) => g.targetDate) && (
+            <>
+              <div className="h-4 w-px bg-stone-200 dark:bg-slate-700 mx-1 shrink-0" />
+              <button
+                type="button"
+                onClick={() => setTimeframeFilter('all')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  timeframeFilter === 'all'
+                    ? 'bg-stone-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                    : 'text-stone-500 hover:bg-stone-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                }`}
+              >
+                Alle
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeframeFilter('soon')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  timeframeFilter === 'soon'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-stone-500 hover:bg-stone-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                }`}
+              >
+                ⚡ Demnächst
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeframeFilter('later')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                  timeframeFilter === 'later'
+                    ? 'bg-amber-600 text-white shadow-2xs'
+                    : 'text-stone-500 hover:bg-stone-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                }`}
+              >
+                🗓️ Später
+              </button>
+            </>
+          )}
         </div>
 
         {/* Shopping Focus Mode & Staples Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           <button
             type="button"
             onClick={onOpenFocusModal}
-            className="duo-btn duo-btn-green px-3.5 py-2 rounded-2xl text-xs font-black text-white flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all whitespace-nowrap"
-            title="Supermarkt-Fokusmodus: Schnelles, einhändiges Abhaken mit Vibrations-Feedback"
+            className="duo-btn duo-btn-green px-3 py-1.5 rounded-xl text-xs font-black text-white flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+            title="Supermarkt-Fokusmodus: Schnelles Abhaken im Laden"
           >
             <ShoppingCart className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Einkaufs-Modus</span>
+            <span className="hidden sm:inline">Einkaufs-Modus</span>
           </button>
 
           <button
             type="button"
             onClick={onToggleStaplesDrawer}
-            className={`duo-btn px-3.5 py-2 rounded-2xl text-xs font-black flex items-center gap-1.5 whitespace-nowrap transition-all ${
+            className={`duo-btn px-2.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 whitespace-nowrap transition-all ${
               showStaplesDrawer
                 ? 'duo-btn-amber ring-2 ring-amber-400 text-stone-900'
                 : 'duo-btn-white text-stone-700 dark:text-slate-200'
@@ -512,140 +545,61 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
         </div>
       </div>
 
-      {/* SMART TIMEFRAME HORIZON FILTER */}
-      {groceries.some((g) => g.targetDate) && (
-        <div className="flex items-center gap-1.5 px-1 py-0.5 overflow-x-auto text-xs font-bold">
-          <span className="text-[11px] font-black text-stone-400 dark:text-slate-500 uppercase tracking-wider mr-1 shrink-0">
-            Einkauf:
-          </span>
-          <button
-            type="button"
-            onClick={() => setTimeframeFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-              timeframeFilter === 'all'
-                ? 'bg-stone-800 text-white dark:bg-white dark:text-stone-900 shadow-xs'
-                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
-            }`}
-          >
-            Alle Artikel ({storeFilteredGroceries.filter((g) => !g.checked).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTimeframeFilter('soon')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 ${
-              timeframeFilter === 'soon'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
-            }`}
-          >
-            <span>⚡ Demnächst</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTimeframeFilter('later')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 ${
-              timeframeFilter === 'later'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
-            }`}
-          >
-            <span>🗓️ Später</span>
-          </button>
-        </div>
-      )}
-
-      {/* Quick Add Bar */}
+      {/* QUICK ADD BAR - SINGLE CLEAN LINE */}
       <form
         onSubmit={handleQuickAdd}
-        className="duo-card p-3 sm:p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 space-y-2.5"
+        className="duo-card p-2 sm:p-2.5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex items-center gap-2 shadow-xs"
       >
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder={
-              selectedStore === 'all'
-                ? 'Artikel hinzufügen (z.B. Milch, Äpfel, Brot)...'
-                : `Artikel für ${selectedStore} hinzufügen...`
-            }
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            className="flex-1 min-w-0 px-3.5 py-2.5 sm:py-3 text-sm sm:text-base font-bold rounded-2xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
-            required
-          />
+        <input
+          type="text"
+          placeholder={
+            selectedStore === 'all'
+              ? 'Artikel hinzufügen (z.B. Milch, Äpfel, Brot)...'
+              : `Artikel für ${selectedStore} hinzufügen...`
+          }
+          value={newItemName}
+          onChange={(e) => setNewItemName(e.target.value)}
+          className="flex-1 min-w-[110px] px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl border border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400"
+          required
+        />
 
-          <button
-            type="button"
-            onClick={onOpenVoiceModal}
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 border-2 border-blue-200 dark:border-blue-800 transition-colors shadow-2xs"
-            title="Per Spracheingabe diktieren"
-          >
-            <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+        <input
+          type="text"
+          placeholder="Menge"
+          value={newItemAmount}
+          onChange={(e) => setNewItemAmount(e.target.value)}
+          className="w-16 sm:w-24 px-2.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400 shrink-0"
+        />
 
-          <button
-            type="submit"
-            className="duo-btn duo-btn-green px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-black rounded-2xl shrink-0 shadow-sm whitespace-nowrap"
-          >
-            + Neu
-          </button>
-        </div>
+        <select
+          value={selectedStore === 'all' ? newItemStore : selectedStore}
+          onChange={(e) => setNewItemStore(e.target.value)}
+          disabled={selectedStore !== 'all'}
+          className="w-24 sm:w-28 px-2 py-2 sm:py-2.5 text-xs font-black rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500 cursor-pointer shrink-0 truncate"
+        >
+          {stores.map((s) => (
+            <option key={s.id} value={s.name}>
+              {s.icon} {s.name}
+            </option>
+          ))}
+        </select>
 
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="text"
-            placeholder="Menge (z.B. 500g, 2 Pck.)"
-            value={newItemAmount}
-            onChange={(e) => setNewItemAmount(e.target.value)}
-            className="w-full px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl border-2 border-stone-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 bg-white dark:bg-slate-800 text-stone-900 dark:text-white placeholder-stone-400 min-w-0"
-          />
+        <button
+          type="button"
+          onClick={onOpenVoiceModal}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800 transition-colors"
+          title="Per Spracheingabe diktieren"
+        >
+          <Mic className="w-4 h-4" />
+        </button>
 
-          <select
-            value={selectedStore === 'all' ? newItemStore : selectedStore}
-            onChange={(e) => setNewItemStore(e.target.value)}
-            className="w-full px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-black rounded-xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500 cursor-pointer min-w-0"
-          >
-            {stores.map((s) => (
-              <option key={s.id} value={s.name}>
-                {s.icon} {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <button
+          type="submit"
+          className="duo-btn duo-btn-green px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-black rounded-xl shrink-0 shadow-2xs whitespace-nowrap"
+        >
+          + Neu
+        </button>
       </form>
-
-      {/* Cart Progress Bar (Accurate Percentage) */}
-      {totalItems > 0 && (
-        <div className="duo-card bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-3.5 border-2 border-stone-200 dark:border-slate-800 flex items-center justify-between gap-4 shadow-xs">
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center justify-between text-xs font-black">
-              <span className="text-stone-700 dark:text-slate-300">
-                🛒 Im Korb: {completedItems} von {totalItems} Artikeln
-              </span>
-              <span className={percentComplete === 100 ? 'text-emerald-600 dark:text-emerald-400 font-extrabold' : 'text-stone-600 dark:text-slate-400'}>
-                {percentComplete}% Erledigt
-              </span>
-            </div>
-            <div className="w-full h-2.5 bg-stone-100 dark:bg-slate-800 rounded-full overflow-hidden border border-stone-200/60 dark:border-slate-700">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full"
-                style={{
-                  width: `${percentComplete}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {completedItems > 0 && (
-            <button
-              type="button"
-              onClick={() => onClearChecked(selectedStore === 'all' ? undefined : selectedStore)}
-              className="text-xs font-black text-rose-600 dark:text-rose-400 hover:text-rose-800 underline shrink-0 whitespace-nowrap"
-            >
-              Erledigte leeren
-            </button>
-          )}
-        </div>
-      )}
 
       {/* ACTIVE UNCHECKED GROCERY ITEMS */}
       <div className="space-y-3">
@@ -656,8 +610,8 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
               {selectedStore === 'all' ? 'Alles eingekauft!' : `Bei ${selectedStore} alles erledigt!`}
             </h3>
             <p className="text-xs font-bold text-stone-400 dark:text-slate-400 max-w-sm mx-auto">
-              {completedItems > 0
-                ? `${completedItems} Artikel liegen bereits im Korb.`
+              {checkedGroceries.length > 0
+                ? `${checkedGroceries.length} Artikel liegen bereits im Korb.`
                 : 'Keine offenen Artikel auf der Liste. Genießt eure Familienzeit!'}
             </p>
           </div>
@@ -688,72 +642,74 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
         )}
       </div>
 
-        {/* CHECKED OFF / COMPLETED SECTION (Collapsible) */}
-        {checkedGroceries.length > 0 && (
-          <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-900 border-2 border-stone-200/90 dark:border-slate-800 space-y-3 mt-6">
-            <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800 pb-2">
-              <button
-                type="button"
-                onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                className="flex items-center gap-2 text-xs font-black text-stone-600 dark:text-slate-300 uppercase tracking-wider hover:text-stone-900 dark:hover:text-white"
-              >
-                <span>✓ Im Einkaufswagen ({checkedGroceries.length})</span>
-                {isCompletedOpen ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </button>
+      {/* CHECKED OFF / COMPLETED SECTION (Unobtrusive & Collapsed by default) */}
+      {checkedGroceries.length > 0 && (
+        <div className="pt-3 border-t border-stone-200/80 dark:border-slate-800/80 space-y-2 mt-4">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+              className="flex items-center gap-1.5 text-xs font-bold text-stone-400 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              {isCompletedOpen ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+              <span>Erledigte Artikel ({checkedGroceries.length})</span>
+            </button>
 
+            {isCompletedOpen && (
               <button
                 type="button"
                 onClick={() => onClearChecked(selectedStore === 'all' ? undefined : selectedStore)}
-                className="text-xs font-black text-rose-600 dark:text-rose-400 hover:text-rose-800 underline"
+                className="text-xs font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 underline"
               >
-                Alle erledigten leeren
+                Erledigte leeren
               </button>
-            </div>
-
-            {isCompletedOpen && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in">
-                {checkedGroceries.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => onToggleGrocery(item.id)}
-                    className="cursor-pointer flex items-center justify-between p-3 rounded-xl border border-stone-200 dark:border-slate-800 bg-white/80 dark:bg-slate-800/60 text-stone-400 hover:bg-white dark:hover:bg-slate-800 transition-colors text-xs"
-                    title="Klicken zum Wiederherstellen in die Einkaufsliste"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-5 h-5 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                      <span className="line-through font-bold text-stone-500 dark:text-slate-400 truncate text-sm">
-                        {item.name}
-                      </span>
-                      {item.amount && (
-                        <span className="text-[11px] text-stone-400 shrink-0">
-                          ({item.amount})
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteGrocery(item.id);
-                      }}
-                      className="text-stone-300 hover:text-rose-600 p-1 ml-2"
-                      title="Löschen"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
-        )}
+
+          {isCompletedOpen && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 animate-in fade-in">
+              {checkedGroceries.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onToggleGrocery(item.id)}
+                  className="cursor-pointer flex items-center justify-between p-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/80 dark:bg-slate-800/40 text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors text-xs"
+                  title="Klicken zum Wiederherstellen in die Einkaufsliste"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="w-4 h-4 rounded-md bg-stone-300 dark:bg-slate-700 text-stone-600 dark:text-slate-200 flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                    <span className="line-through font-semibold text-stone-500 dark:text-slate-400 truncate">
+                      {item.name}
+                    </span>
+                    {item.amount && (
+                      <span className="text-[10px] text-stone-400 shrink-0">
+                        ({item.amount})
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteGrocery(item.id);
+                    }}
+                    className="text-stone-300 hover:text-rose-600 p-1 ml-2"
+                    title="Löschen"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -734,7 +734,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onNavigateTab('lists')}
+                  onClick={() => onNavigateTab('groceries')}
                   className="p-2 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 border border-stone-200 dark:border-slate-700 transition-all hover:scale-105 active:scale-95"
                 >
                   <span className="block text-sm font-black text-amber-600 dark:text-amber-400">{groceries.length}</span>
@@ -745,7 +745,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onNavigateTab('lists')}
+                  onClick={() => onNavigateTab('calendar')}
                   className="p-2 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 border border-stone-200 dark:border-slate-700 transition-all hover:scale-105 active:scale-95"
                 >
                   <span className="block text-sm font-black text-purple-600 dark:text-purple-400">{chores.length}</span>

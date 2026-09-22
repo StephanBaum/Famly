@@ -7,7 +7,7 @@ import { DashboardView } from './views/DashboardView';
 import { CalendarView } from './views/CalendarView';
 import { MealPlannerView } from './views/MealPlannerView';
 import { PhotoStreamView } from './views/PhotoStreamView';
-import { ListsAndChoresView } from './views/ListsAndChoresView';
+import { GroceriesView } from './views/GroceriesView';
 import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
@@ -185,9 +185,9 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'meals' && <MealPlannerView />}
 
-        {activeTab === 'photos' && <PhotoStreamView />}
+        {(activeTab === 'groceries' || activeTab === 'lists') && <GroceriesView />}
 
-        {activeTab === 'lists' && <ListsAndChoresView />}
+        {activeTab === 'photos' && <PhotoStreamView />}
 
         {activeTab === 'members' && <FamilyMembersView />}
       </main>

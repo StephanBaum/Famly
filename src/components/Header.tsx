@@ -4,7 +4,6 @@ import {
   Calendar as CalendarIcon,
   Utensils,
   Camera,
-  CheckSquare,
   Home,
   Users,
   Plus,
@@ -13,9 +12,10 @@ import {
   QrCode,
   X,
   UserCheck,
+  ShoppingCart,
 } from 'lucide-react';
 
-export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
+export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'groceries' | 'photos' | 'members' | 'lists';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -337,7 +337,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-              <span>Kalender</span>
+              <span>Kalender & Aufgaben</span>
             </button>
 
             <button
@@ -353,6 +353,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('groceries')}
+              className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
+                activeTab === 'groceries' || activeTab === 'lists'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-2 border-b-4 border-emerald-300 dark:border-emerald-700'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
+              }`}
+            >
+              <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
+              <span>Einkaufsliste</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('photos')}
               className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
                 activeTab === 'photos'
@@ -362,18 +374,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Camera className="w-3.5 h-3.5 mr-1.5" />
               <span>Momente</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('lists')}
-              className={`duo-btn px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
-                activeTab === 'lists'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-2 border-b-4 border-emerald-300 dark:border-emerald-700'
-                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-slate-800 border-2 border-transparent'
-              }`}
-            >
-              <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
-              <span>Einkauf & Aufgaben</span>
             </button>
 
             <button
