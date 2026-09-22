@@ -381,8 +381,15 @@ export async function decideAutonomous(
           }
         } catch {}
       }
-      if (m.notes) info += `, Hobbys/Interessen: "${m.notes}"`;
-      if (m.childDetails?.allergies) info += `, Allergien: "${m.childDetails.allergies}"`;
+      const memberInterests = Array.isArray(m.interests) && m.interests.length > 0
+        ? m.interests
+        : (m.childDetails?.interests || []);
+      if (memberInterests.length > 0) {
+        info += `, Hobbys/Vorlieben: [${memberInterests.join(', ')}]`;
+      }
+      if (m.notes) info += `, Notizen: "${m.notes}"`;
+      const allg = m.allergies || m.childDetails?.allergies;
+      if (allg) info += `, Allergien: "${allg}"`;
       return `${info})`;
     })
     .join('\n- ');

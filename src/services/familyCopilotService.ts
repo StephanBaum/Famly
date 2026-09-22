@@ -108,10 +108,18 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
   const membersSummary = data.members
     .map((m) => {
       let details = `${m.name} (${m.role}, ${m.stars || 0} Sterne, Serie: ${m.choreStreak || 0} Tage)`;
-      if (m.childDetails?.allergies) details += `, Allergien: ${m.childDetails.allergies}`;
-      if (m.childDetails?.clothingSize) details += `, Kleidergröße: ${m.childDetails.clothingSize}`;
-      if (m.childDetails?.shoeSize) details += `, Schuhgröße: ${m.childDetails.shoeSize}`;
+      const memberInterests = Array.isArray(m.interests) && m.interests.length > 0
+        ? m.interests
+        : (m.childDetails?.interests || []);
+      if (memberInterests.length > 0) details += `, Hobbys/Vorlieben: [${memberInterests.join(', ')}]`;
+      const allg = m.allergies || m.childDetails?.allergies;
+      if (allg) details += `, Allergien: ${allg}`;
+      const cSize = m.clothingSize || m.childDetails?.clothingSize;
+      if (cSize) details += `, Kleidergröße: ${cSize}`;
+      const sSize = m.shoeSize || m.childDetails?.shoeSize;
+      if (sSize) details += `, Schuhgröße: ${sSize}`;
       if (m.birthday) details += `, Geburtstag: ${m.birthday}`;
+      if (m.notes) details += `, Notizen: "${m.notes}"`;
       return ` - ${details}`;
     })
     .join('\n');

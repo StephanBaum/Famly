@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { FamilyMember } from '../types';
-import { Plus, Edit2, Calendar, Shirt, HeartPulse, QrCode } from 'lucide-react';
-import { ChildDetailsModal } from '../components/ChildDetailsModal';
+import { Plus, Edit2, Calendar, QrCode, Sparkles } from 'lucide-react';
+import { MemberProfileModal } from '../components/MemberProfileModal';
 import { ModalPortal } from '../components/ModalPortal';
 import { JoinFamilyQRModal } from '../components/JoinFamilyQRModal';
 
@@ -16,7 +16,6 @@ export const FamilyMembersView: React.FC = () => {
   const [isJoinQROpen, setIsJoinQROpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [selectedDetailsMember, setSelectedDetailsMember] = useState<FamilyMember | null>(null);
-  const [detailsInitialEditMode, setDetailsInitialEditMode] = useState<boolean>(false);
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -124,7 +123,6 @@ export const FamilyMembersView: React.FC = () => {
               member.role.toLowerCase().includes('child')
           );
           const details = member.childDetails || {};
-          const customFields = member.customFields || details.customFields || [];
 
           return (
             <div
@@ -186,154 +184,87 @@ export const FamilyMembersView: React.FC = () => {
                   </p>
                 )}
 
-                {/* KID-SPECIFIC SIZES & CLINIC PREVIEW CARD */}
-                {isChild ? (
-                  <div className="bg-amber-50/50 dark:bg-amber-950/20 p-3.5 rounded-2xl border-2 border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-black text-amber-900 dark:text-amber-200 tracking-wider">
-                        🧸 Kinder-Pass
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedDetailsMember(member);
-                            setDetailsInitialEditMode(false);
-                          }}
-                          className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
-                        >
-                          Pass ansehen
-                        </button>
-                        <span className="text-stone-300 dark:text-slate-600">•</span>
-                        <button
-                          onClick={() => {
-                            setSelectedDetailsMember(member);
-                            setDetailsInitialEditMode(true);
-                          }}
-                          className="text-[11px] font-black text-amber-700 dark:text-amber-400 hover:underline"
-                        >
-                          ✏️ Bearbeiten
-                        </button>
-                      </div>
-                    </div>
+                {/* 10x HIGHLIGHTS & STECKBRIEF TAGS */}
+                {(() => {
+                  const tags: Array<{ label: string; isAllergy?: boolean }> = [];
+                  const memberInterests = Array.isArray(member.interests)
+                    ? member.interests
+                    : (details.interests || []);
+                  
+                  memberInterests.slice(0, 3).forEach((tag) => tags.push({ label: tag }));
 
-                    {/* Sizes chips */}
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                      <div className="bg-white dark:bg-slate-800 px-2 py-1 rounded-xl border border-stone-200 dark:border-slate-700 flex items-center gap-1">
-                        <Shirt className="w-3 h-3 text-amber-500" />
-                        <span className="font-semibold text-stone-600 dark:text-slate-300 truncate">
-                          {details.clothingSize || 'Größe k.A.'}
+                  const cSize = member.clothingSize || details.clothingSize;
+                  if (cSize) tags.push({ label: `👕 Gr. ${cSize}` });
+
+                  const sSize = member.shoeSize || details.shoeSize;
+                  if (sSize) tags.push({ label: `👟 Gr. ${sSize}` });
+
+                  const mAllergies = member.allergies || details.allergies;
+                  if (mAllergies) tags.push({ label: `⚠️ ${mAllergies}`, isAllergy: true });
+
+                  if (tags.length > 0) {
+                    return (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] font-black uppercase text-stone-400 dark:text-slate-500 tracking-wider">
+                          Steckbrief-Highlights
                         </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.slice(0, 5).map((t, idx) => (
+                            <span
+                              key={idx}
+                              className={`text-xs px-2.5 py-1 rounded-xl font-bold border transition-all truncate max-w-[170px] ${
+                                t.isAllergy
+                                  ? 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-900'
+                                  : 'bg-stone-50 dark:bg-slate-800/80 text-stone-700 dark:text-slate-200 border-stone-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {t.label}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="bg-white dark:bg-slate-800 px-2 py-1 rounded-xl border border-stone-200 dark:border-slate-700 flex items-center gap-1">
-                        <span>👟</span>
-                        <span className="font-semibold text-stone-600 dark:text-slate-300 truncate">
-                          {details.shoeSize || 'Schuhe k.A.'}
-                        </span>
-                      </div>
-                    </div>
+                    );
+                  }
 
-                    {/* Doctor preview */}
-                    {details.doctorName && (
-                      <div className="text-[11px] text-stone-600 dark:text-slate-300 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-xl border border-stone-200 dark:border-slate-700 truncate">
-                        <HeartPulse className="w-3 h-3 text-emerald-500 shrink-0" />
-                        <span className="font-semibold truncate">{details.doctorName}</span>
-                      </div>
-                    )}
-
-                    {/* Custom fields preview */}
-                    {customFields.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {customFields.slice(0, 2).map((cf) => (
-                          <span
-                            key={cf.id}
-                            className="text-[10px] bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-900/60 font-bold text-stone-700 dark:text-slate-300 truncate max-w-[150px]"
-                          >
-                            {cf.label}: {cf.value}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* ADULT / PARENT INFORMATION & CUSTOM FIELDS */
-                  <div className="bg-stone-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border-2 border-stone-200/80 dark:border-slate-700 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-black text-stone-500 dark:text-slate-400 tracking-wider">
-                        Persönliche Infos
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedDetailsMember(member);
-                            setDetailsInitialEditMode(false);
-                          }}
-                          className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 hover:underline"
-                        >
-                          Ansehen
-                        </button>
-                        <span className="text-stone-300 dark:text-slate-600">•</span>
-                        <button
-                          onClick={() => {
-                            setSelectedDetailsMember(member);
-                            setDetailsInitialEditMode(true);
-                          }}
-                          className="text-[11px] font-black text-amber-700 dark:text-amber-400 hover:underline"
-                        >
-                          ✏️ Bearbeiten
-                        </button>
-                      </div>
-                    </div>
-
-                    {customFields.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {customFields.map((cf) => (
-                          <div
-                            key={cf.id}
-                            className="bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-slate-700 flex items-center justify-between text-xs"
-                          >
-                            <span className="font-bold text-stone-500 dark:text-slate-400">{cf.label}:</span>
-                            <span className="font-black text-stone-800 dark:text-white">{cf.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-stone-400 italic bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-stone-200 dark:border-slate-700">
-                        Keine Notizen hinterlegt. Klicke auf "+ Infos bearbeiten" für wichtige persönliche Angaben.
-                      </p>
-                    )}
-                  </div>
-                )}
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDetailsMember(member)}
+                      className="w-full py-3 px-3 rounded-2xl border-2 border-dashed border-purple-200 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 hover:bg-purple-50 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors group"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-purple-500 group-hover:rotate-12 transition-transform" />
+                      <span>+ Steckbrief ausfüllen (Hobbys, Maße & Notfall)</span>
+                    </button>
+                  );
+                })()}
 
                 {member.notes && (
-                  <p className="text-xs text-stone-500 dark:text-slate-400 bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-stone-200 dark:border-slate-700 font-medium">
+                  <p className="text-xs text-stone-500 dark:text-slate-400 bg-stone-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-stone-200 dark:border-slate-700 font-medium line-clamp-2">
                     {member.notes}
                   </p>
                 )}
               </div>
 
-              {/* Card Footer */}
+              {/* Clean Single Action Footer */}
               <div className="mt-5 pt-3 border-t-2 border-stone-100 dark:border-slate-800 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedDetailsMember(member);
-                    setDetailsInitialEditMode(false);
-                  }}
-                  className={`duo-btn px-3 py-2 text-xs font-black rounded-xl flex-1 ${
-                    isChild ? 'duo-btn-purple' : 'duo-btn-white text-stone-700 dark:text-slate-200'
+                  onClick={() => setSelectedDetailsMember(member)}
+                  className={`duo-btn px-4 py-2.5 text-xs font-black rounded-xl flex-1 flex items-center justify-center gap-1.5 ${
+                    isChild ? 'duo-btn-purple' : 'duo-btn-white text-stone-800 dark:text-white border-stone-300 dark:border-slate-700'
                   }`}
                 >
-                  {isChild ? '🧸 Kinder-Pass öffnen' : '👤 Profil & Details'}
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isChild ? '🧸 Kinder-Pass & Größen' : '✨ Steckbrief & Infos öffnen'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => openEditModal(member)}
-                  className="duo-btn duo-btn-white px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white shrink-0"
-                  title="Basisdaten bearbeiten"
+                  className="p-2.5 rounded-xl text-stone-400 hover:text-stone-800 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors border border-stone-200 dark:border-slate-700 shrink-0"
+                  title="Name & Avatar anpassen"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                  <span>Bearbeiten</span>
                 </button>
               </div>
 
@@ -363,16 +294,12 @@ export const FamilyMembersView: React.FC = () => {
         </div>
       )}
 
-      {/* Child Details Modal */}
+      {/* Member Profile Modal */}
       {selectedDetailsMember && (
-        <ChildDetailsModal
+        <MemberProfileModal
           member={selectedDetailsMember}
           isOpen={true}
-          initialEditMode={detailsInitialEditMode}
-          onClose={() => {
-            setSelectedDetailsMember(null);
-            setDetailsInitialEditMode(false);
-          }}
+          onClose={() => setSelectedDetailsMember(null)}
         />
       )}
 

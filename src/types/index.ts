@@ -9,6 +9,7 @@ export interface ChildDetails {
   clothingSize?: string;
   shoeSize?: string;
   pantsSize?: string;
+  bikeSize?: string;
   doctorName?: string;
   doctorPhone?: string;
   doctorAddress?: string;
@@ -20,6 +21,8 @@ export interface ChildDetails {
   schoolName?: string;
   grade?: string;
   emergencyContact?: string;
+  interests?: string[];
+  occupation?: string;
   customFields?: CustomInfoField[];
 }
 
@@ -36,6 +39,21 @@ export interface FamilyMember {
   birthday?: string;
   notes?: string;
   pin?: string; // 4-digit login passcode
+  interests?: string[]; // Hobbies, sport, preferences
+  clothingSize?: string;
+  shoeSize?: string;
+  pantsSize?: string;
+  bikeSize?: string;
+  allergies?: string;
+  bloodType?: string;
+  doctorName?: string;
+  doctorPhone?: string;
+  doctorAddress?: string;
+  dentistName?: string;
+  dentistPhone?: string;
+  dentistAddress?: string;
+  emergencyContact?: string;
+  occupation?: string;
   childDetails?: ChildDetails;
   customFields?: CustomInfoField[]; // Custom fields for adults or kids
   choreStreak?: number;
