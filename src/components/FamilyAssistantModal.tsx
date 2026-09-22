@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
 import {
@@ -11,50 +11,36 @@ import {
 } from '../services/familyCopilotService';
 import { decideAutonomous, DecisionResult } from '../services/decisionService';
 import { getFamilyMemories } from '../services/familyMemoryService';
-import { format, addDays } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { triggerHaptic } from '../utils/haptics';
 import { ErrorBoundary } from './ErrorBoundary';
-import { MarkdownMessage } from './MarkdownMessage';
 import { getAIConfig } from '../services/aiRecipeService';
 import {
   X,
   MessageSquare,
   Calendar,
   Utensils,
-  Sparkles,
-  Send,
-  Check,
-  Clock,
-  Plus,
   Compass,
-  RefreshCw,
-  CalendarCheck,
-  Key,
-  Brain,
-  Undo2,
 } from 'lucide-react';
+import { AssistantChatTab, ChatMessage } from './assistant/AssistantChatTab';
+import { AssistantSchedulerTab } from './assistant/AssistantSchedulerTab';
+import { AssistantMealsTab } from './assistant/AssistantMealsTab';
+import { AssistantAdviceTab } from './assistant/AssistantAdviceTab';
 
 interface FamilyAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: 'chat' | 'scheduler' | 'meals' | 'custom';
   onOpenSettings?: () => void;
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  actions?: CopilotAction[];
-  timestamp: number;
+  onNavigateTab?: (tab: string) => void;
 }
 
 const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   onClose,
   initialTab = 'chat',
   onOpenSettings,
+  onNavigateTab,
 }) => {
   const {
     familyName,
@@ -64,23 +50,40 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     recipes,
     mealPlans,
     groceries,
+    notes,
+    rewards,
     addAppointment,
     deleteAppointment,
     setMealSlot,
+    addRecipe,
+    toggleFavoriteRecipe,
+    addRecipeIngredientsToGrocery,
     addGrocery,
+    toggleGrocery,
     deleteGrocery,
-    addChore,
-    deleteChore,
+    clearCheckedGroceries,
+    toggleAlwaysInStock,
     cleanPastMealGroceries,
+    addChore,
+    toggleChore,
+    deleteChore,
+    awardStars,
+    updateMember,
+    addNote,
+    deleteNote,
+    addReward,
+    claimReward,
   } = useFamily();
 
-  // Defensively guard all data arrays against null/undefined
+  // Defensively guard all data arrays
   const safeMembers = Array.isArray(members) ? members.filter(Boolean) : [];
   const safeAppointments = Array.isArray(appointments) ? appointments.filter(Boolean) : [];
   const safeChores = Array.isArray(chores) ? chores.filter(Boolean) : [];
   const safeRecipes = Array.isArray(recipes) ? recipes.filter(Boolean) : [];
   const safeMealPlans = Array.isArray(mealPlans) ? mealPlans.filter(Boolean) : [];
   const safeGroceries = Array.isArray(groceries) ? groceries.filter(Boolean) : [];
+  const safeNotes = Array.isArray(notes) ? notes.filter(Boolean) : [];
+  const safeRewards = Array.isArray(rewards) ? rewards.filter(Boolean) : [];
 
   const [activeTab, setActiveTab] = useState<'chat' | 'scheduler' | 'meals' | 'custom'>(initialTab);
 
@@ -92,21 +95,18 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     {
       id: 'm_welcome',
       role: 'assistant',
-      text: `Hallo Familie ${familyName || ''}! 👋 Ich bin euer Famly-Assistent. Ich kenne all eure Termine, Aufgaben, den Essensplan und eure Einkaufsliste. Wie kann ich euch heute helfen?`,
+      text: `Hallo Familie ${familyName || ''}! 👋 Ich bin euer Famly-Assistent. Ich kann jede Aktion im System für euch erledigen – vom Kalender über Aufgaben, Einkaufsliste und Essensplan bis hin zum Schwarzen Brett und Belohnungen!`,
       timestamp: Date.now(),
     },
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const chatBottomRef = useRef<HTMLDivElement | null>(null);
-
-  // Scheduled notification banners
   const [actionSuccessNotice, setActionSuccessNotice] = useState<string | null>(null);
 
   // Proactive Chore Scheduler State
   const [scheduledChoreIds, setScheduledChoreIds] = useState<Set<string>>(new Set());
 
-  // Autonomous Decider State (AI formulates options itself!)
+  // Autonomous Decider State
   const [customQuestion, setCustomQuestion] = useState('Was unternehmen wir heute als Familie?');
   const [isDeciding, setIsDeciding] = useState(false);
   const [decisionResult, setDecisionResult] = useState<DecisionResult | null>(null);
@@ -116,9 +116,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   const handleRunDecision = async (overrideQuestion?: string) => {
     const q = (overrideQuestion || customQuestion).trim();
     if (!q || isDeciding) return;
-    if (overrideQuestion) {
-      setCustomQuestion(overrideQuestion);
-    }
+    if (overrideQuestion) setCustomQuestion(overrideQuestion);
     setIsDeciding(true);
     try {
       const res = await decideAutonomous(q, {
@@ -137,30 +135,389 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     }
   };
 
-  // Run initial decision when opening custom tab
-  useEffect(() => {
-    if (activeTab === 'custom' && !decisionResult && !isDeciding) {
-      handleRunDecision();
-    }
-  }, [activeTab]);
-
-  // Compute chore schedule proposals dynamically
   const choreProposals: ChoreScheduleProposal[] = useMemo(() => {
     return generateChoreCalendarProposals(safeChores, safeAppointments, safeMembers, 7);
   }, [safeChores, safeAppointments, safeMembers]);
 
-  // Today string
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayPlan = safeMealPlans.find((mp) => mp && mp.date === todayStr);
 
-  // Auto-scroll chat
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatMessages, activeTab]);
+  // Universal Action Execution Engine
+  const handleExecuteAction = (action: CopilotAction): boolean => {
+    try {
+      const p = action.payload || {};
 
-  // Handle Chat Submit
+      switch (action.type) {
+        case 'ADD_APPOINTMENT': {
+          const targetDate = p.date || todayStr;
+          addAppointment({
+            title: p.title || 'Termin',
+            date: targetDate,
+            time: p.time || '10:00',
+            memberIds: p.memberIds || (safeMembers[0] ? [safeMembers[0].id] : ['m1']),
+            category: p.category || 'family',
+            notes: p.notes || 'Vom Famly-Assistenten eingetragen',
+          });
+          setActionSuccessNotice(`✓ Termin "${p.title}" eingetragen (${targetDate})! 📅`);
+          return true;
+        }
+
+        case 'DELETE_APPOINTMENT': {
+          const match = safeAppointments.find(
+            (a) => (p.id && a.id === p.id) || (p.title && a.title.toLowerCase().includes(p.title.toLowerCase()))
+          );
+          if (match) {
+            deleteAppointment(match.id);
+            setActionSuccessNotice(`✓ Termin "${match.title}" gelöscht.`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'SCHEDULE_CHORE': {
+          const choreObj = safeChores.find((c) => c.id === p.choreId);
+          const proposal = choreProposals.find((pr) => pr.chore.id === p.choreId);
+          const choreTitle = p.title || choreObj?.title || 'Aufgabe';
+          const targetDate = p.date || proposal?.proposedDate || todayStr;
+          const targetTime = p.time || proposal?.proposedTime || '18:00';
+          const targetMemberId = p.memberId || proposal?.targetMember?.id || choreObj?.assignedMemberId || (safeMembers[0] ? safeMembers[0].id : 'm1');
+
+          addAppointment({
+            title: `🧹 ${choreTitle}`,
+            date: targetDate,
+            time: targetTime,
+            durationMinutes: p.durationMinutes || proposal?.durationMinutes || 20,
+            memberIds: [targetMemberId],
+            category: 'family',
+            notes: `Aufgabe automatisch eingeplant`,
+          });
+          if (p.choreId) {
+            setScheduledChoreIds((prev) => new Set([...prev, p.choreId]));
+          }
+          setActionSuccessNotice(`✓ "${choreTitle}" für ${targetTime} Uhr (${targetDate}) im Kalender eingetragen! 📅`);
+          return true;
+        }
+
+        case 'ADD_CHORE': {
+          addChore(
+            p.title || 'Aufgabe',
+            p.assignedMemberId || '',
+            'once',
+            Number(p.stars) || 3,
+            p.assignedMemberId ? [p.assignedMemberId] : [],
+            p.dueDate
+          );
+          setActionSuccessNotice(`✓ Aufgabe "${p.title}" angelegt! ⭐`);
+          return true;
+        }
+
+        case 'COMPLETE_CHORE': {
+          const match = safeChores.find(
+            (c) => (p.id && c.id === p.id) || (p.title && c.title.toLowerCase().includes(p.title.toLowerCase()))
+          );
+          if (match) {
+            toggleChore(match.id, p.completingMemberId || safeMembers[0]?.id);
+            setActionSuccessNotice(`✓ Aufgabe "${match.title}" als erledigt markiert! ⭐`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'DELETE_CHORE': {
+          const match = safeChores.find(
+            (c) => (p.id && c.id === p.id) || (p.title && c.title.toLowerCase().includes(p.title.toLowerCase()))
+          );
+          if (match) {
+            deleteChore(match.id);
+            setActionSuccessNotice(`✓ Aufgabe "${match.title}" gelöscht.`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'ADD_GROCERY': {
+          addGrocery(p.name, p.store || 'Rewe', p.amount, p.category);
+          setActionSuccessNotice(`✓ "${p.name}" auf die Einkaufsliste gesetzt! 🛒`);
+          return true;
+        }
+
+        case 'CHECK_GROCERY': {
+          const match = safeGroceries.find(
+            (g) => (p.id && g.id === p.id) || (p.name && g.name.toLowerCase().includes(p.name.toLowerCase()))
+          );
+          if (match) {
+            toggleGrocery(match.id);
+            setActionSuccessNotice(`✓ "${match.name}" als erledigt abgehakt! 🛒`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'DELETE_GROCERY': {
+          const match = safeGroceries.find(
+            (g) => (p.id && g.id === p.id) || (p.name && g.name.toLowerCase().includes(p.name.toLowerCase()))
+          );
+          if (match) {
+            deleteGrocery(match.id);
+            setActionSuccessNotice(`✓ "${match.name}" von der Einkaufsliste entfernt.`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'CLEAR_CHECKED_GROCERIES': {
+          clearCheckedGroceries();
+          setActionSuccessNotice(`✓ Erledigte Artikel aus dem Korb geleert.`);
+          return true;
+        }
+
+        case 'ADD_ALWAYS_IN_STOCK': {
+          if (p.name) {
+            toggleAlwaysInStock(p.name);
+            setActionSuccessNotice(`✓ "${p.name}" zu den Vorräten hinzugefügt 🏠`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'CLEAN_SHOPPING_LIST': {
+          const { removedCount } = cleanPastMealGroceries();
+          setActionSuccessNotice(`✓ Einkaufsliste bereinigt (${removedCount} alte Zutaten entfernt) 🧹`);
+          return true;
+        }
+
+        case 'SET_MEAL': {
+          const targetDate = p.date || todayStr;
+          setMealSlot(targetDate, p.slot || 'dinner', {
+            title: p.title,
+            recipeId: p.recipeId,
+          });
+          setActionSuccessNotice(`✓ "${p.title}" in den Essensplan eingetragen! 🍽️`);
+          return true;
+        }
+
+        case 'CLEAR_MEAL': {
+          const targetDate = p.date || todayStr;
+          setMealSlot(targetDate, p.slot || 'dinner', { title: '' });
+          setActionSuccessNotice(`✓ Essensplan für ${targetDate} geleert.`);
+          return true;
+        }
+
+        case 'ADD_RECIPE': {
+          addRecipe({
+            title: p.title || 'Rezept',
+            prepTime: p.prepTime || '25 Min',
+            servings: p.servings || 4,
+            category: p.category || 'family-favorite',
+            imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=600&q=80',
+            ingredients: p.ingredients || [],
+            instructions: p.instructions || [],
+            isFavorite: false,
+            tags: p.tags || ['Familie'],
+          });
+          setActionSuccessNotice(`✓ Rezept "${p.title}" in Rezeptbox gespeichert! 🍲`);
+          return true;
+        }
+
+        case 'FAVORITE_RECIPE': {
+          const match = safeRecipes.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
+          if (match) {
+            toggleFavoriteRecipe(match.id);
+            setActionSuccessNotice(`✓ "${match.title}" als Favorit ⭐ markiert!`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'ADD_RECIPE_TO_GROCERIES': {
+          const match = safeRecipes.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
+          if (match) {
+            addRecipeIngredientsToGrocery(match, p.date || todayStr);
+            setActionSuccessNotice(`✓ Zutaten für "${match.title}" zur Einkaufsliste hinzugefügt! 🛒`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'ADD_NOTE': {
+          addNote(p.title || 'Notiz', p.content || p.title || '', p.tag || 'info', true);
+          setActionSuccessNotice(`✓ Notiz "${p.title}" ans Schwarze Brett geheftet! 📌`);
+          return true;
+        }
+
+        case 'DELETE_NOTE': {
+          const match = safeNotes.find(
+            (n) => (p.id && n.id === p.id) || (p.title && n.title.toLowerCase().includes(p.title.toLowerCase()))
+          );
+          if (match) {
+            deleteNote(match.id);
+            setActionSuccessNotice(`✓ Notiz "${match.title}" entfernt.`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'UPDATE_CHILD_DETAILS': {
+          const member = safeMembers.find(
+            (m) => (p.memberId && m.id === p.memberId) || (p.childName && m.name.toLowerCase().includes(p.childName.toLowerCase()))
+          );
+          if (member) {
+            updateMember(member.id, {
+              childDetails: {
+                ...(member.childDetails || {}),
+                ...(p.shoeSize ? { shoeSize: p.shoeSize } : {}),
+                ...(p.clothingSize ? { clothingSize: p.clothingSize } : {}),
+                ...(p.allergies ? { allergies: p.allergies } : {}),
+                ...(p.notes ? { notes: p.notes } : {}),
+              },
+            });
+            setActionSuccessNotice(`✓ Daten für ${member.name} aktualisiert! 🧸`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'AWARD_STARS': {
+          const member = safeMembers.find(
+            (m) => (p.memberId && m.id === p.memberId) || (p.memberName && m.name.toLowerCase().includes(p.memberName.toLowerCase()))
+          );
+          if (member) {
+            awardStars(member.id, Number(p.stars) || 3);
+            setActionSuccessNotice(`✓ ${p.stars || 3} Sterne an ${member.name} vergeben! ⭐🎉`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'ADD_REWARD': {
+          addReward(p.title, Number(p.starsCost) || 15, p.icon || '🎁', p.description);
+          setActionSuccessNotice(`✓ Belohnung "${p.title}" angelegt! 🎁`);
+          return true;
+        }
+
+        case 'CLAIM_REWARD': {
+          const reward = safeRewards.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
+          const child = safeMembers.find(
+            (m) => (p.childName && m.name.toLowerCase().includes(p.childName.toLowerCase())) || m.isChild
+          );
+          if (reward && child) {
+            claimReward(reward.id, child.id);
+            setActionSuccessNotice(`✓ Belohnung "${reward.title}" für ${child.name} eingelöst! 🎁`);
+            return true;
+          }
+          return false;
+        }
+
+        case 'SET_MORNING_BRIEFING': {
+          const briefingObj = {
+            headline: p.headline || `Guten Morgen Familie ${familyName}! ☀️`,
+            summary: p.summary || 'Eure persönlichen Tagesgrüße',
+            highlights: Array.isArray(p.highlights) ? p.highlights : [],
+            tipOfTheDay: p.tipOfTheDay || '',
+            generatedAt: new Date().toISOString(),
+          };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('famly_cached_briefing', JSON.stringify(briefingObj));
+            window.dispatchEvent(new CustomEvent('famly_daily_briefing_updated', { detail: briefingObj }));
+          }
+          setActionSuccessNotice(`✓ Tagesgrüße auf dem Dashboard gespeichert! ☀️`);
+          return true;
+        }
+
+        case 'NAVIGATE': {
+          onClose();
+          if (p.tab === 'settings') onOpenSettings?.();
+          else if (onNavigateTab && p.tab) onNavigateTab(p.tab);
+          return true;
+        }
+
+        default:
+          return false;
+      }
+    } catch (e) {
+      console.warn('handleExecuteAction failed:', e);
+      return false;
+    }
+  };
+
+  // Undo Action
+  const handleUndoAction = (action: CopilotAction) => {
+    try {
+      const p = action.payload || {};
+      if (action.type === 'ADD_GROCERY') {
+        const match = safeGroceries.find((g) => g.name.toLowerCase() === p.name.toLowerCase());
+        if (match) deleteGrocery(match.id);
+      } else if (action.type === 'CHECK_GROCERY') {
+        const match = safeGroceries.find((g) => g.name.toLowerCase() === p.name.toLowerCase());
+        if (match) toggleGrocery(match.id);
+      } else if (action.type === 'SET_MEAL') {
+        const targetDate = p.date || todayStr;
+        setMealSlot(targetDate, p.slot || 'dinner', { title: '' });
+      } else if (action.type === 'ADD_APPOINTMENT' || action.type === 'SCHEDULE_CHORE') {
+        const titleMatch = action.type === 'SCHEDULE_CHORE' ? `🧹 ${p.title}` : p.title;
+        const match = safeAppointments.find((a) => a.title === titleMatch);
+        if (match) deleteAppointment(match.id);
+      } else if (action.type === 'ADD_CHORE') {
+        const match = safeChores.find((c) => c.title === p.title);
+        if (match) deleteChore(match.id);
+      } else if (action.type === 'COMPLETE_CHORE') {
+        const match = safeChores.find((c) => c.title === p.title);
+        if (match) toggleChore(match.id);
+      } else if (action.type === 'ADD_NOTE') {
+        const match = safeNotes.find((n) => n.title === p.title);
+        if (match) deleteNote(match.id);
+      } else if (action.type === 'AWARD_STARS') {
+        const member = safeMembers.find((m) => m.id === p.memberId || m.name === p.memberName);
+        if (member) awardStars(member.id, -Math.abs(Number(p.stars) || 3));
+      }
+      setActionSuccessNotice(`Aktion "${action.description}" rückgängig gemacht.`);
+      setTimeout(() => setActionSuccessNotice(null), 3000);
+    } catch (e) {
+      console.warn('handleUndoAction error:', e);
+    }
+  };
+
+  // Schedule Single Proposal
+  const handleScheduleSingleProposal = (proposal: ChoreScheduleProposal) => {
+    addAppointment({
+      title: `🧹 ${proposal.chore.title}`,
+      date: proposal.proposedDate,
+      time: proposal.proposedTime,
+      durationMinutes: proposal.durationMinutes,
+      memberIds: [proposal.targetMember.id],
+      category: 'family',
+      notes: `Vom Aufgaben-Planer eingetragen (${proposal.reason})`,
+    });
+    setScheduledChoreIds((prev) => new Set([...prev, proposal.chore.id]));
+    confetti({ particleCount: 45, spread: 60, origin: { y: 0.6 } });
+    setActionSuccessNotice(`✓ "${proposal.chore.title}" für ${proposal.proposedTime} Uhr eingetragen! 📅`);
+    setTimeout(() => setActionSuccessNotice(null), 3500);
+  };
+
+  // Schedule All Proposals
+  const handleScheduleAllProposals = () => {
+    let count = 0;
+    choreProposals.forEach((proposal) => {
+      if (!scheduledChoreIds.has(proposal.chore.id)) {
+        addAppointment({
+          title: `🧹 ${proposal.chore.title}`,
+          date: proposal.proposedDate,
+          time: proposal.proposedTime,
+          durationMinutes: proposal.durationMinutes,
+          memberIds: [proposal.targetMember.id],
+          category: 'family',
+          notes: `Vom Aufgaben-Planer eingetragen (${proposal.reason})`,
+        });
+        count++;
+      }
+    });
+    setScheduledChoreIds(new Set(choreProposals.map((p) => p.chore.id)));
+    confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+    setActionSuccessNotice(`✓ ${count} Aufgaben automatisch in freie Zeitfenster eingetragen! 🎉`);
+    setTimeout(() => setActionSuccessNotice(null), 4000);
+  };
+
+  // Handle Send Chat
   const handleSendChat = async (textToSend?: string) => {
     const query = (textToSend || chatInput).trim();
     if (!query || isAiLoading) return;
@@ -188,11 +545,13 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
           recipes: safeRecipes,
           mealPlans: safeMealPlans,
           groceries: safeGroceries,
+          notes: safeNotes,
+          rewards: safeRewards,
         },
         history
       );
 
-      // Auto-execute all actions immediately in the app!
+      // Auto-execute all actions immediately
       const executedActions = (response.actions || []).map((act) => {
         const ok = handleExecuteAction(act);
         return { ...act, autoExecuted: ok };
@@ -201,14 +560,8 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
       if (executedActions.length > 0) {
         triggerHaptic('success');
         try {
-          confetti({
-            particleCount: 45,
-            spread: 60,
-            origin: { y: 0.6 },
-          });
-        } catch {
-          // ignore
-        }
+          confetti({ particleCount: 45, spread: 60, origin: { y: 0.6 } });
+        } catch {}
       }
 
       const assistantMsg: ChatMessage = {
@@ -235,910 +588,171 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     }
   };
 
-  // Execute Action from Chat or Buttons (returns true on success)
-  const handleExecuteAction = (action: CopilotAction): boolean => {
-    try {
-      if (action.type === 'ADD_GROCERY') {
-        addGrocery(action.payload.name, action.payload.store || 'Rewe', action.payload.amount);
-        setActionSuccessNotice(`✓ "${action.payload.name}" auf Einkaufsliste gesetzt! 🛒`);
-        return true;
-      } else if (action.type === 'SET_MEAL') {
-        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
-        const targetSlot = action.payload.slot || 'dinner';
-        setMealSlot(targetDate, targetSlot, {
-          title: action.payload.title,
-          recipeId: action.payload.recipeId,
-        });
-        setActionSuccessNotice(`✓ "${action.payload.title}" in den Essensplan eingetragen! 🍽️`);
-        return true;
-      } else if (action.type === 'ADD_APPOINTMENT') {
-        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
-        addAppointment({
-          title: action.payload.title,
-          date: targetDate,
-          time: action.payload.time || '10:00',
-          memberIds: action.payload.memberIds || (safeMembers[0] ? [safeMembers[0].id] : ['m1']),
-          category: 'family',
-          notes: action.payload.notes || 'Vom Famly-Assistenten eingetragen',
-        });
-        setActionSuccessNotice(`✓ Termin "${action.payload.title}" in Kalender eingetragen! 📅`);
-        return true;
-      } else if (action.type === 'SCHEDULE_CHORE') {
-        const choreObj = safeChores.find((c) => c.id === action.payload.choreId);
-        const proposal = choreProposals.find((p) => p.chore.id === action.payload.choreId);
-        const choreTitle = action.payload.title || choreObj?.title || 'Aufgabe';
-        const targetDate = action.payload.date || proposal?.proposedDate || format(new Date(), 'yyyy-MM-dd');
-        const targetTime = action.payload.time || proposal?.proposedTime || '18:00';
-        const targetMemberId = action.payload.memberId || proposal?.targetMember?.id || choreObj?.assignedMemberId || (safeMembers[0] ? safeMembers[0].id : 'm1');
-
-        addAppointment({
-          title: `🧹 ${choreTitle}`,
-          date: targetDate,
-          time: targetTime,
-          durationMinutes: action.payload.durationMinutes || proposal?.durationMinutes || 20,
-          memberIds: [targetMemberId],
-          category: 'family',
-          notes: `Aufgabe automatisch eingeplant`,
-        });
-        if (action.payload.choreId) {
-          setScheduledChoreIds((prev) => new Set([...prev, action.payload.choreId]));
-        }
-        setActionSuccessNotice(`✓ "${choreTitle}" für ${targetTime} Uhr im Kalender eingetragen! 📅`);
-        return true;
-      } else if (action.type === 'ADD_CHORE') {
-        addChore(
-          action.payload.title,
-          action.payload.assignedMemberId || '',
-          'once',
-          Number(action.payload.stars) || 3,
-          action.payload.assignedMemberId ? [action.payload.assignedMemberId] : [],
-          action.payload.dueDate
-        );
-        setActionSuccessNotice(`✓ Aufgabe "${action.payload.title}" angelegt! ⭐`);
-        return true;
-      } else if (action.type === 'CLEAN_SHOPPING_LIST') {
-        const { removedCount } = cleanPastMealGroceries();
-        setActionSuccessNotice(`✓ Einkaufsliste bereinigt (${removedCount} alte Zutaten entfernt) 🧹`);
-        return true;
-      } else if (action.type === 'SET_MORNING_BRIEFING') {
-        const briefingObj = {
-          headline: action.payload.headline || `Guten Morgen Familie ${familyName}! ☀️`,
-          summary: action.payload.summary || 'Eure persönlichen Tagesgrüße',
-          highlights: Array.isArray(action.payload.highlights) ? action.payload.highlights : [],
-          tipOfTheDay: action.payload.tipOfTheDay || '',
-          generatedAt: new Date().toISOString(),
-        };
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('famly_cached_briefing', JSON.stringify(briefingObj));
-          window.dispatchEvent(new CustomEvent('famly_daily_briefing_updated', { detail: briefingObj }));
-        }
-        setActionSuccessNotice(`✓ Tagesgrüße auf dem Dashboard gespeichert! ☀️`);
-        return true;
-      } else if (action.type === 'NAVIGATE') {
-        onClose();
-        onOpenSettings?.();
-        return true;
-      }
-    } catch (e) {
-      console.warn('handleExecuteAction failed:', e);
-    }
-    return false;
-  };
-
-  // Undo Action
-  const handleUndoAction = (action: CopilotAction) => {
-    try {
-      if (action.type === 'ADD_GROCERY') {
-        const match = safeGroceries.find((g) => g.name.toLowerCase() === action.payload.name.toLowerCase());
-        if (match) deleteGrocery(match.id);
-      } else if (action.type === 'SET_MEAL') {
-        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
-        setMealSlot(targetDate, action.payload.slot || 'dinner', { title: '' });
-      } else if (action.type === 'ADD_APPOINTMENT' || action.type === 'SCHEDULE_CHORE') {
-        const titleMatch = action.type === 'SCHEDULE_CHORE' ? `🧹 ${action.payload.title}` : action.payload.title;
-        const match = safeAppointments.find((a) => a.title === titleMatch);
-        if (match) deleteAppointment(match.id);
-      } else if (action.type === 'ADD_CHORE') {
-        const match = safeChores.find((c) => c.title === action.payload.title);
-        if (match) deleteChore(match.id);
-      }
-      setActionSuccessNotice(`Aktion "${action.description}" rückgängig gemacht.`);
-      setTimeout(() => setActionSuccessNotice(null), 3000);
-    } catch (e) {
-      console.warn('handleUndoAction error:', e);
-    }
-  };
-
-  // Schedule a single chore proposal to the calendar
-  const handleScheduleSingleProposal = (proposal: ChoreScheduleProposal) => {
-    addAppointment({
-      title: `🧹 ${proposal.chore.title}`,
-      date: proposal.proposedDate,
-      time: proposal.proposedTime,
-      durationMinutes: proposal.durationMinutes,
-      memberIds: [proposal.targetMember.id],
-      category: 'family',
-      notes: `Automatisch durch Famly-Assistent eingeplant (Aufgabe: ${proposal.chore.title}, ⭐ ${proposal.chore.stars} Sterne)`,
-    });
-
-    setScheduledChoreIds((prev) => new Set(prev).add(proposal.chore.id));
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
-    });
-    setActionSuccessNotice(`✓ "${proposal.chore.title}" für ${proposal.targetMember.name} am ${proposal.proposedDate} um ${proposal.proposedTime} Uhr eingetragen!`);
-    setTimeout(() => setActionSuccessNotice(null), 3500);
-  };
-
-  // Bulk schedule all uncompleted chores to calendar
-  const handleScheduleAllProposals = () => {
-    const unscheduled = choreProposals.filter((p) => !scheduledChoreIds.has(p.chore.id));
-    if (unscheduled.length === 0) return;
-
-    for (const proposal of unscheduled) {
-      addAppointment({
-        title: `🧹 ${proposal.chore.title}`,
-        date: proposal.proposedDate,
-        time: proposal.proposedTime,
-        durationMinutes: proposal.durationMinutes,
-        memberIds: [proposal.targetMember.id],
-        category: 'family',
-        notes: `Automatisch durch Famly-Assistent eingeplant (Aufgabe: ${proposal.chore.title})`,
-      });
-      setScheduledChoreIds((prev) => new Set(prev).add(proposal.chore.id));
-    }
-
-    confetti({
-      particleCount: 80,
-      spread: 80,
-      origin: { y: 0.6 },
-    });
-    setActionSuccessNotice(`✓ Alle ${unscheduled.length} Aufgaben erfolgreich ohne Terminkonflikte in den Kalender eingetragen! 📅`);
-    setTimeout(() => setActionSuccessNotice(null), 4000);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto scrollbar-none animate-in fade-in">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-stone-200 dark:border-slate-800 animate-in zoom-in-95 my-auto text-stone-900 dark:text-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-stone-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl font-black shadow-xs">
-                ✨
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
-                  <span>Famly Assistent</span>
-                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                    Proaktiv & Live
-                  </span>
-                </h2>
-                <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">
-                  Fragen stellen, Aufgaben in Kalender einplanen & Essensplan abstimmen
-                </p>
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 dark:bg-black/80 backdrop-blur-xs animate-in fade-in">
+      <div className="duo-card w-full max-w-3xl bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden">
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 flex items-center justify-center text-xl shrink-0">
+              ✨
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-500 dark:text-slate-400 flex items-center justify-center font-black transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="flex items-center gap-1.5 p-2 px-4 sm:px-5 bg-stone-50 dark:bg-slate-800/60 border-b border-stone-200 dark:border-slate-800 shrink-0 overflow-x-auto scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setActiveTab('chat')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
-                activeTab === 'chat'
-                  ? 'bg-amber-400 text-stone-900 shadow-xs'
-                  : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Frag Famly (Chat)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('scheduler')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
-                activeTab === 'scheduler'
-                  ? 'bg-amber-400 text-stone-900 shadow-xs'
-                  : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Aufgaben ➔ Kalender</span>
-              {choreProposals.length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-900 text-[10px] flex items-center justify-center font-bold">
-                  {choreProposals.length}
+            <div>
+              <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
+                <span>Famly Assistent</span>
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                  Proaktiv & Live
                 </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('meals')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
-                activeTab === 'meals'
-                  ? 'bg-amber-400 text-stone-900 shadow-xs'
-                  : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <Utensils className="w-3.5 h-3.5" />
-              <span>Essensplan-Helfer</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('custom')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
-                activeTab === 'custom'
-                  ? 'bg-amber-400 text-stone-900 shadow-xs'
-                  : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              <span>Freier Rat</span>
-            </button>
+              </h2>
+              <p className="text-xs font-semibold text-stone-400 dark:text-slate-400">
+                Fragen stellen, Aufgaben & Termine planen, Notizen anheften
+              </p>
+            </div>
           </div>
-
-          {/* Feedback Banner */}
-          {actionSuccessNotice && (
-            <div className="bg-emerald-500 text-white p-2.5 px-4 text-xs font-bold flex items-center justify-between shrink-0 animate-in fade-in">
-              <span>{actionSuccessNotice}</span>
-              <button onClick={() => setActionSuccessNotice(null)} className="p-0.5 hover:opacity-80">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* TAB 1: FRAG FAMLY (CHAT) */}
-          {activeTab === 'chat' && (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              {/* Notice when API key is missing */}
-              {!hasApiKey && (
-                <div className="mx-4 sm:mx-5 mt-3 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 flex items-center justify-between gap-2.5 shrink-0 animate-in fade-in">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 flex items-center justify-center text-sm font-black shrink-0">
-                      <Key className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h5 className="text-xs font-black text-stone-900 dark:text-white truncate">
-                        Google Gemini 3+ Flash Key einrichten
-                      </h5>
-                      <p className="text-[11px] text-stone-600 dark:text-slate-300">
-                        Aktuell im lokalen Modus. Verbinde deinen kostenlosen Key für smarte KI-Antworten.
-                      </p>
-                    </div>
-                  </div>
-                  {onOpenSettings && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onOpenSettings();
-                      }}
-                      className="duo-btn duo-btn-amber px-3 py-1.5 text-xs font-black rounded-xl whitespace-nowrap shrink-0"
-                    >
-                      Key eingeben ➔
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Message Stream */}
-              <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5 scrollbar-thin">
-                {chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-2.5 max-w-[85%] ${
-                      msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-xs font-black ${
-                        msg.role === 'user'
-                          ? 'bg-stone-800 dark:bg-stone-700 text-white'
-                          : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
-                      }`}
-                    >
-                      {msg.role === 'user' ? '👤' : '✨'}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div
-                        className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-amber-400 text-stone-950 font-semibold rounded-tr-xs shadow-xs'
-                            : 'bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-slate-100 rounded-tl-xs border border-stone-200/60 dark:border-slate-700'
-                        }`}
-                      >
-                        <MarkdownMessage text={msg.text} isUser={msg.role === 'user'} />
-                      </div>
-
-                      {/* Attached Action Cards (Auto-Executed with 1-click Undo) */}
-                      {msg.actions && msg.actions.length > 0 && (
-                        <div className="flex flex-col gap-1.5 pt-1">
-                          {msg.actions.map((act, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 text-xs font-bold text-emerald-900 dark:text-emerald-200 shadow-2xs animate-in fade-in"
-                            >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-emerald-600 dark:text-emerald-400 font-black">✓</span>
-                                <span className="truncate">{act.description}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleUndoAction(act)}
-                                className="text-[11px] font-black underline text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 shrink-0 cursor-pointer flex items-center gap-1"
-                              >
-                                <Undo2 className="w-3 h-3" />
-                                <span>Rückgängig</span>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {isAiLoading && (
-                  <div className="flex gap-2.5 max-w-[85%] mr-auto items-center">
-                    <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0 text-xs">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    </div>
-                    <div className="p-3 rounded-2xl bg-stone-100 dark:bg-slate-800 text-xs text-stone-500 dark:text-slate-400 font-semibold animate-pulse">
-                      Famly denkt nach...
-                    </div>
-                  </div>
-                )}
-                <div ref={chatBottomRef} />
-              </div>
-
-              {/* Quick Prompt Chips */}
-              <div className="p-2.5 px-4 bg-stone-50/80 dark:bg-slate-800/40 border-t border-stone-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleSendChat('Was steht heute an?')}
-                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 shrink-0"
-                >
-                  📅 Was steht heute an?
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendChat('Was essen wir heute laut Essensplan?')}
-                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 shrink-0"
-                >
-                  🍲 Was essen wir heute?
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendChat('Welche Aufgaben sind noch offen?')}
-                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 shrink-0"
-                >
-                  🧹 Offene Aufgaben
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendChat('Wer hat die meisten Sterne?')}
-                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 shrink-0"
-                >
-                  ⭐ Sternen-Rangliste
-                </button>
-              </div>
-
-              {/* Chat Input Bar */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendChat();
-                }}
-                className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-stone-100 dark:border-slate-800 flex items-center gap-2 shrink-0"
-              >
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Frag etwas zu Terminen, Essensplan, Aufgaben..."
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-stone-100 dark:bg-slate-800 border border-transparent focus:border-amber-500 text-xs sm:text-sm text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim() || isAiLoading}
-                  className="duo-btn duo-btn-amber px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-1.5 disabled:opacity-40"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Senden</span>
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* TAB 2: AUFGABEN ➔ KALENDER (SMART SCHEDULER) */}
-          {activeTab === 'scheduler' && (
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 scrollbar-thin">
-              <div className="duo-card p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-black text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    Proaktiver Aufgaben-Terminplaner
-                  </h4>
-                  <p className="text-xs text-amber-800 dark:text-amber-300">
-                    Findet freie Zeitfenster ohne Terminkollisionen für alle offenen Aufgaben.
-                  </p>
-                </div>
-
-                {choreProposals.filter((p) => !scheduledChoreIds.has(p.chore.id)).length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleScheduleAllProposals}
-                    className="duo-btn duo-btn-green px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shrink-0"
-                  >
-                    <CalendarCheck className="w-4 h-4" />
-                    <span>Alle {choreProposals.filter((p) => !scheduledChoreIds.has(p.chore.id)).length} Aufgaben einplanen</span>
-                  </button>
-                )}
-              </div>
-
-              {choreProposals.length === 0 ? (
-                <div className="text-center py-12 space-y-2">
-                  <span className="text-4xl">🎉</span>
-                  <h3 className="text-base font-black">Keine offenen Aufgaben!</h3>
-                  <p className="text-xs text-stone-500 dark:text-slate-400">
-                    Alle Familienaufgaben sind bereits erledigt oder im Kalender eingeplant.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {choreProposals.map((proposal) => {
-                    const isAlreadyScheduled = scheduledChoreIds.has(proposal.chore.id);
-
-                    return (
-                      <div
-                        key={proposal.id}
-                        className={`p-4 rounded-2xl border transition-all ${
-                          isAlreadyScheduled
-                            ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 opacity-80'
-                            : 'bg-white dark:bg-slate-800/80 border-stone-200 dark:border-slate-700 shadow-xs'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-black text-stone-900 dark:text-white">
-                                🧹 {proposal.chore.title}
-                              </span>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                ⭐ {proposal.chore.stars} Sterne
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                                👤 {proposal.targetMember.name}
-                              </span>
-                            </div>
-
-                            <p className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-stone-400" />
-                              <span>Vorschlag: <strong>{proposal.reason}</strong></span>
-                            </p>
-                          </div>
-
-                          <div className="shrink-0">
-                            {isAlreadyScheduled ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl bg-emerald-100/70 dark:bg-emerald-900/40">
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                Im Kalender eingetragen
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleScheduleSingleProposal(proposal)}
-                                className="duo-btn duo-btn-amber px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 w-full sm:w-auto justify-center"
-                              >
-                                <Calendar className="w-3.5 h-3.5" />
-                                <span>In Kalender einplanen</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: ESSENSPLAN-HELFER */}
-          {activeTab === 'meals' && (
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 scrollbar-thin">
-              {/* Today's Meal Plan Card */}
-              <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-stone-400 dark:text-slate-400">
-                    Heute im Essensplan ({format(new Date(), 'EEEE, d. MMMM', { locale: de })})
-                  </span>
-                  <span
-                    className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                      todayPlan?.dinner?.title
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
-                  >
-                    {todayPlan?.dinner?.title ? '✓ Bereits geplant (Kein Konflikt)' : 'Noch offen'}
-                  </span>
-                </div>
-
-                {todayPlan?.dinner?.title ? (
-                  <div className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-700 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🍽️</span>
-                      <div>
-                        <h4 className="text-sm font-black text-stone-900 dark:text-white">
-                          {todayPlan.dinner.title}
-                        </h4>
-                        <p className="text-xs text-stone-500 dark:text-slate-400">
-                          Fest für das heutige Abendessen vorgesehen.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/50 space-y-2">
-                    <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                      Für heute Abend ist noch kein Gericht im Essensplan eingetragen!
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {safeRecipes.slice(0, 3).map((rec) => (
-                        <button
-                          key={rec.id}
-                          type="button"
-                          onClick={() => {
-                            setMealSlot(todayStr, 'dinner', {
-                              title: rec.title,
-                              recipeId: rec.id,
-                            });
-                            setActionSuccessNotice(`✓ "${rec.title}" wurde als heutiges Abendessen eingetragen!`);
-                            setTimeout(() => setActionSuccessNotice(null), 3500);
-                          }}
-                          className="duo-btn duo-btn-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-amber-600" />
-                          <span>{rec.title} ({rec.prepTime})</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Weekly Open Slot Overview */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2">
-                  <span>Wochen-Essensplan Übersicht</span>
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {[0, 1, 2, 3, 4, 5, 6].map((dayOffset) => {
-                    const targetDate = addDays(new Date(), dayOffset);
-                    const dStr = format(targetDate, 'yyyy-MM-dd');
-                    const dayName = format(targetDate, 'EEEE', { locale: de });
-                    const plan = safeMealPlans.find((mp) => mp && mp.date === dStr);
-                    const hasDinner = Boolean(plan?.dinner?.title);
-
-                    return (
-                      <div
-                        key={dStr}
-                        className={`p-3 rounded-2xl border flex items-center justify-between gap-2 ${
-                          hasDinner
-                            ? 'bg-white dark:bg-slate-800/80 border-stone-200 dark:border-slate-700'
-                            : 'bg-stone-50 dark:bg-slate-800/40 border-dashed border-stone-300 dark:border-slate-700'
-                        }`}
-                      >
-                        <div>
-                          <span className="text-[11px] font-black uppercase text-stone-400 dark:text-slate-400 block">
-                            {dayOffset === 0 ? 'Heute' : dayOffset === 1 ? 'Morgen' : dayName}
-                          </span>
-                          <span className="text-xs font-bold text-stone-800 dark:text-white">
-                            {plan?.dinner?.title || '— Offener Tag —'}
-                          </span>
-                        </div>
-
-                        {!hasDinner && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const randomRecipe = safeRecipes[Math.floor(Math.random() * safeRecipes.length)] || safeRecipes[0];
-                              if (randomRecipe) {
-                                setMealSlot(dStr, 'dinner', {
-                                  title: randomRecipe.title,
-                                  recipeId: randomRecipe.id,
-                                });
-                                setActionSuccessNotice(`✓ "${randomRecipe.title}" für ${dayName} eingetragen!`);
-                                setTimeout(() => setActionSuccessNotice(null), 3500);
-                              }
-                            }}
-                            className="duo-btn duo-btn-amber px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>Rezept vorschlagen</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: AUTONOMER KI-FAMILIENRAT */}
-          {activeTab === 'custom' && (
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 scrollbar-thin">
-              {/* Info Header */}
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-1.5">
-                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-black text-xs sm:text-sm">
-                  <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span>Autonomer KI-Familienrat (Gemini 3+ Flash)</span>
-                </div>
-                <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-                  Ihr müsst keine Optionen selbst eintippen! Nennt einfach euer Dilemma: Die KI recherchiert passende Vorschläge, gleicht sie mit eurem Familien-Gedächtnis & Kalender ab und berechnet Vor- und Nachteile.
-                </p>
-              </div>
-
-              {/* Quick Topic Chips */}
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400">
-                  Schnelle Ideen / Häufige Familienfragen
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: '🌧️ Regentags-Plan', q: 'Was machen wir heute Nachmittag bei schlechtem Wetter / Regen mit den Kindern?' },
-                    { label: '🍿 Familienfilm für heute', q: 'Welchen Familienfilm können wir heute Abend schauen, der allen Spaß macht?' },
-                    { label: '🎯 Wochenend-Ausflug', q: 'Was ist ein schöner, stressfreier Familienausflug für das Wochenende?' },
-                    { label: '🍕 Schnelles Abendessen', q: 'Was kochen wir heute Abend schnell und unkompliziert für die ganze Familie?' },
-                    { label: '🧹 Aufgaben fair verteilen', q: 'Wie teilen wir die anstehenden Haushaltsaufgaben heute fair und motivierend auf?' },
-                  ].map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      onClick={() => handleRunDecision(chip.q)}
-                      className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 transition-colors shrink-0"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Question Input Form */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRunDecision();
-                }}
-                className="space-y-2 pt-1"
-              >
-                <label className="block text-xs font-black uppercase text-stone-500 dark:text-slate-400">
-                  Frage oder Dilemma an den Rat
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customQuestion}
-                    onChange={(e) => setCustomQuestion(e.target.value)}
-                    placeholder="z.B. Welches Spiel spielen wir heute oder wohin geht der Sonntagsausflug?"
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs sm:text-sm font-bold bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!customQuestion.trim() || isDeciding}
-                    className="duo-btn duo-btn-amber px-4 py-2.5 text-xs font-black rounded-xl flex items-center gap-1.5 disabled:opacity-50 shrink-0"
-                  >
-                    {isDeciding ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5" />
-                    )}
-                    <span>{isDeciding ? 'Berät...' : 'Rat einholen'}</span>
-                  </button>
-                </div>
-              </form>
-
-              {/* Memory Indicator */}
-              {familyMemories.length > 0 && (
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-stone-400 dark:text-slate-500 pt-0.5">
-                  <span className="text-amber-500">🧠</span>
-                  <span>Langzeit-Gedächtnis aktiv ({familyMemories.length} Familienfakten fließen in die Empfehlung ein)</span>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {isDeciding && (
-                <div className="text-center py-10 space-y-2">
-                  <div className="w-10 h-10 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl font-black">
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                  </div>
-                  <h4 className="text-sm font-black text-stone-800 dark:text-slate-200">
-                    Der Familienrat berät sich...
-                  </h4>
-                  <p className="text-xs text-stone-500 dark:text-slate-400">
-                    Gemini 3+ Flash wiegt Möglichkeiten, Wetter, Zeiten und Vorlieben ab.
-                  </p>
-                </div>
-              )}
-
-              {/* Decision Result Display */}
-              {!isDeciding && decisionResult && (
-                <div className="space-y-4 pt-2">
-                  {/* Winner Card */}
-                  <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-br from-amber-50 via-orange-50 to-amber-100/60 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/20 border-2 border-amber-300 dark:border-amber-700/60 shadow-xs space-y-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[11px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                        <span>🏆</span>
-                        <span>Empfehlung des Familienrats</span>
-                      </span>
-                      <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
-                        {decisionResult.winner.percentage}% Übereinstimmung
-                      </span>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base sm:text-lg font-black text-amber-950 dark:text-white">
-                          {decisionResult.winner.title}
-                        </h3>
-                        {decisionResult.winner.badge && (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-slate-700">
-                            {decisionResult.winner.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-amber-900/80 dark:text-amber-200/80 mt-1 leading-relaxed">
-                        {decisionResult.summary}
-                      </p>
-                    </div>
-
-                    {/* Pros & Cons */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
-                      {decisionResult.winner.pros && decisionResult.winner.pros.length > 0 && (
-                        <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200 dark:border-slate-800 space-y-1">
-                          <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
-                            Vorteile:
-                          </span>
-                          <ul className="space-y-0.5 text-stone-700 dark:text-slate-300">
-                            {decisionResult.winner.pros.map((pro, pIdx) => (
-                              <li key={pIdx} className="flex items-start gap-1.5">
-                                <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                <span>{pro}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {decisionResult.winner.cons && decisionResult.winner.cons.length > 0 && (
-                        <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200 dark:border-slate-800 space-y-1">
-                          <span className="text-[10px] font-black uppercase text-stone-500 dark:text-slate-400">
-                            Zu bedenken:
-                          </span>
-                          <ul className="space-y-0.5 text-stone-600 dark:text-slate-400">
-                            {decisionResult.winner.cons.map((con, cIdx) => (
-                              <li key={cIdx} className="flex items-start gap-1.5">
-                                <span className="text-stone-400 shrink-0">•</span>
-                                <span>{con}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-                          setActionSuccessNotice(`Entscheidung "${decisionResult.winner.title}" angenommen! 🚀`);
-                          setTimeout(() => setActionSuccessNotice(null), 3500);
-                        }}
-                        className="duo-btn duo-btn-green px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5"
-                      >
-                        <Check className="w-4 h-4" />
-                        <span>Entscheidung annehmen</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Alternative Options */}
-                  {decisionResult.options && decisionResult.options.length > 1 && (
-                    <div className="space-y-2 pt-1">
-                      <h4 className="text-xs font-black uppercase text-stone-500 dark:text-slate-400">
-                        Weitere abgewogene Optionen ({decisionResult.options.length - 1})
-                      </h4>
-
-                      <div className="space-y-2">
-                        {decisionResult.options
-                          .filter((opt) => opt.id !== decisionResult.winner.id)
-                          .map((opt) => (
-                            <div
-                              key={opt.id}
-                              className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
-                            >
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs sm:text-sm font-black text-stone-900 dark:text-white">
-                                    {opt.title}
-                                  </span>
-                                  {opt.badge && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300">
-                                      {opt.badge}
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] font-black text-stone-400">
-                                    {opt.percentage}% Eignung
-                                  </span>
-                                </div>
-                                {opt.pros && opt.pros.length > 0 && (
-                                  <p className="text-[11px] text-stone-500 dark:text-slate-400">
-                                    Pluspunkt: {opt.pros[0]}
-                                  </p>
-                                )}
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
-                                  setActionSuccessNotice(`Alternative "${opt.title}" gewählt! 🚀`);
-                                  setTimeout(() => setActionSuccessNotice(null), 3500);
-                                }}
-                                className="duo-btn duo-btn-white px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 self-end sm:self-auto"
-                              >
-                                Stattdessen wählen
-                              </button>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="p-3 sm:p-4 bg-stone-50 dark:bg-slate-900 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-            <span className="text-[11px] font-semibold text-stone-400 dark:text-slate-500">
-              💡 Tipp: Frag den Assistenten nach offenen Aufgaben oder Essenswünschen
-            </span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2 rounded-xl text-xs font-black bg-stone-200 dark:bg-slate-800 hover:bg-stone-300 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 transition-colors"
-            >
-              Schließen
-            </button>
-          </div>
-
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-stone-500 dark:text-slate-400 flex items-center justify-center font-black transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-1.5 p-2 px-4 sm:px-5 bg-stone-50 dark:bg-slate-800/60 border-b border-stone-200 dark:border-slate-800 shrink-0 overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('chat')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
+              activeTab === 'chat'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
+                : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Frag Famly (Chat)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('scheduler')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
+              activeTab === 'scheduler'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
+                : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Aufgaben ➔ Kalender</span>
+            {choreProposals.length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-900 text-[10px] flex items-center justify-center font-bold">
+                {choreProposals.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('meals')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
+              activeTab === 'meals'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
+                : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5" />
+            <span>Essensplan-Helfer</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('custom')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shrink-0 ${
+              activeTab === 'custom'
+                ? 'bg-amber-400 text-stone-900 shadow-xs'
+                : 'text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Freier Rat</span>
+          </button>
+        </div>
+
+        {/* Feedback Banner */}
+        {actionSuccessNotice && (
+          <div className="bg-emerald-500 text-white p-2.5 px-4 text-xs font-bold flex items-center justify-between shrink-0 animate-in fade-in">
+            <span>{actionSuccessNotice}</span>
+            <button onClick={() => setActionSuccessNotice(null)} className="p-0.5 hover:opacity-80">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Tab 1: Chat */}
+        {activeTab === 'chat' && (
+          <AssistantChatTab
+            chatMessages={chatMessages}
+            chatInput={chatInput}
+            setChatInput={setChatInput}
+            isAiLoading={isAiLoading}
+            onSendChat={handleSendChat}
+            onUndoAction={handleUndoAction}
+            onExecuteAction={handleExecuteAction}
+            hasApiKey={hasApiKey}
+            onOpenSettings={onOpenSettings}
+            onClose={onClose}
+          />
+        )}
+
+        {/* Tab 2: Scheduler */}
+        {activeTab === 'scheduler' && (
+          <AssistantSchedulerTab
+            choreProposals={choreProposals}
+            scheduledChoreIds={scheduledChoreIds}
+            onScheduleSingleProposal={handleScheduleSingleProposal}
+            onScheduleAllProposals={handleScheduleAllProposals}
+          />
+        )}
+
+        {/* Tab 3: Meals */}
+        {activeTab === 'meals' && (
+          <AssistantMealsTab
+            safeMealPlans={safeMealPlans}
+            safeRecipes={safeRecipes}
+            todayStr={todayStr}
+            todayPlan={todayPlan}
+            onSetMealSlot={(date, slot, data) => setMealSlot(date, slot, data)}
+            onSuccessNotice={(msg) => {
+              setActionSuccessNotice(msg);
+              setTimeout(() => setActionSuccessNotice(null), 3500);
+            }}
+          />
+        )}
+
+        {/* Tab 4: Autonomous Decider */}
+        {activeTab === 'custom' && (
+          <AssistantAdviceTab
+            customQuestion={customQuestion}
+            setCustomQuestion={setCustomQuestion}
+            isDeciding={isDeciding}
+            decisionResult={decisionResult}
+            handleRunDecision={handleRunDecision}
+            familyMemories={familyMemories}
+            onSuccessNotice={(msg) => {
+              setActionSuccessNotice(msg);
+              setTimeout(() => setActionSuccessNotice(null), 3500);
+            }}
+          />
+        )}
       </div>
+    </div>
   );
 };
 
 export const FamilyAssistantModal: React.FC<FamilyAssistantModalProps> = (props) => {
   if (!props.isOpen) return null;
-
   return (
     <ModalPortal>
-      <ErrorBoundary fallbackTitle="Der Famly-Assistent konnte nicht geladen werden">
+      <ErrorBoundary>
         <FamilyAssistantModalContent {...props} />
       </ErrorBoundary>
     </ModalPortal>

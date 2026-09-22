@@ -5,6 +5,8 @@ import {
   Recipe,
   MealPlanDay,
   GroceryItem,
+  PinnedNote,
+  Reward,
   isAppointmentOnDate,
 } from '../types';
 import { getAIConfig, resolveGeminiFlashModel } from './aiRecipeService';
@@ -19,6 +21,8 @@ export interface CopilotFamilyData {
   recipes: Recipe[];
   mealPlans: MealPlanDay[];
   groceries: GroceryItem[];
+  notes?: PinnedNote[];
+  rewards?: Reward[];
 }
 
 export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): CopilotFamilyData {
@@ -30,6 +34,8 @@ export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): Copilot
     recipes: Array.isArray(data?.recipes) ? data.recipes.filter(Boolean) : [],
     mealPlans: Array.isArray(data?.mealPlans) ? data.mealPlans.filter(Boolean) : [],
     groceries: Array.isArray(data?.groceries) ? data.groceries.filter(Boolean) : [],
+    notes: Array.isArray(data?.notes) ? data.notes.filter(Boolean) : [],
+    rewards: Array.isArray(data?.rewards) ? data.rewards.filter(Boolean) : [],
   };
 }
 
@@ -37,9 +43,26 @@ export interface CopilotAction {
   type:
     | 'SCHEDULE_CHORE'
     | 'ADD_CHORE'
+    | 'COMPLETE_CHORE'
+    | 'DELETE_CHORE'
     | 'ADD_GROCERY'
+    | 'CHECK_GROCERY'
+    | 'DELETE_GROCERY'
+    | 'CLEAR_CHECKED_GROCERIES'
+    | 'ADD_ALWAYS_IN_STOCK'
     | 'SET_MEAL'
+    | 'CLEAR_MEAL'
+    | 'ADD_RECIPE_TO_GROCERIES'
+    | 'ADD_RECIPE'
+    | 'FAVORITE_RECIPE'
     | 'ADD_APPOINTMENT'
+    | 'DELETE_APPOINTMENT'
+    | 'ADD_NOTE'
+    | 'DELETE_NOTE'
+    | 'UPDATE_CHILD_DETAILS'
+    | 'AWARD_STARS'
+    | 'ADD_REWARD'
+    | 'CLAIM_REWARD'
     | 'CLEAN_SHOPPING_LIST'
     | 'SET_MORNING_BRIEFING'
     | 'NAVIGATE';
@@ -184,6 +207,16 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
   const dayAfterTomorrow = addDays(today, 2);
   const dayAfterTomorrowStr = format(dayAfterTomorrow, 'yyyy-MM-dd');
 
+  // Pinned Notes & Notice board
+  const notesSummary = (data.notes || [])
+    .map((n) => ` - [${n.tag.toUpperCase()}] "${n.title}": ${n.content}`)
+    .join('\n');
+
+  // Rewards catalog
+  const rewardsSummary = (data.rewards || [])
+    .map((r) => ` - ${r.icon} "${r.title}" (${r.starsCost} ⭐)`)
+    .join('\n');
+
   return `
 HEUTIGES DATUM: ${todayGerman} (${todayStr})
 MORGEN IST: ${tomorrowGerman} (${tomorrowStr})
@@ -216,6 +249,12 @@ ${openChores || 'Alle Aufgaben erledigt!'}
 
 EINKAUFSLISTE (OFFEN):
 ${uncheckedGroceries || 'Einkaufsliste ist leer'}
+
+SCHWARZES BRETT & NOTIZEN:
+${notesSummary || 'Keine Notizen angeheftet'}
+
+BELOHNUNGS-KATALOG:
+${rewardsSummary || 'Keine Belohnungen hinterlegt'}
 `.trim();
 }
 
@@ -546,11 +585,228 @@ export function queryLocalFamilyAssistant(
         source: 'local',
       };
     }
+
+    const sizes = data.members.filter((m) => m.childDetails?.clothingSize || m.childDetails?.shoeSize);
+    if (sizes.length > 0) {
+      const sizeStr = sizes.map((m) => `• **${m.name}**: Kleidung ${m.childDetails?.clothingSize || '-'}, Schuhe ${m.childDetails?.shoeSize || '-'}`).join('\n');
+      return {
+        text: `Hinterlegte Größen der Kinder:\n\n${sizeStr}`,
+        source: 'local',
+      };
+    }
+  }
+
+  // 6. Notes & Notice Board (Schwarzes Brett)
+  if (q.includes('notiz') || q.includes('pinnwand') || q.includes('schwarzes brett') || q.includes('zettel')) {
+    if (q.includes('lösch') || q.includes('entfern') || q.includes('streich') || q.includes('abnehmen')) {
+      const matchNote = (data.notes || []).find((n) => q.includes(n.title.toLowerCase()) || q.includes(n.content.toLowerCase()));
+      const noteTitle = matchNote ? matchNote.title : 'Notiz';
+      return {
+        text: `Ich habe die Notiz **"${noteTitle}"** vom Schwarzen Brett entfernt. 📌`,
+        actions: [
+          {
+            type: 'DELETE_NOTE',
+            description: `Notiz "${noteTitle}" löschen`,
+            payload: { id: matchNote?.id, title: noteTitle },
+          },
+        ],
+        source: 'local',
+      };
+    } else {
+      let tag: 'info' | 'urgent' | 'fun' | 'wifi' = 'info';
+      if (q.includes('wifi') || q.includes('wlan')) tag = 'wifi';
+      else if (q.includes('wichtig') || q.includes('dringend')) tag = 'urgent';
+      else if (q.includes('lustig') || q.includes('spaß')) tag = 'fun';
+
+      let content = query
+        .replace(/häng(e)? (eine )?notiz ans schwarze brett/gi, '')
+        .replace(/notiz (anheften|erstellen|schreiben)/gi, '')
+        .replace(/schwarzes brett/gi, '')
+        .replace(/notiz/gi, '')
+        .replace(/mit dem inhalt/gi, '')
+        .replace(/mit/gi, '')
+        .trim();
+      if (!content || content.length < 2) content = 'Neue Notiz';
+      const title = content.length > 25 ? content.slice(0, 22) + '...' : content;
+      return {
+        text: `Ich habe die Notiz **"${title}"** direkt ans Schwarze Brett geheftet! 📌`,
+        actions: [
+          {
+            type: 'ADD_NOTE',
+            description: `Notiz "${title}" anheften`,
+            payload: { title, content, tag },
+          },
+        ],
+        source: 'local',
+      };
+    }
+  }
+
+  // 7. Child details update (sizes, allergies, notes)
+  if (
+    (q.includes('schuhgröße') || q.includes('kleidergröße') || q.includes('allergie') || q.includes('größe')) &&
+    (data.members || []).some((m) => q.includes(m.name.toLowerCase()))
+  ) {
+    const member = data.members.find((m) => q.includes(m.name.toLowerCase()));
+    if (member) {
+      const updates: any = { childName: member.name, memberId: member.id };
+      let infoText = '';
+
+      const shoeMatch = q.match(/schuhgröße\s*(\d{2})/i) || q.match(/schuhe\s*(\d{2})/i) || q.match(/(\d{2})\s*schuh/i);
+      if (shoeMatch) {
+        updates.shoeSize = shoeMatch[1];
+        infoText += `Schuhgröße: ${shoeMatch[1]}`;
+      }
+
+      const clothingMatch = q.match(/kleidergröße\s*(\d{2,3})/i) || q.match(/größe\s*(\d{2,3})/i);
+      if (clothingMatch && !shoeMatch) {
+        updates.clothingSize = clothingMatch[1];
+        infoText += `Kleidergröße: ${clothingMatch[1]}`;
+      }
+
+      if (q.includes('allergie') || q.includes('allergisch')) {
+        const allergyText = query.split(/allergie|allergisch/i)[1]?.replace(/gegen|auf/i, '')?.trim() || 'Hinterlegt';
+        updates.allergies = allergyText;
+        infoText += `Allergie: ${allergyText}`;
+      }
+
+      return {
+        text: `Alles klar! Ich habe die Daten für **${member.name}** aktualisiert (${infoText || 'Angaben gespeichert'}). 🧸`,
+        actions: [
+          {
+            type: 'UPDATE_CHILD_DETAILS',
+            description: `Details für ${member.name} aktualisieren`,
+            payload: updates,
+          },
+        ],
+        source: 'local',
+      };
+    }
+  }
+
+  // 8. Award stars
+  if (
+    (q.includes('stern') || q.includes('sterne')) &&
+    (q.includes('gib') || q.includes('schenk') || q.includes('belohn') || q.includes('plus') || q.includes('gutschreib'))
+  ) {
+    const member = (data.members || []).find((m) => q.includes(m.name.toLowerCase()));
+    const starNumMatch = q.match(/(\d+)\s*stern/i);
+    const starsCount = starNumMatch ? parseInt(starNumMatch[1], 10) : 3;
+    const targetMember = member || data.members.find((m) => m.isChild) || data.members[0];
+
+    if (targetMember) {
+      return {
+        text: `Klasse! Ich habe **${targetMember.name}** gerade **${starsCount} Sterne** gutgeschrieben! ⭐🎉`,
+        actions: [
+          {
+            type: 'AWARD_STARS',
+            description: `${starsCount} Sterne an ${targetMember.name} vergeben`,
+            payload: {
+              memberId: targetMember.id,
+              memberName: targetMember.name,
+              stars: starsCount,
+              reason: 'Vom Assistenten vergeben',
+            },
+          },
+        ],
+        source: 'local',
+      };
+    }
+  }
+
+  // 9. Groceries check off or remove
+  if (
+    (q.includes('gekauft') || q.includes('im korb') || q.includes('streich') || q.includes('abgehakt') || q.includes('lösch')) &&
+    (data.groceries || []).some((g) => q.includes(g.name.toLowerCase()))
+  ) {
+    const matched = (data.groceries || []).find((g) => q.includes(g.name.toLowerCase()));
+    if (matched) {
+      const isDelete = q.includes('lösch') || q.includes('entfern') || q.includes('streich');
+      if (isDelete) {
+        return {
+          text: `Ich habe **"${matched.name}"** von der Einkaufsliste gelöscht. 🛒`,
+          actions: [
+            {
+              type: 'DELETE_GROCERY',
+              description: `"${matched.name}" von Einkaufsliste löschen`,
+              payload: { id: matched.id, name: matched.name },
+            },
+          ],
+          source: 'local',
+        };
+      } else {
+        return {
+          text: `Super! Ich habe **"${matched.name}"** als erledigt abgehakt. ✓🛒`,
+          actions: [
+            {
+              type: 'CHECK_GROCERY',
+              description: `"${matched.name}" als erledigt markieren`,
+              payload: { id: matched.id, name: matched.name },
+            },
+          ],
+          source: 'local',
+        };
+      }
+    }
+  }
+
+  // 10. Delete Appointment
+  if (
+    (q.includes('termin') || q.includes('reminder') || q.includes('erinnerung')) &&
+    (q.includes('lösch') || q.includes('absag') || q.includes('entfern') || q.includes('streich') || q.includes('stornier'))
+  ) {
+    const matchApp = (data.appointments || []).find((a) => q.includes(a.title.toLowerCase()));
+    const title = matchApp ? matchApp.title : 'Termin';
+    return {
+      text: `Alles klar, ich habe den Termin **"${title}"** aus dem Kalender gelöscht. 📅`,
+      actions: [
+        {
+          type: 'DELETE_APPOINTMENT',
+          description: `Termin "${title}" löschen`,
+          payload: { id: matchApp?.id, title },
+        },
+      ],
+      source: 'local',
+    };
+  }
+
+  // 11. Complete or delete chore
+  if (
+    (q.includes('aufgabe') || q.includes('chore')) &&
+    (q.includes('erledigt') || q.includes('gemacht') || q.includes('fertig') || q.includes('lösch') || q.includes('entfern'))
+  ) {
+    const matchChore = (data.chores || []).find((c) => q.includes(c.title.toLowerCase()));
+    const choreTitle = matchChore ? matchChore.title : 'Aufgabe';
+    if (q.includes('lösch') || q.includes('entfern')) {
+      return {
+        text: `Ich habe die Aufgabe **"${choreTitle}"** gelöscht. 🧹`,
+        actions: [
+          {
+            type: 'DELETE_CHORE',
+            description: `Aufgabe "${choreTitle}" löschen`,
+            payload: { id: matchChore?.id, title: choreTitle },
+          },
+        ],
+        source: 'local',
+      };
+    } else {
+      return {
+        text: `Klasse gemacht! Ich habe die Aufgabe **"${choreTitle}"** als erledigt markiert! ⭐`,
+        actions: [
+          {
+            type: 'COMPLETE_CHORE',
+            description: `Aufgabe "${choreTitle}" abhaken`,
+            payload: { id: matchChore?.id, title: choreTitle },
+          },
+        ],
+        source: 'local',
+      };
+    }
   }
 
   // Default fallback response
   return {
-    text: `Hallo Familie ${data.familyName}! 👋 Ich habe Zugriff auf euren Kalender, Essensplan, Aufgaben und die Einkaufsliste.\n\nDu kannst mich zum Beispiel fragen:\n• *"Was essen wir heute laut Essensplan?"*\n• *"Was steht morgen an?"*\n• *"Welche Aufgaben sind noch offen?"*\n• *"Plane Aufgaben in freie Kalender-Slots ein"*\n• *"Setze Milch auf die Einkaufsliste"*`,
+    text: `Hallo Familie ${data.familyName}! 👋 Ich bin euer intelligenter Familien-Assistent.\n\nIch kann jede Aktion im System für dich ausführen:\n• 📅 *"Erinnere mich morgen um 07:30 an die Tasche"*\n• 📌 *"Häng eine Notiz ans Schwarze Brett mit dem WLAN-Passwort 'Sommer2026'"*\n• 🧸 *"Ida hat jetzt Schuhgröße 31"*\n• ⭐ *"Gib Leo 3 Sterne fürs Zimmer aufräumen"*\n• 🛒 *"Milch ist gekauft"* oder *"Streiche Eier von der Liste"*\n• 🍲 *"Plan Lachs-Bowl für heute Abend ein"*`,
     source: 'local',
   };
 }
@@ -611,15 +867,41 @@ WICHTIGE VERHALTENSREGELN:
      3. Bestimme das genaue Datum anhand von "MORGEN IST: ..." aus dem Kontext und die passende Uhrzeit ("morgen früh" = 07:30, "vormittags" = 09:30 oder die genannte Uhrzeit).
      4. Formuliere einen prägnanten Titel im Infinitiv (z.B. "Tasche mitnehmen").
      5. Bestätige dem Nutzer kurz und herzlich, dass der Reminder direkt im Kalender eingetragen wurde (z.B. "Erledigt! Ich habe dir für morgen um 07:30 Uhr die Erinnerung '**Tasche mitnehmen**' direkt in den Kalender eingetragen. 📅").
-6. AUTOMATISCHE AKTIONEN IM SYSTEM:
+6. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
    Um Aktionen im System direkt auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
-   * [ACTION:ADD_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD","time":"HH:MM","notes":"Notiz"}]
-   * [ACTION:SET_MEAL:{"date":"YYYY-MM-DD","slot":"dinner","title":"Gerichtname"}]
-   * [ACTION:ADD_GROCERY:{"name":"Artikel","store":"Rewe","amount":"Menge"}]
-   * [ACTION:SCHEDULE_CHORE:{"title":"Aufgabe","date":"YYYY-MM-DD","time":"HH:MM","durationMinutes":15}]
-   * [ACTION:ADD_CHORE:{"title":"Aufgabe","stars":3}]
-   * [ACTION:CLEAN_SHOPPING_LIST:{}]
-   * [ACTION:SET_MORNING_BRIEFING:{"headline":"Titel","summary":"Text","highlights":["Spruch 1","Spruch 2"]}]
+   * Termine & Kalender:
+     - [ACTION:ADD_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD","time":"HH:MM","notes":"Notiz"}]
+     - [ACTION:DELETE_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD"}]
+     - [ACTION:SCHEDULE_CHORE:{"title":"Aufgabe","date":"YYYY-MM-DD","time":"HH:MM","durationMinutes":15}]
+   * Einkaufsliste & Vorräte:
+     - [ACTION:ADD_GROCERY:{"name":"Artikel","store":"Rewe","amount":"Menge"}]
+     - [ACTION:CHECK_GROCERY:{"name":"Artikel"}]
+     - [ACTION:DELETE_GROCERY:{"name":"Artikel"}]
+     - [ACTION:CLEAR_CHECKED_GROCERIES:{}]
+     - [ACTION:ADD_ALWAYS_IN_STOCK:{"name":"Artikel"}]
+     - [ACTION:CLEAN_SHOPPING_LIST:{}]
+   * Essensplan & Rezepte:
+     - [ACTION:SET_MEAL:{"date":"YYYY-MM-DD","slot":"dinner","title":"Gerichtname"}]
+     - [ACTION:CLEAR_MEAL:{"date":"YYYY-MM-DD","slot":"dinner"}]
+     - [ACTION:ADD_RECIPE_TO_GROCERIES:{"title":"Rezeptname"}]
+     - [ACTION:ADD_RECIPE:{"title":"Rezeptname","prepTime":"25 Min"}]
+     - [ACTION:FAVORITE_RECIPE:{"title":"Rezeptname"}]
+   * Aufgaben & Sterne:
+     - [ACTION:ADD_CHORE:{"title":"Aufgabe","stars":3}]
+     - [ACTION:COMPLETE_CHORE:{"title":"Aufgabe"}]
+     - [ACTION:DELETE_CHORE:{"title":"Aufgabe"}]
+     - [ACTION:AWARD_STARS:{"memberName":"Name","stars":3,"reason":"Grund"}]
+   * Schwarzes Brett & Notizen:
+     - [ACTION:ADD_NOTE:{"title":"Titel","content":"Text","tag":"info"}] (Tags: info, urgent, fun, wifi)
+     - [ACTION:DELETE_NOTE:{"title":"Titel"}]
+   * Kinder & Profile:
+     - [ACTION:UPDATE_CHILD_DETAILS:{"childName":"Name","clothingSize":"116","shoeSize":"31","allergies":"Erdnüsse"}]
+   * Belohnungen:
+     - [ACTION:ADD_REWARD:{"title":"Titel","starsCost":15,"icon":"🍦"}]
+     - [ACTION:CLAIM_REWARD:{"title":"Titel","childName":"Name"}]
+   * Routinen & Navigation:
+     - [ACTION:SET_MORNING_BRIEFING:{"headline":"Titel","summary":"Text","highlights":["Spruch 1","Spruch 2"]}]
+     - [ACTION:NAVIGATE:{"tab":"dashboard"|"calendar"|"meals"|"lists"|"members"|"photos"|"settings"}]
    Das System führt diese Aktionen sofort automatisch live im Familien-Hub aus.
 ${continuityDirective}
 AKTUELLE FAMILIENDATEN:
@@ -735,7 +1017,7 @@ ${systemContext}
     const actions: CopilotAction[] = [];
     let cleanText = rawResponse;
 
-    const actionRegex = /\[ACTION:(SCHEDULE_CHORE|ADD_CHORE|ADD_GROCERY|SET_MEAL|ADD_APPOINTMENT|CLEAN_SHOPPING_LIST|SET_MORNING_BRIEFING):(.*?)\]/g;
+    const actionRegex = /\[ACTION:([A-Z_]+):(.*?)\]/g;
     let match;
     while ((match = actionRegex.exec(rawResponse)) !== null) {
       const actionType = match[1] as CopilotAction['type'];
@@ -743,12 +1025,30 @@ ${systemContext}
         const payload = JSON.parse(match[2]);
         let description = 'Aktion ausführen';
         if (actionType === 'ADD_GROCERY') description = `"${payload.name}" auf die Einkaufsliste`;
-        if (actionType === 'SET_MEAL') description = `"${payload.title}" in den Essensplan (${payload.date || 'Heute'})`;
-        if (actionType === 'ADD_APPOINTMENT') description = `Termin "${payload.title}" in Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
-        if (actionType === 'SCHEDULE_CHORE') description = `"${payload.title || 'Aufgabe'}" in den Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
-        if (actionType === 'ADD_CHORE') description = `Aufgabe "${payload.title}" anlegen`;
-        if (actionType === 'CLEAN_SHOPPING_LIST') description = `Einkaufsliste bereinigt`;
-        if (actionType === 'SET_MORNING_BRIEFING') description = `Morgengrüße in Dashboard-Routine gespeichert`;
+        else if (actionType === 'CHECK_GROCERY') description = `"${payload.name}" als erledigt markiert 🛒`;
+        else if (actionType === 'DELETE_GROCERY') description = `"${payload.name}" von der Einkaufsliste gelöscht`;
+        else if (actionType === 'CLEAR_CHECKED_GROCERIES') description = `Erledigte Einkäufe aus Korb geleert`;
+        else if (actionType === 'ADD_ALWAYS_IN_STOCK') description = `"${payload.name}" zu Vorräten hinzugefügt 🏠`;
+        else if (actionType === 'SET_MEAL') description = `"${payload.title}" in den Essensplan (${payload.date || 'Heute'})`;
+        else if (actionType === 'CLEAR_MEAL') description = `Essensplan für ${payload.date || 'Heute'} geleert`;
+        else if (actionType === 'ADD_RECIPE_TO_GROCERIES') description = `Zutaten für "${payload.title}" zur Einkaufsliste`;
+        else if (actionType === 'ADD_RECIPE') description = `Rezept "${payload.title}" gespeichert 🍲`;
+        else if (actionType === 'FAVORITE_RECIPE') description = `Rezept "${payload.title}" als Favorit ⭐ markiert`;
+        else if (actionType === 'ADD_APPOINTMENT') description = `Termin "${payload.title}" in Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
+        else if (actionType === 'DELETE_APPOINTMENT') description = `Termin "${payload.title}" gelöscht / abgesagt 📅`;
+        else if (actionType === 'SCHEDULE_CHORE') description = `"${payload.title || 'Aufgabe'}" in den Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
+        else if (actionType === 'ADD_CHORE') description = `Aufgabe "${payload.title}" anlegen`;
+        else if (actionType === 'COMPLETE_CHORE') description = `Aufgabe "${payload.title}" als erledigt markiert ⭐`;
+        else if (actionType === 'DELETE_CHORE') description = `Aufgabe "${payload.title}" gelöscht`;
+        else if (actionType === 'ADD_NOTE') description = `Notiz "${payload.title}" an Pinnwand geheftet 📌`;
+        else if (actionType === 'DELETE_NOTE') description = `Notiz "${payload.title}" von Pinnwand entfernt`;
+        else if (actionType === 'UPDATE_CHILD_DETAILS') description = `Details für ${payload.childName || 'Kind'} aktualisiert 🧸`;
+        else if (actionType === 'AWARD_STARS') description = `${payload.stars} Sterne an ${payload.memberName} vergeben ⭐`;
+        else if (actionType === 'ADD_REWARD') description = `Belohnung "${payload.title}" angelegt 🎁`;
+        else if (actionType === 'CLAIM_REWARD') description = `Belohnung "${payload.title}" eingelöst 🎁`;
+        else if (actionType === 'CLEAN_SHOPPING_LIST') description = `Einkaufsliste bereinigt`;
+        else if (actionType === 'SET_MORNING_BRIEFING') description = `Morgengrüße in Dashboard-Routine gespeichert`;
+        else if (actionType === 'NAVIGATE') description = `Zu "${payload.tab}" navigiert`;
 
         actions.push({ type: actionType, payload, description });
       } catch (e) {
