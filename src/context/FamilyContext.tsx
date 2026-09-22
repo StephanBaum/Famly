@@ -33,6 +33,13 @@ import {
   setSharedAIConfig,
 } from '../services/aiRecipeService';
 import {
+  FamilyMemory,
+  getFamilyMemories,
+  addFamilyMemory,
+  deleteFamilyMemory,
+  saveRemoteMemoriesToLocal,
+} from '../services/familyMemoryService';
+import {
   INITIAL_MEMBERS,
   INITIAL_RECIPES,
   INITIAL_MEAL_PLANS,
@@ -195,6 +202,11 @@ export interface FamilyContextType {
   aiConfig: AIConfig | null;
   saveAIConfig: (provider: AIProvider, apiKey: string) => void;
   clearAIConfig: () => void;
+
+  // Long-Term Family Memories (Cross-Device Vector & Redis Sync)
+  memories: FamilyMemory[];
+  addMemory: (text: string, category?: FamilyMemory['category'], importance?: number) => FamilyMemory;
+  deleteMemory: (id: string) => void;
 }
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
@@ -339,6 +351,28 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     getStoredOrDefault(STORAGE_KEYS.ALWAYS_IN_STOCK, INITIAL_ALWAYS_IN_STOCK)
   );
 
+  // Long-Term Family Memories State (Cross-Device Vector & Redis Sync)
+  const [memories, setMemories] = useState<FamilyMemory[]>(() => getFamilyMemories());
+
+  useEffect(() => {
+    const handleMemoryChange = () => {
+      setMemories(getFamilyMemories());
+    };
+    window.addEventListener('famly_memory_changed', handleMemoryChange);
+    return () => window.removeEventListener('famly_memory_changed', handleMemoryChange);
+  }, []);
+
+  const addMemory = (text: string, category: FamilyMemory['category'] = 'general', importance = 3) => {
+    const newMem = addFamilyMemory(text, category, importance);
+    setMemories(getFamilyMemories());
+    return newMem;
+  };
+
+  const deleteMemory = (id: string) => {
+    deleteFamilyMemory(id);
+    setMemories(getFamilyMemories());
+  };
+
   // Theme (Dark Mode)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.THEME);
@@ -458,6 +492,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (Array.isArray(res.data.chores)) setChores(res.data.chores);
             if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
             if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+            if (Array.isArray(res.data.memories) && res.data.memories.length > 0) {
+              const merged = saveRemoteMemoriesToLocal(res.data.memories);
+              setMemories(merged);
+            }
             if (res.data.aiConfig && typeof res.data.aiConfig === 'object' && res.data.aiConfig.apiKey) {
               setSharedAIConfig(res.data.aiConfig);
               setAiConfigState(res.data.aiConfig);
@@ -491,6 +529,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Array.isArray(remoteData.chores)) setChores(remoteData.chores);
       if (Array.isArray(remoteData.notes)) setNotes(remoteData.notes);
       if (Array.isArray(remoteData.rewards)) setRewards(remoteData.rewards);
+      if (Array.isArray(remoteData.memories) && remoteData.memories.length > 0) {
+        const merged = saveRemoteMemoriesToLocal(remoteData.memories);
+        setMemories(merged);
+      }
       if (remoteData.aiConfig && typeof remoteData.aiConfig === 'object' && remoteData.aiConfig.apiKey) {
         setSharedAIConfig(remoteData.aiConfig);
         setAiConfigState(remoteData.aiConfig);
@@ -520,8 +562,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       rewards,
       earnedStars,
       aiConfig,
+      memories,
     });
-  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars, aiConfig]);
+  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars, aiConfig, memories]);
 
   const joinFamilyFromCloud = async (): Promise<boolean> => {
     try {
@@ -542,6 +585,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(res.data.chores)) setChores(res.data.chores);
         if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
         if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+        if (Array.isArray(res.data.memories) && res.data.memories.length > 0) {
+          const merged = saveRemoteMemoriesToLocal(res.data.memories);
+          setMemories(merged);
+        }
         if (res.data.aiConfig && typeof res.data.aiConfig === 'object' && res.data.aiConfig.apiKey) {
           setSharedAIConfig(res.data.aiConfig);
           setAiConfigState(res.data.aiConfig);
@@ -1869,6 +1916,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         aiConfig,
         saveAIConfig,
         clearAIConfig,
+        memories,
+        addMemory,
+        deleteMemory,
       }}
     >
       {children}

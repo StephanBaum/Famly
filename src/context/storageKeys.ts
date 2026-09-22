@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   THEME: 'famly_theme_mode',
   FAMILY_NAME: 'famly_family_name',
   EARNED_STARS: 'famly_earned_stars_v2',
+  MEMORIES: 'famly_longterm_memories_v1',
 };
 
 export const INITIAL_REWARDS: Reward[] = [

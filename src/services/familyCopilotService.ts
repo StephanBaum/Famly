@@ -13,6 +13,8 @@ import { getAIConfig, resolveGeminiFlashModel } from './aiRecipeService';
 import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { buildDynamicAgentActionDocs } from './appActionRegistry';
+import { formatMemoriesForPromptAsync, addFamilyMemory, getRelevantMemories } from './familyMemoryService';
+import { decideMeal, decideChoreAssignee } from './decisionService';
 
 export interface CopilotFamilyData {
   familyName: string;
@@ -66,7 +68,9 @@ export interface CopilotAction {
     | 'CLAIM_REWARD'
     | 'CLEAN_SHOPPING_LIST'
     | 'SET_MORNING_BRIEFING'
-    | 'NAVIGATE';
+    | 'NAVIGATE'
+    | 'SAVE_MEMORY'
+    | 'DELETE_MEMORY';
   payload: any;
   description: string;
   autoExecuted?: boolean;
@@ -273,12 +277,118 @@ export function queryLocalFamilyAssistant(
   const todayStr = format(today, 'yyyy-MM-dd');
   const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
 
-  // 0. Reminder & Appointment Creation Intent
+  // 0a. Persistent Long-Term Memory Saving Intent (Cross-Device)
+  const isMemorySaveIntent =
+    (q.includes('merk dir') || q.includes('denk dran') || q.includes('speicher') || q.includes('behalt im kopf')) &&
+    !q.includes('uhr') &&
+    !q.includes('termin') &&
+    !q.includes('kalender');
+
+  if (isMemorySaveIntent) {
+    let cleanFact = query
+      .replace(/merk dir bitte/gi, '')
+      .replace(/merk dir/gi, '')
+      .replace(/denk dran dass/gi, '')
+      .replace(/denk dran das/gi, '')
+      .replace(/denk dran/gi, '')
+      .replace(/speicher/gi, '')
+      .replace(/dass/gi, '')
+      .replace(/das/gi, '')
+      .replace(/bitte/gi, '')
+      .replace(/^[:,\s]+/, '')
+      .trim();
+
+    if (cleanFact.length > 2) {
+      let category: 'preference' | 'allergy' | 'schedule' | 'rule' | 'general' = 'general';
+      const lower = cleanFact.toLowerCase();
+      if (lower.includes('allerg') || lower.includes('verträgt')) category = 'allergy';
+      else if (lower.includes('mag') || lower.includes('liebt') || lower.includes('trinkt') || lower.includes('isst')) category = 'preference';
+      else if (lower.includes('montag') || lower.includes('dienstag') || lower.includes('mittwoch') || lower.includes('donnerstag') || lower.includes('freitag') || lower.includes('homeoffice')) category = 'schedule';
+      else if (lower.includes('regel') || lower.includes('immer') || lower.includes('nie')) category = 'rule';
+
+      const mem = addFamilyMemory(cleanFact, category, 4);
+      return {
+        text: `Alles klar! Ich habe mir diesen Fakt im Familiengedächtnis gemerkt:\n\n🧠 **"${mem.text}"**\n\nEr ist nun gespeichert und auf allen Geräten der Familie abrufbar!`,
+        actions: [
+          {
+            type: 'SAVE_MEMORY',
+            description: `Fakt "${mem.text}" im Langzeit-Gedächtnis gespeichert 🧠`,
+            payload: { text: mem.text, category: mem.category },
+            autoExecuted: true,
+          },
+        ],
+        source: 'local',
+      };
+    }
+  }
+
+  // 0b. Open-Jev System 1 Decision Fast-Path (<5ms)
+  const isDecisionIntent =
+    q.includes('entscheid') ||
+    q.includes('was kochen wir heute') ||
+    q.includes('was essen wir heute') ||
+    (q.includes('wer') && (q.includes('müll') || q.includes('spül') || q.includes('putzt') || q.includes('saugt') || q.includes('aufräumen')));
+
+  if (isDecisionIntent) {
+    const todayApps = data.appointments.filter((a) => isAppointmentOnDate(a, todayStr));
+
+    // Decision: Meal
+    if (q.includes('koch') || q.includes('ess') || q.includes('gericht') || q.includes('abendessen') || q.includes('mittag')) {
+      const mealDecision = decideMeal(data.recipes, [], todayApps, 45, data.mealPlans, todayStr);
+      return {
+        text: `⚡ **Open-Jev System 1 Empfehlung** (${mealDecision.winner.percentage}% Fit):\n\n🍲 **${mealDecision.winner.title}**\n${mealDecision.winner.pros.map((p) => `• ${p}`).join('\n')}\n\n*${mealDecision.summary}*`,
+        actions: [
+          {
+            type: 'SET_MEAL',
+            description: `"${mealDecision.winner.title}" für heute eintragen`,
+            payload: { date: todayStr, slot: 'dinner', title: mealDecision.winner.title, recipeId: mealDecision.winner.id },
+          },
+        ],
+        source: 'local',
+      };
+    }
+
+    // Decision: Chore
+    const openChores = data.chores.filter((c) => !c.completed);
+    if (openChores.length > 0 && data.members.length > 0) {
+      const chore = openChores.find((c) => q.includes(c.title.toLowerCase())) || openChores[0];
+      const choreDecision = decideChoreAssignee(chore, data.members, todayApps);
+      return {
+        text: `⚡ **Open-Jev System 1 Fairness-Entscheidung** (${choreDecision.winner.percentage}%):\n\n🧹 **${choreDecision.winner.title}** sollte "${chore.title}" übernehmen!\n${choreDecision.winner.pros.map((p) => `• ${p}`).join('\n')}\n\n*${choreDecision.summary}*`,
+        actions: [
+          {
+            type: 'SCHEDULE_CHORE',
+            description: `"${chore.title}" für ${choreDecision.winner.title} einplanen`,
+            payload: { id: chore.id, title: chore.title, date: todayStr, time: '17:00', memberId: choreDecision.winner.id },
+          },
+        ],
+        source: 'local',
+      };
+    }
+  }
+
+  // 0c. Long-Term Memory Recall Intent (Local Fallback)
+  const isQuestionIntent = q.startsWith('was') || q.startsWith('wo') || q.startsWith('wer') || q.startsWith('wann') || q.startsWith('welche') || q.includes('erinner');
+  if (isQuestionIntent) {
+    const relevant = getRelevantMemories(query, 3);
+    const hasMeaningfulMatch = relevant.some((m) => {
+      const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+      return words.some((w) => m.text.toLowerCase().includes(w));
+    });
+    if (hasMeaningfulMatch) {
+      const memStr = relevant.map((m) => `• [${m.category.toUpperCase()}] ${m.text}`).join('\n');
+      return {
+        text: `🧠 **Aus unserem Familiengedächtnis:**\n\n${memStr}`,
+        source: 'local',
+      };
+    }
+  }
+
+  // 0d. Reminder & Appointment Creation Intent
   const isReminderIntent =
     q.includes('reminder') ||
     q.includes('erinner') ||
     q.includes('reinstellen') ||
-    q.includes('merk dir') ||
     q.includes('nicht vergessen') ||
     (q.includes('termin') && (q.includes('eintragen') || q.includes('anlegen') || q.includes('erstellen') || q.includes('planen') || q.includes('reinstellen') || q.includes('setzen') || q.includes('mach'))) ||
     (q.includes('mitnehm') && (q.includes('tasche') || q.includes('morgen') || q.includes('denk')));
@@ -826,6 +936,32 @@ export async function queryFamilyAssistant(
     return queryLocalFamilyAssistant(userQuery, data);
   }
 
+  // 1. Semantic Memory Retrieval from Vector Store / Synced Cache
+  const semanticMemoriesText = await formatMemoriesForPromptAsync(userQuery);
+
+  // 2. Open-Jev System 1 Pre-Calculations (<2ms heuristic calibration)
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+  let system1DecisionInsight = '';
+  try {
+    const todayApps = data.appointments.filter((a) => isAppointmentOnDate(a, todayStr));
+    const openChores = data.chores.filter((c) => !c.completed);
+    const topMealDecision = decideMeal(data.recipes, [], todayApps, 45, data.mealPlans, todayStr);
+    const topChoreDecision =
+      openChores.length > 0 && data.members.length > 0
+        ? decideChoreAssignee(openChores[0], data.members, todayApps)
+        : null;
+
+    system1DecisionInsight = `
+OPEN-JEV SYSTEM 1 SCHNELL-DECISION-INSIGHTS (VORBERECHNETE HEURISTIKEN IN <5MS):
+- Heutige Essens-Empfehlung: "${topMealDecision.winner.title}" (${topMealDecision.winner.percentage}% Fit | Vorzüge: ${topMealDecision.winner.pros.join(', ') || 'Ausgewogen'})
+${topChoreDecision ? `- Aufgaben-Fairness ("${openChores[0].title}"): "${topChoreDecision.winner.title}" (${topChoreDecision.winner.percentage}% Fairness-Score)` : ''}
+Hinweis für Gemini: Du kannst diese System-1 Heuristiken sofort als Begründung oder Empfehlung heranziehen, um Antwortzeiten und Entscheidungspräzision zu maximieren!
+`;
+  } catch {
+    // fallback silently
+  }
+
   const systemContext = buildFamilyContextSummary(data);
 
   // Inspect previous turn for conversation continuity
@@ -868,11 +1004,22 @@ WICHTIGE VERHALTENSREGELN:
      3. Bestimme das genaue Datum anhand von "MORGEN IST: ..." aus dem Kontext und die passende Uhrzeit ("morgen früh" = 07:30, "vormittags" = 09:30 oder die genannte Uhrzeit).
      4. Formuliere einen prägnanten Titel im Infinitiv (z.B. "Tasche mitnehmen").
      5. Bestätige dem Nutzer kurz und herzlich, dass der Reminder direkt im Kalender eingetragen wurde (z.B. "Erledigt! Ich habe dir für morgen um 07:30 Uhr die Erinnerung '**Tasche mitnehmen**' direkt in den Kalender eingetragen. 📅").
-6. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
+6. LANGZEIT-GEDÄCHTNIS & FAKTEN DER FAMILIE (CROSS-DEVICE):
+   - Wenn der Nutzer dir einen neuen Fakt, eine Gewohnheit, Vorliebe oder Regel anvertraut:
+     (z.B. "Merk dir...", "Denk dran dass...", "Leo mag keine Pilze", "Idas Ballett ist dienstags", "Papa trinkt Hafermilch", "Der Ersatzschlüssel liegt im Schuppen")
+     1. Speichere diesen Fakt IMMER mit [ACTION:SAVE_MEMORY:{"text":"...","category":"preference|allergy|schedule|rule|general"}].
+     2. Bestätige kurz und freundlich, dass dieser Fakt dauerhaft im Familiengedächtnis für alle Geräte und Familienmitglieder abgespeichert ist!
+   - Wenn der Nutzer nach Gewohnheiten, Vorlieben, Terminen oder Fakten fragt:
+     Ziehe stets die unten aufgeführten Fakten aus dem Langzeit-Gedächtnis heran!
+7. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
    Um Aktionen im System direkt auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
 ${buildDynamicAgentActionDocs()}
    Das System führt diese Aktionen sofort automatisch live im Familien-Hub aus.
 ${continuityDirective}
+${system1DecisionInsight}
+GESPEICHERTES LANGZEIT-GEDÄCHTNIS & FAKTEN DER FAMILIE (UPSTASH VECTOR STORE):
+${semanticMemoriesText}
+
 AKTUELLE FAMILIENDATEN:
 ${systemContext}
 `.trim();
@@ -1018,6 +1165,8 @@ ${systemContext}
         else if (actionType === 'CLEAN_SHOPPING_LIST') description = `Einkaufsliste bereinigt`;
         else if (actionType === 'SET_MORNING_BRIEFING') description = `Morgengrüße in Dashboard-Routine gespeichert`;
         else if (actionType === 'NAVIGATE') description = `Zu "${payload.tab}" navigiert`;
+        else if (actionType === 'SAVE_MEMORY') description = `Fakt "${payload.text}" im Familiengedächtnis gespeichert 🧠`;
+        else if (actionType === 'DELETE_MEMORY') description = `Erinnerung aus Familiengedächtnis gelöscht`;
 
         actions.push({ type: actionType, payload, description });
       } catch (e) {

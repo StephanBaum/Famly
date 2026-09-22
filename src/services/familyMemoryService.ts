@@ -90,6 +90,12 @@ export function addFamilyMemory(
     }).catch(() => {
       // Non-blocking background sync
     });
+
+    try {
+      window.dispatchEvent(new CustomEvent('famly_memory_changed', { detail: { action: 'add', memory: newMemory } }));
+    } catch {
+      // Ignore in non-browser context
+    }
   }
 
   return newMemory;
@@ -114,7 +120,49 @@ export function deleteFamilyMemory(id: string): void {
     }).catch(() => {
       // Non-blocking
     });
+
+    try {
+      window.dispatchEvent(new CustomEvent('famly_memory_changed', { detail: { action: 'delete', id } }));
+    } catch {
+      // Ignore
+    }
   }
+}
+
+/**
+ * Merges memories received from cloud storage (Upstash Redis) with local storage
+ */
+export function saveRemoteMemoriesToLocal(remoteMemories: FamilyMemory[]): FamilyMemory[] {
+  if (!Array.isArray(remoteMemories) || remoteMemories.length === 0) return getFamilyMemories();
+  const local = getFamilyMemories();
+  const map = new Map<string, FamilyMemory>();
+
+  // Insert remote first
+  for (const r of remoteMemories) {
+    if (r && r.text) {
+      map.set(r.text.toLowerCase().trim(), r);
+    }
+  }
+
+  // Insert local (preserving local if newer or unique)
+  for (const l of local) {
+    if (l && l.text) {
+      const key = l.text.toLowerCase().trim();
+      if (!map.has(key)) {
+        map.set(key, l);
+      }
+    }
+  }
+
+  const merged = Array.from(map.values()).slice(0, 100);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMORIES, JSON.stringify(merged));
+    } catch (e) {
+      console.warn('Failed to store merged memories:', e);
+    }
+  }
+  return merged;
 }
 
 /**

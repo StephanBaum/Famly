@@ -1,5 +1,6 @@
 import { FamilyContextType } from '../context/FamilyContext';
 import { saveCustomDailyBriefing } from './briefingService';
+import { addFamilyMemory, deleteFamilyMemory } from './familyMemoryService';
 import { ActiveTab } from '../components/Header';
 
 export interface ActionExecutionContext {
@@ -15,7 +16,7 @@ export interface ActionResult {
 
 export interface AppActionDefinition<TPayload = any> {
   type: string;
-  domain: 'calendar' | 'groceries' | 'meals' | 'chores' | 'notes' | 'kids' | 'rewards' | 'system';
+  domain: 'calendar' | 'groceries' | 'meals' | 'chores' | 'notes' | 'kids' | 'rewards' | 'memory' | 'system';
   title: string;
   description: string;
   promptDoc: string;
@@ -60,7 +61,8 @@ export function buildDynamicAgentActionDocs(): string {
     notes: '5. SCHWARZES BRETT & NOTIZEN',
     kids: '6. KINDER-DETAILS, GRÖSSEN & ALLERGIEN',
     rewards: '7. BELOHNUNGEN & STERN-SHOP',
-    system: '8. ROUTINEN & NAVIGATION',
+    memory: '8. LANGZEIT-GEDÄCHTNIS & FAMILIENFAKTEN',
+    system: '9. ROUTINEN & NAVIGATION',
   };
 
   for (const [domain, items] of Object.entries(grouped)) {
@@ -713,3 +715,48 @@ registerAppAction({
     return { success: true, message: 'Zurück zum Dashboard.' };
   },
 });
+
+// 26. SAVE_MEMORY
+registerAppAction({
+  type: 'SAVE_MEMORY',
+  domain: 'memory',
+  title: 'Fakt im Langzeit-Gedächtnis merken',
+  description: 'Speichert wichtige Fakten, Vorlieben, Regeln oder Wissenswertes im persistenten Langzeitgedächtnis & Upstash Vector Store für alle Familienmitglieder',
+  promptDoc: '[ACTION:SAVE_MEMORY:{"text":"...","category":"preference|allergy|schedule|rule|general"}]',
+  execute: (p) => {
+    if (!p.text || !p.text.trim()) {
+      return { success: false, message: 'Kein Inhalt zum Merken angegeben.' };
+    }
+    const mem = addFamilyMemory(p.text, p.category || 'general', 4);
+    return {
+      success: true,
+      message: `Fakt gemerkt: "${mem.text}" 🧠 (Für alle Geräte gespeichert)`,
+      undoPayload: { id: mem.id },
+    };
+  },
+  undo: (p) => {
+    if (p.id) {
+      deleteFamilyMemory(p.id);
+      return { success: true, message: 'Fakt aus Gedächtnis entfernt.' };
+    }
+    return { success: false, message: 'Konnte nicht gelöscht werden.' };
+  },
+});
+
+// 27. DELETE_MEMORY
+registerAppAction({
+  type: 'DELETE_MEMORY',
+  domain: 'memory',
+  title: 'Fakt aus Gedächtnis löschen',
+  description: 'Entfernt einen Fakt aus dem Langzeit-Gedächtnis',
+  promptDoc: '[ACTION:DELETE_MEMORY:{"id":"..."}]',
+  execute: (p) => {
+    if (p.id) {
+      deleteFamilyMemory(p.id);
+      return { success: true, message: 'Erinnerung gelöscht.' };
+    }
+    return { success: false, message: 'Keine ID angegeben.' };
+  },
+  undo: () => ({ success: false, message: 'Gelöschte Erinnerung kann nicht wiederhergestellt werden.' }),
+});
+
