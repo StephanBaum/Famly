@@ -17,6 +17,7 @@ import { ModalPortal } from './ModalPortal';
 import { VoiceInputModal } from './VoiceInputModal';
 import { parseUniversalInput } from '../utils/universalParser';
 import { format } from 'date-fns';
+import { startVoiceRecognition, VoiceSession } from '../services/voiceRecognitionService';
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
   // Smart Universal Input state
   const [smartText, setSmartText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const sessionRef = useRef<VoiceSession | null>(null);
 
   // Manual exclusions from the parsed set if user taps delete on a preview item
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
@@ -62,54 +63,36 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
   // Setup Web Speech API for inline recording in Smart tab
   useEffect(() => {
     if (!isOpen && isRecording) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (sessionRef.current) sessionRef.current.stop();
+      sessionRef.current = null;
       setIsRecording(false);
     }
   }, [isOpen, isRecording]);
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (isRecording) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (sessionRef.current) sessionRef.current.stop();
+      sessionRef.current = null;
       setIsRecording(false);
       return;
     }
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert('Spracherkennung wird in diesem Browser leider nicht unterstützt.');
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'de-DE';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => setIsRecording(true);
-
-      recognition.onresult = (event: any) => {
-        let currentText = '';
-        for (let i = 0; i < event.results.length; i++) {
-          currentText += event.results[i][0].transcript + ' ';
-        }
-        setSmartText(currentText.trim());
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
+    const session = await startVoiceRecognition({
+      onStart: () => setIsRecording(true),
+      onTranscriptChange: (text) => setSmartText(text),
+      onError: (msg) => {
         setIsRecording(false);
-      };
+        sessionRef.current = null;
+        alert(msg);
+      },
+      onEnd: () => {
+        setIsRecording(false);
+        sessionRef.current = null;
+      },
+    });
 
-      recognition.onend = () => setIsRecording(false);
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error('Speech recognition start failed:', err);
-      setIsRecording(false);
+    if (session) {
+      sessionRef.current = session;
     }
   };
 

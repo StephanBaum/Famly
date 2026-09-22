@@ -29,7 +29,14 @@ import {
   Sparkles,
   ExternalLink,
   RefreshCw,
+  Bell,
+  BellRing,
 } from 'lucide-react';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendDeviceNotification,
+} from '../services/notificationService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -79,6 +86,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [vercelStatus, setVercelStatus] = useState<VercelSyncStatus | null>(null);
   const [isCheckingVercel, setIsCheckingVercel] = useState(false);
   const [manualSyncStatus, setManualSyncStatus] = useState<string | null>(null);
+
+  // Notification & Reminder State
+  const [notifPerm, setNotifPerm] = useState(() => getNotificationPermission());
+
+  const handleRequestNotif = async () => {
+    const res = await requestNotificationPermission();
+    setNotifPerm(res);
+    if (res === 'granted') {
+      sendDeviceNotification('🔔 Erinnerungen aktiviert!', {
+        body: 'Famly erinnert dich zuverlässig an anstehende Termine und Aufgaben.',
+      });
+    }
+  };
 
   // Load existing credentials and check Vercel status on mount / open
   useEffect(() => {
@@ -268,6 +288,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* PWA Homescreen App Installation */}
             <InstallAppBanner />
+
+            {/* Notification & Device Reminders Card */}
+            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black shrink-0 ${
+                    notifPerm === 'granted'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {notifPerm === 'granted' ? <BellRing className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                      Erinnerungen & Benachrichtigungen
+                    </h4>
+                    <p className="text-xs text-stone-500 dark:text-slate-400 font-semibold truncate">
+                      {notifPerm === 'granted'
+                        ? 'Aktiviert: Handy vibriert und meldet fällige Termine'
+                        : notifPerm === 'denied'
+                        ? 'Im Browser blockiert (in Chrome-Website-Einstellungen erlauben)'
+                        : 'Noch nicht aktiviert auf diesem Gerät'}
+                    </p>
+                  </div>
+                </div>
+
+                {notifPerm === 'granted' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sendDeviceNotification('🔔 Test-Erinnerung von Famly', {
+                        body: 'Audio-Gong und Benachrichtigung funktionieren einwandfrei!',
+                      });
+                    }}
+                    className="duo-btn duo-btn-white px-3 py-1.5 rounded-xl text-xs font-black shrink-0"
+                  >
+                    Testen
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRequestNotif}
+                    className="duo-btn duo-btn-green px-3.5 py-1.5 rounded-xl text-xs font-black shrink-0"
+                  >
+                    Aktivieren
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Section 2: Vercel Cloud Sync (Out of the Box) */}
             <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3.5">

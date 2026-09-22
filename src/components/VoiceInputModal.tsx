@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ModalPortal } from './ModalPortal';
-import { Mic, MicOff, X, Sparkles, Trash2, ShoppingCart } from 'lucide-react';
+import { Mic, MicOff, X, Sparkles, Trash2, ShoppingCart, AlertCircle } from 'lucide-react';
 import { GroceryCategory } from '../types';
 import { inferGroceryCategory } from '../utils/recipeParser';
+import {
+  isSpeechRecognitionSupported,
+  startVoiceRecognition,
+  VoiceSession,
+} from '../services/voiceRecognitionService';
 
 interface VoiceInputModalProps {
   isOpen: boolean;
@@ -18,67 +23,22 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [parsedItems, setParsedItems] = useState<Array<{ name: string; category: GroceryCategory }>>([]);
-  const [hasSpeechSupport, setHasSpeechSupport] = useState(true);
-  const recognitionRef = useRef<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasSpeechSupport] = useState(() => isSpeechRecognitionSupported());
+  const sessionRef = useRef<VoiceSession | null>(null);
 
+  // Clean up session on modal close
   useEffect(() => {
     if (!isOpen) {
-      if (recognitionRef.current && isListening) {
-        recognitionRef.current.stop();
+      if (sessionRef.current) {
+        sessionRef.current.stop();
+        sessionRef.current = null;
       }
       setIsListening(false);
       setTranscript('');
       setParsedItems([]);
-      return;
+      setErrorMessage(null);
     }
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setHasSpeechSupport(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'de-DE';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => setIsListening(true);
-
-      recognition.onresult = (event: any) => {
-        let currentText = '';
-        for (let i = 0; i < event.results.length; i++) {
-          currentText += event.results[i][0].transcript + ' ';
-        }
-        setTranscript(currentText.trim());
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          setIsListening(false);
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.warn('Speech recognition start failed:', err);
-      setHasSpeechSupport(false);
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
   }, [isOpen]);
 
   // Parse speech transcript whenever transcript updates
@@ -89,7 +49,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
     }
 
     // Clean common prefixes
-    let clean = transcript
+    const clean = transcript
       .replace(/^(wir brauchen|bitte kauf|kauf bitte|ich brauche|kauf mal|aufschreiben|einkaufsliste)\s*/gi, '')
       .trim();
 
@@ -107,18 +67,37 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
     setParsedItems(items);
   }, [transcript]);
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
+  const toggleListening = async () => {
+    setErrorMessage(null);
+
+    if (isListening && sessionRef.current) {
+      sessionRef.current.stop();
+      sessionRef.current = null;
       setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
+      return;
+    }
+
+    const session = await startVoiceRecognition({
+      onStart: () => {
         setIsListening(true);
-      } catch (e) {
-        console.warn('Restart failed:', e);
-      }
+        setErrorMessage(null);
+      },
+      onTranscriptChange: (text) => {
+        setTranscript(text);
+      },
+      onError: (msg) => {
+        setErrorMessage(msg);
+        setIsListening(false);
+        sessionRef.current = null;
+      },
+      onEnd: () => {
+        setIsListening(false);
+        sessionRef.current = null;
+      },
+    });
+
+    if (session) {
+      sessionRef.current = session;
     }
   };
 
@@ -166,20 +145,28 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
             <div className="p-4 bg-amber-50 dark:bg-amber-950/50 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-2">
               <p className="font-bold">Mikrofon im Browser nicht verfügbar</p>
               <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                Dein Browser unterstützt die Web Speech API aktuell nicht. Öffne Famly in Chrome, Edge oder Safari auf iOS, um das Sprach-Diktat zu nutzen.
+                Dein Browser unterstützt die Web Speech API aktuell nicht. Öffne Famly in Chrome auf deinem Pixel / Smartphone.
               </p>
             </div>
           ) : (
             <>
+              {/* Error Notice */}
+              {errorMessage && (
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <p className="font-semibold leading-relaxed">{errorMessage}</p>
+                </div>
+              )}
+
               {/* Pulsing Mic Visualizer */}
               <div className="flex flex-col items-center justify-center py-4 space-y-3">
                 <button
                   type="button"
                   onClick={toggleListening}
-                  className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                  className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
                     isListening
                       ? 'bg-rose-500 text-white animate-pulse ring-8 ring-rose-200 dark:ring-rose-950/50 scale-105'
-                      : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105'
+                      : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 hover:bg-rose-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   {isListening ? <Mic className="w-8 h-8 stroke-[2.5]" /> : <MicOff className="w-8 h-8" />}
@@ -187,7 +174,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
 
                 <div className="text-center space-y-1">
                   <span className="text-xs font-black text-stone-800 dark:text-white block">
-                    {isListening ? 'Famly hört zu... sprich einfach los!' : 'Mikrofon pausiert'}
+                    {isListening ? 'Famly hört zu... sprich einfach los!' : 'Tippe auf das Mikrofon, um zu sprechen'}
                   </span>
                   <p className="text-[11px] text-stone-500 dark:text-slate-400 max-w-xs">
                     Tipp: <em>„Wir brauchen Hafermilch, 6 Eier, Bananen und Butter“</em>
@@ -196,21 +183,21 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
               </div>
 
               {/* Live Transcript / Parsed Items Box */}
-              <div className="p-3.5 bg-stone-50 dark:bg-slate-850 rounded-2xl border border-stone-200 dark:border-slate-750 space-y-2.5 max-h-56 overflow-y-auto">
+              <div className="p-3.5 bg-stone-50 dark:bg-slate-800/60 rounded-2xl border border-stone-200 dark:border-slate-700 space-y-2.5 max-h-56 overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase text-stone-500 dark:text-slate-400 tracking-wider">
                     Erkannte Artikel ({parsedItems.length})
                   </span>
                   {parsedItems.length > 0 && (
                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Auto-Regal-Sortierung
+                      <Sparkles className="w-3 h-3" /> Auto-Kategorie
                     </span>
                   )}
                 </div>
 
                 {parsedItems.length === 0 ? (
                   <p className="text-xs text-stone-400 dark:text-slate-500 italic py-2 text-center">
-                    {isListening ? 'Warte auf Spracheingabe...' : 'Tippe auf das Mikrofon, um zu sprechen.'}
+                    {isListening ? 'Warte auf Spracheingabe...' : 'Noch nichts eingesprochen.'}
                   </p>
                 ) : (
                   <div className="space-y-1.5">

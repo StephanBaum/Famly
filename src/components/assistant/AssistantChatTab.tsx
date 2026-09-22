@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import { Send, Key, RefreshCw, Undo2 } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Send, Key, RefreshCw, Undo2, Mic, AlertCircle } from 'lucide-react';
 import { MarkdownMessage } from '../MarkdownMessage';
 import { CopilotAction } from '../../services/familyCopilotService';
+import { startVoiceRecognition, VoiceSession } from '../../services/voiceRecognitionService';
 
 export interface ChatMessage {
   id: string;
@@ -37,10 +38,56 @@ export const AssistantChatTab: React.FC<AssistantChatTabProps> = ({
   onClose,
 }) => {
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const sessionRef = useRef<VoiceSession | null>(null);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isAiLoading]);
+
+  // Clean up session on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionRef.current) {
+        sessionRef.current.stop();
+        sessionRef.current = null;
+      }
+    };
+  }, []);
+
+  const toggleVoice = async () => {
+    setVoiceError(null);
+    if (isListening && sessionRef.current) {
+      sessionRef.current.stop();
+      sessionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
+    const session = await startVoiceRecognition({
+      onStart: () => {
+        setIsListening(true);
+        setVoiceError(null);
+      },
+      onTranscriptChange: (text) => {
+        setChatInput(text);
+      },
+      onError: (msg) => {
+        setVoiceError(msg);
+        setIsListening(false);
+        sessionRef.current = null;
+      },
+      onEnd: () => {
+        setIsListening(false);
+        sessionRef.current = null;
+      },
+    });
+
+    if (session) {
+      sessionRef.current = session;
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -198,6 +245,23 @@ export const AssistantChatTab: React.FC<AssistantChatTabProps> = ({
         </button>
       </div>
 
+      {/* Voice Error Notice */}
+      {voiceError && (
+        <div className="px-4 py-2 bg-rose-50 dark:bg-rose-950/50 border-t border-rose-200 dark:border-rose-900/60 text-xs text-rose-800 dark:text-rose-200 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 truncate">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span className="truncate">{voiceError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setVoiceError(null)}
+            className="text-rose-500 hover:text-rose-700 font-bold text-xs shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Chat Input Bar */}
       <form
         onSubmit={(e) => {
@@ -210,9 +274,27 @@ export const AssistantChatTab: React.FC<AssistantChatTabProps> = ({
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Frag etwas oder gib eine Anweisung (Termin, Notiz, Sterne, Einkauf)..."
-          className="flex-1 px-4 py-2.5 rounded-2xl bg-stone-100 dark:bg-slate-800 border border-transparent focus:border-amber-500 text-xs sm:text-sm text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none"
+          placeholder={isListening ? 'Famly hört zu... sprich jetzt...' : 'Frag etwas oder gib eine Anweisung (Termin, Notiz, Einkauf)...'}
+          className={`flex-1 px-4 py-2.5 rounded-2xl bg-stone-100 dark:bg-slate-800 border text-xs sm:text-sm text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none transition-all ${
+            isListening
+              ? 'border-rose-400 dark:border-rose-600 ring-2 ring-rose-200 dark:ring-rose-950/60'
+              : 'border-transparent focus:border-amber-500'
+          }`}
         />
+
+        <button
+          type="button"
+          onClick={toggleVoice}
+          title={isListening ? 'Zuhören beenden' : 'Sprach-Diktat starten (Mikrofon)'}
+          className={`p-2.5 rounded-2xl border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+            isListening
+              ? 'bg-rose-500 text-white border-rose-600 animate-pulse ring-4 ring-rose-200 dark:ring-rose-950/60'
+              : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 border-stone-200 dark:border-slate-700 hover:text-rose-600 dark:hover:text-rose-400'
+          }`}
+        >
+          <Mic className={`w-4 h-4 ${isListening ? 'stroke-[2.5]' : ''}`} />
+        </button>
+
         <button
           type="submit"
           disabled={!chatInput.trim() || isAiLoading}

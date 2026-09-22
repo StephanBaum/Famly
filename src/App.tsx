@@ -17,9 +17,10 @@ import { OnboardingView } from './views/OnboardingView';
 import { KidsView } from './views/KidsView';
 import { JoinFamilyQRModal } from './components/JoinFamilyQRModal';
 import { pullVercelFamilyState } from './services/vercelSync';
+import { initReminderScheduler } from './services/notificationService';
 
 const MainAppContent: React.FC = () => {
-  const { loggedInMemberId, galleries, isOnboarded, joinFamilyFromCloud } = useFamily();
+  const { loggedInMemberId, galleries, isOnboarded, joinFamilyFromCloud, appointments } = useFamily();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -87,6 +88,12 @@ const MainAppContent: React.FC = () => {
       });
     }
   }, [guestGalleryId, sharedGuestGallery]);
+
+  // Start background reminder scheduler (checks due appointments and triggers native alerts)
+  useEffect(() => {
+    const cleanup = initReminderScheduler(() => appointments);
+    return cleanup;
+  }, [appointments]);
 
   // If visiting via guest link, handle guest viewer directly without ever redirecting to Onboarding!
   if (guestGalleryId) {

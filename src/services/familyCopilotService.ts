@@ -12,6 +12,7 @@ import {
 import { getAIConfig, resolveGeminiFlashModel } from './aiRecipeService';
 import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { buildDynamicAgentActionDocs } from './appActionRegistry';
 
 export interface CopilotFamilyData {
   familyName: string;
@@ -869,39 +870,7 @@ WICHTIGE VERHALTENSREGELN:
      5. Bestätige dem Nutzer kurz und herzlich, dass der Reminder direkt im Kalender eingetragen wurde (z.B. "Erledigt! Ich habe dir für morgen um 07:30 Uhr die Erinnerung '**Tasche mitnehmen**' direkt in den Kalender eingetragen. 📅").
 6. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
    Um Aktionen im System direkt auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
-   * Termine & Kalender:
-     - [ACTION:ADD_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD","time":"HH:MM","notes":"Notiz"}]
-     - [ACTION:DELETE_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD"}]
-     - [ACTION:SCHEDULE_CHORE:{"title":"Aufgabe","date":"YYYY-MM-DD","time":"HH:MM","durationMinutes":15}]
-   * Einkaufsliste & Vorräte:
-     - [ACTION:ADD_GROCERY:{"name":"Artikel","store":"Rewe","amount":"Menge"}]
-     - [ACTION:CHECK_GROCERY:{"name":"Artikel"}]
-     - [ACTION:DELETE_GROCERY:{"name":"Artikel"}]
-     - [ACTION:CLEAR_CHECKED_GROCERIES:{}]
-     - [ACTION:ADD_ALWAYS_IN_STOCK:{"name":"Artikel"}]
-     - [ACTION:CLEAN_SHOPPING_LIST:{}]
-   * Essensplan & Rezepte:
-     - [ACTION:SET_MEAL:{"date":"YYYY-MM-DD","slot":"dinner","title":"Gerichtname"}]
-     - [ACTION:CLEAR_MEAL:{"date":"YYYY-MM-DD","slot":"dinner"}]
-     - [ACTION:ADD_RECIPE_TO_GROCERIES:{"title":"Rezeptname"}]
-     - [ACTION:ADD_RECIPE:{"title":"Rezeptname","prepTime":"25 Min"}]
-     - [ACTION:FAVORITE_RECIPE:{"title":"Rezeptname"}]
-   * Aufgaben & Sterne:
-     - [ACTION:ADD_CHORE:{"title":"Aufgabe","stars":3}]
-     - [ACTION:COMPLETE_CHORE:{"title":"Aufgabe"}]
-     - [ACTION:DELETE_CHORE:{"title":"Aufgabe"}]
-     - [ACTION:AWARD_STARS:{"memberName":"Name","stars":3,"reason":"Grund"}]
-   * Schwarzes Brett & Notizen:
-     - [ACTION:ADD_NOTE:{"title":"Titel","content":"Text","tag":"info"}] (Tags: info, urgent, fun, wifi)
-     - [ACTION:DELETE_NOTE:{"title":"Titel"}]
-   * Kinder & Profile:
-     - [ACTION:UPDATE_CHILD_DETAILS:{"childName":"Name","clothingSize":"116","shoeSize":"31","allergies":"Erdnüsse"}]
-   * Belohnungen:
-     - [ACTION:ADD_REWARD:{"title":"Titel","starsCost":15,"icon":"🍦"}]
-     - [ACTION:CLAIM_REWARD:{"title":"Titel","childName":"Name"}]
-   * Routinen & Navigation:
-     - [ACTION:SET_MORNING_BRIEFING:{"headline":"Titel","summary":"Text","highlights":["Spruch 1","Spruch 2"]}]
-     - [ACTION:NAVIGATE:{"tab":"dashboard"|"calendar"|"meals"|"lists"|"members"|"photos"|"settings"}]
+${buildDynamicAgentActionDocs()}
    Das System führt diese Aktionen sofort automatisch live im Familien-Hub aus.
 ${continuityDirective}
 AKTUELLE FAMILIENDATEN:

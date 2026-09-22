@@ -11,6 +11,7 @@ import {
 } from '../services/familyCopilotService';
 import { decideAutonomous, DecisionResult } from '../services/decisionService';
 import { getFamilyMemories } from '../services/familyMemoryService';
+import { executeRegisteredAction, undoRegisteredAction } from '../services/appActionRegistry';
 import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { triggerHaptic } from '../utils/haptics';
@@ -42,6 +43,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   onOpenSettings,
   onNavigateTab,
 }) => {
+  const family = useFamily();
   const {
     familyName,
     members,
@@ -53,27 +55,8 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     notes,
     rewards,
     addAppointment,
-    deleteAppointment,
     setMealSlot,
-    addRecipe,
-    toggleFavoriteRecipe,
-    addRecipeIngredientsToGrocery,
-    addGrocery,
-    toggleGrocery,
-    deleteGrocery,
-    clearCheckedGroceries,
-    toggleAlwaysInStock,
-    cleanPastMealGroceries,
-    addChore,
-    toggleChore,
-    deleteChore,
-    awardStars,
-    updateMember,
-    addNote,
-    deleteNote,
-    addReward,
-    claimReward,
-  } = useFamily();
+  } = family;
 
   // Defensively guard all data arrays
   const safeMembers = Array.isArray(members) ? members.filter(Boolean) : [];
@@ -142,336 +125,39 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayPlan = safeMealPlans.find((mp) => mp && mp.date === todayStr);
 
-  // Universal Action Execution Engine
+  // Universal Action Execution Engine (Delegated to centralized Action Registry)
   const handleExecuteAction = (action: CopilotAction): boolean => {
     try {
-      const p = action.payload || {};
-
-      switch (action.type) {
-        case 'ADD_APPOINTMENT': {
-          const targetDate = p.date || todayStr;
-          addAppointment({
-            title: p.title || 'Termin',
-            date: targetDate,
-            time: p.time || '10:00',
-            memberIds: p.memberIds || (safeMembers[0] ? [safeMembers[0].id] : ['m1']),
-            category: p.category || 'family',
-            notes: p.notes || 'Vom Famly-Assistenten eingetragen',
-          });
-          setActionSuccessNotice(`✓ Termin "${p.title}" eingetragen (${targetDate})! 📅`);
-          return true;
-        }
-
-        case 'DELETE_APPOINTMENT': {
-          const match = safeAppointments.find(
-            (a) => (p.id && a.id === p.id) || (p.title && a.title.toLowerCase().includes(p.title.toLowerCase()))
-          );
-          if (match) {
-            deleteAppointment(match.id);
-            setActionSuccessNotice(`✓ Termin "${match.title}" gelöscht.`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'SCHEDULE_CHORE': {
-          const choreObj = safeChores.find((c) => c.id === p.choreId);
-          const proposal = choreProposals.find((pr) => pr.chore.id === p.choreId);
-          const choreTitle = p.title || choreObj?.title || 'Aufgabe';
-          const targetDate = p.date || proposal?.proposedDate || todayStr;
-          const targetTime = p.time || proposal?.proposedTime || '18:00';
-          const targetMemberId = p.memberId || proposal?.targetMember?.id || choreObj?.assignedMemberId || (safeMembers[0] ? safeMembers[0].id : 'm1');
-
-          addAppointment({
-            title: `🧹 ${choreTitle}`,
-            date: targetDate,
-            time: targetTime,
-            durationMinutes: p.durationMinutes || proposal?.durationMinutes || 20,
-            memberIds: [targetMemberId],
-            category: 'family',
-            notes: `Aufgabe automatisch eingeplant`,
-          });
-          if (p.choreId) {
-            setScheduledChoreIds((prev) => new Set([...prev, p.choreId]));
-          }
-          setActionSuccessNotice(`✓ "${choreTitle}" für ${targetTime} Uhr (${targetDate}) im Kalender eingetragen! 📅`);
-          return true;
-        }
-
-        case 'ADD_CHORE': {
-          addChore(
-            p.title || 'Aufgabe',
-            p.assignedMemberId || '',
-            'once',
-            Number(p.stars) || 3,
-            p.assignedMemberId ? [p.assignedMemberId] : [],
-            p.dueDate
-          );
-          setActionSuccessNotice(`✓ Aufgabe "${p.title}" angelegt! ⭐`);
-          return true;
-        }
-
-        case 'COMPLETE_CHORE': {
-          const match = safeChores.find(
-            (c) => (p.id && c.id === p.id) || (p.title && c.title.toLowerCase().includes(p.title.toLowerCase()))
-          );
-          if (match) {
-            toggleChore(match.id, p.completingMemberId || safeMembers[0]?.id);
-            setActionSuccessNotice(`✓ Aufgabe "${match.title}" als erledigt markiert! ⭐`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'DELETE_CHORE': {
-          const match = safeChores.find(
-            (c) => (p.id && c.id === p.id) || (p.title && c.title.toLowerCase().includes(p.title.toLowerCase()))
-          );
-          if (match) {
-            deleteChore(match.id);
-            setActionSuccessNotice(`✓ Aufgabe "${match.title}" gelöscht.`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'ADD_GROCERY': {
-          addGrocery(p.name, p.store || 'Rewe', p.amount, p.category);
-          setActionSuccessNotice(`✓ "${p.name}" auf die Einkaufsliste gesetzt! 🛒`);
-          return true;
-        }
-
-        case 'CHECK_GROCERY': {
-          const match = safeGroceries.find(
-            (g) => (p.id && g.id === p.id) || (p.name && g.name.toLowerCase().includes(p.name.toLowerCase()))
-          );
-          if (match) {
-            toggleGrocery(match.id);
-            setActionSuccessNotice(`✓ "${match.name}" als erledigt abgehakt! 🛒`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'DELETE_GROCERY': {
-          const match = safeGroceries.find(
-            (g) => (p.id && g.id === p.id) || (p.name && g.name.toLowerCase().includes(p.name.toLowerCase()))
-          );
-          if (match) {
-            deleteGrocery(match.id);
-            setActionSuccessNotice(`✓ "${match.name}" von der Einkaufsliste entfernt.`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'CLEAR_CHECKED_GROCERIES': {
-          clearCheckedGroceries();
-          setActionSuccessNotice(`✓ Erledigte Artikel aus dem Korb geleert.`);
-          return true;
-        }
-
-        case 'ADD_ALWAYS_IN_STOCK': {
-          if (p.name) {
-            toggleAlwaysInStock(p.name);
-            setActionSuccessNotice(`✓ "${p.name}" zu den Vorräten hinzugefügt 🏠`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'CLEAN_SHOPPING_LIST': {
-          const { removedCount } = cleanPastMealGroceries();
-          setActionSuccessNotice(`✓ Einkaufsliste bereinigt (${removedCount} alte Zutaten entfernt) 🧹`);
-          return true;
-        }
-
-        case 'SET_MEAL': {
-          const targetDate = p.date || todayStr;
-          setMealSlot(targetDate, p.slot || 'dinner', {
-            title: p.title,
-            recipeId: p.recipeId,
-          });
-          setActionSuccessNotice(`✓ "${p.title}" in den Essensplan eingetragen! 🍽️`);
-          return true;
-        }
-
-        case 'CLEAR_MEAL': {
-          const targetDate = p.date || todayStr;
-          setMealSlot(targetDate, p.slot || 'dinner', { title: '' });
-          setActionSuccessNotice(`✓ Essensplan für ${targetDate} geleert.`);
-          return true;
-        }
-
-        case 'ADD_RECIPE': {
-          addRecipe({
-            title: p.title || 'Rezept',
-            prepTime: p.prepTime || '25 Min',
-            servings: p.servings || 4,
-            category: p.category || 'family-favorite',
-            imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=600&q=80',
-            ingredients: p.ingredients || [],
-            instructions: p.instructions || [],
-            isFavorite: false,
-            tags: p.tags || ['Familie'],
-          });
-          setActionSuccessNotice(`✓ Rezept "${p.title}" in Rezeptbox gespeichert! 🍲`);
-          return true;
-        }
-
-        case 'FAVORITE_RECIPE': {
-          const match = safeRecipes.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
-          if (match) {
-            toggleFavoriteRecipe(match.id);
-            setActionSuccessNotice(`✓ "${match.title}" als Favorit ⭐ markiert!`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'ADD_RECIPE_TO_GROCERIES': {
-          const match = safeRecipes.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
-          if (match) {
-            addRecipeIngredientsToGrocery(match, p.date || todayStr);
-            setActionSuccessNotice(`✓ Zutaten für "${match.title}" zur Einkaufsliste hinzugefügt! 🛒`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'ADD_NOTE': {
-          addNote(p.title || 'Notiz', p.content || p.title || '', p.tag || 'info', true);
-          setActionSuccessNotice(`✓ Notiz "${p.title}" ans Schwarze Brett geheftet! 📌`);
-          return true;
-        }
-
-        case 'DELETE_NOTE': {
-          const match = safeNotes.find(
-            (n) => (p.id && n.id === p.id) || (p.title && n.title.toLowerCase().includes(p.title.toLowerCase()))
-          );
-          if (match) {
-            deleteNote(match.id);
-            setActionSuccessNotice(`✓ Notiz "${match.title}" entfernt.`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'UPDATE_CHILD_DETAILS': {
-          const member = safeMembers.find(
-            (m) => (p.memberId && m.id === p.memberId) || (p.childName && m.name.toLowerCase().includes(p.childName.toLowerCase()))
-          );
-          if (member) {
-            updateMember(member.id, {
-              childDetails: {
-                ...(member.childDetails || {}),
-                ...(p.shoeSize ? { shoeSize: p.shoeSize } : {}),
-                ...(p.clothingSize ? { clothingSize: p.clothingSize } : {}),
-                ...(p.allergies ? { allergies: p.allergies } : {}),
-                ...(p.notes ? { notes: p.notes } : {}),
-              },
-            });
-            setActionSuccessNotice(`✓ Daten für ${member.name} aktualisiert! 🧸`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'AWARD_STARS': {
-          const member = safeMembers.find(
-            (m) => (p.memberId && m.id === p.memberId) || (p.memberName && m.name.toLowerCase().includes(p.memberName.toLowerCase()))
-          );
-          if (member) {
-            awardStars(member.id, Number(p.stars) || 3);
-            setActionSuccessNotice(`✓ ${p.stars || 3} Sterne an ${member.name} vergeben! ⭐🎉`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'ADD_REWARD': {
-          addReward(p.title, Number(p.starsCost) || 15, p.icon || '🎁', p.description);
-          setActionSuccessNotice(`✓ Belohnung "${p.title}" angelegt! 🎁`);
-          return true;
-        }
-
-        case 'CLAIM_REWARD': {
-          const reward = safeRewards.find((r) => r.title.toLowerCase().includes(p.title.toLowerCase()));
-          const child = safeMembers.find(
-            (m) => (p.childName && m.name.toLowerCase().includes(p.childName.toLowerCase())) || m.isChild
-          );
-          if (reward && child) {
-            claimReward(reward.id, child.id);
-            setActionSuccessNotice(`✓ Belohnung "${reward.title}" für ${child.name} eingelöst! 🎁`);
-            return true;
-          }
-          return false;
-        }
-
-        case 'SET_MORNING_BRIEFING': {
-          const briefingObj = {
-            headline: p.headline || `Guten Morgen Familie ${familyName}! ☀️`,
-            summary: p.summary || 'Eure persönlichen Tagesgrüße',
-            highlights: Array.isArray(p.highlights) ? p.highlights : [],
-            tipOfTheDay: p.tipOfTheDay || '',
-            generatedAt: new Date().toISOString(),
-          };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('famly_cached_briefing', JSON.stringify(briefingObj));
-            window.dispatchEvent(new CustomEvent('famly_daily_briefing_updated', { detail: briefingObj }));
-          }
-          setActionSuccessNotice(`✓ Tagesgrüße auf dem Dashboard gespeichert! ☀️`);
-          return true;
-        }
-
-        case 'NAVIGATE': {
+      const res = executeRegisteredAction(action.type, action.payload, {
+        family,
+        navigate: (tab) => {
           onClose();
-          if (p.tab === 'settings') onOpenSettings?.();
-          else if (onNavigateTab && p.tab) onNavigateTab(p.tab);
-          return true;
-        }
-
-        default:
-          return false;
+          if ((tab as string) === 'settings') onOpenSettings?.();
+          else onNavigateTab?.(tab);
+        },
+      });
+      if (res.success) {
+        setActionSuccessNotice(`✓ ${res.message}`);
+        return true;
       }
+      return false;
     } catch (e) {
       console.warn('handleExecuteAction failed:', e);
       return false;
     }
   };
 
-  // Undo Action
+  // Undo Action (Delegated to centralized Action Registry)
   const handleUndoAction = (action: CopilotAction) => {
     try {
-      const p = action.payload || {};
-      if (action.type === 'ADD_GROCERY') {
-        const match = safeGroceries.find((g) => g.name.toLowerCase() === p.name.toLowerCase());
-        if (match) deleteGrocery(match.id);
-      } else if (action.type === 'CHECK_GROCERY') {
-        const match = safeGroceries.find((g) => g.name.toLowerCase() === p.name.toLowerCase());
-        if (match) toggleGrocery(match.id);
-      } else if (action.type === 'SET_MEAL') {
-        const targetDate = p.date || todayStr;
-        setMealSlot(targetDate, p.slot || 'dinner', { title: '' });
-      } else if (action.type === 'ADD_APPOINTMENT' || action.type === 'SCHEDULE_CHORE') {
-        const titleMatch = action.type === 'SCHEDULE_CHORE' ? `🧹 ${p.title}` : p.title;
-        const match = safeAppointments.find((a) => a.title === titleMatch);
-        if (match) deleteAppointment(match.id);
-      } else if (action.type === 'ADD_CHORE') {
-        const match = safeChores.find((c) => c.title === p.title);
-        if (match) deleteChore(match.id);
-      } else if (action.type === 'COMPLETE_CHORE') {
-        const match = safeChores.find((c) => c.title === p.title);
-        if (match) toggleChore(match.id);
-      } else if (action.type === 'ADD_NOTE') {
-        const match = safeNotes.find((n) => n.title === p.title);
-        if (match) deleteNote(match.id);
-      } else if (action.type === 'AWARD_STARS') {
-        const member = safeMembers.find((m) => m.id === p.memberId || m.name === p.memberName);
-        if (member) awardStars(member.id, -Math.abs(Number(p.stars) || 3));
+      const res = undoRegisteredAction(action.type, action.payload, {
+        family,
+        navigate: (tab) => onNavigateTab?.(tab),
+      });
+      if (res.success) {
+        setActionSuccessNotice(`✓ ${res.message}`);
+        setTimeout(() => setActionSuccessNotice(null), 3500);
       }
-      setActionSuccessNotice(`Aktion "${action.description}" rückgängig gemacht.`);
-      setTimeout(() => setActionSuccessNotice(null), 3000);
     } catch (e) {
       console.warn('handleUndoAction error:', e);
     }
