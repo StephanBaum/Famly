@@ -34,15 +34,34 @@ export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): Copilot
 }
 
 export interface CopilotAction {
-  type: 'SCHEDULE_CHORE' | 'ADD_GROCERY' | 'SET_MEAL' | 'NAVIGATE';
+  type:
+    | 'SCHEDULE_CHORE'
+    | 'ADD_CHORE'
+    | 'ADD_GROCERY'
+    | 'SET_MEAL'
+    | 'ADD_APPOINTMENT'
+    | 'CLEAN_SHOPPING_LIST'
+    | 'SET_MORNING_BRIEFING'
+    | 'NAVIGATE';
   payload: any;
   description: string;
+  autoExecuted?: boolean;
 }
 
 export interface CopilotResponse {
   text: string;
   actions?: CopilotAction[];
   source: 'ai' | 'local';
+}
+
+function normalizeDateStr(d?: string): string {
+  if (!d) return '';
+  return d.trim().split('T')[0];
+}
+
+function isSameDay(d1?: string, d2?: string): boolean {
+  if (!d1 || !d2) return false;
+  return normalizeDateStr(d1) === normalizeDateStr(d2);
 }
 
 /**
@@ -65,6 +84,18 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
     })
     .join('\n');
 
+  // Today's appointments specifically
+  const todayAppointments = data.appointments
+    .filter((a) => isAppointmentOnDate(a, todayStr))
+    .map((a) => {
+      const memberNames = (a.memberIds || [])
+        .map((id) => data.members.find((m) => m.id === id)?.name)
+        .filter(Boolean)
+        .join(', ');
+      return ` - ${a.time || 'Ganztägig'}: ${a.title} (${memberNames || 'Alle'})`;
+    })
+    .join('\n');
+
   // Next 7 days appointments
   const upcomingAppointments = data.appointments
     .filter((a) => {
@@ -84,16 +115,51 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
     })
     .join('\n');
 
-  // Meal plans for this week
-  const upcomingMealPlans = data.mealPlans
-    .slice(0, 7)
+  // Today's meal plan specifically
+  const todayPlan = data.mealPlans.find((mp) => mp && isSameDay(mp.date, todayStr));
+  const todayMealsList: string[] = [];
+  if (todayPlan?.dinner?.title) todayMealsList.push(`Abendessen: "${todayPlan.dinner.title}"`);
+  if (todayPlan?.lunch?.title) todayMealsList.push(`Mittagessen: "${todayPlan.lunch.title}"`);
+  if (todayPlan?.breakfast?.title) todayMealsList.push(`Frühstück: "${todayPlan.breakfast.title}"`);
+
+  const todayMealsSummary = todayMealsList.length > 0
+    ? `BEREITS EINGETRAGEN FÜR HEUTE: ${todayMealsList.join(' | ')} (Bestätige dieses Gericht und behaupte keinesfalls, dass noch nichts geplant sei!)`
+    : 'Noch kein Gericht eingetragen (Tag ist frei)';
+
+  // All recorded meals in the entire system so the model has 100% full visibility
+  const allRecordedMeals = data.mealPlans
+    .filter((mp) => mp && (mp.breakfast?.title || mp.lunch?.title || mp.dinner?.title))
     .map((mp) => {
-      const meals: string[] = [];
-      if (mp.dinner?.title) meals.push(`Abendessen: ${mp.dinner.title}`);
-      if (mp.lunch?.title) meals.push(`Mittagessen: ${mp.lunch.title}`);
-      if (mp.breakfast?.title) meals.push(`Frühstück: ${mp.breakfast.title}`);
-      return ` - ${mp.date}: ${meals.length > 0 ? meals.join(' | ') : 'Noch nichts eingetragen (Frei)'}`;
+      const parts: string[] = [];
+      if (mp.dinner?.title) parts.push(`Abendessen: "${mp.dinner.title}"`);
+      if (mp.lunch?.title) parts.push(`Mittagessen: "${mp.lunch.title}"`);
+      if (mp.breakfast?.title) parts.push(`Frühstück: "${mp.breakfast.title}"`);
+      const isToday = isSameDay(mp.date, todayStr);
+      return ` - Datum ${normalizeDateStr(mp.date)}${isToday ? ' (HEUTE!)' : ''}: ${parts.join(' | ')}`;
     })
+    .join('\n');
+
+  // Meal plans for the next 7 days anchored strictly on TODAY
+  const upcomingMealPlans = Array.from({ length: 7 }, (_, i) => {
+    const targetDate = addDays(today, i);
+    const dStr = format(targetDate, 'yyyy-MM-dd');
+    const dayLabel = i === 0
+      ? `Heute (${format(targetDate, 'EEEE', { locale: de })})`
+      : i === 1
+        ? `Morgen (${format(targetDate, 'EEEE', { locale: de })})`
+        : format(targetDate, 'EEEE, d. MMM', { locale: de });
+    const mp = data.mealPlans.find((p) => p && isSameDay(p.date, dStr));
+    const meals: string[] = [];
+    if (mp?.dinner?.title) meals.push(`Abendessen: "${mp.dinner.title}"`);
+    if (mp?.lunch?.title) meals.push(`Mittagessen: "${mp.lunch.title}"`);
+    if (mp?.breakfast?.title) meals.push(`Frühstück: "${mp.breakfast.title}"`);
+    return ` - ${dayLabel} [${dStr}]: ${meals.length > 0 ? meals.join(' | ') : 'Noch nichts eingetragen (Frei)'}`;
+  }).join('\n');
+
+  // Available recipes from family cookbook
+  const recipesSummary = (data.recipes || [])
+    .slice(0, 15)
+    .map((r) => ` - ID "${r.id}": "${r.title}" (${r.prepTime || '25 Min'}${r.isFavorite ? ', Beliebt ⭐' : ''})`)
     .join('\n');
 
   // Open chores
@@ -112,18 +178,38 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
     .map((g) => ` - ${g.name}${g.amount ? ` (${g.amount})` : ''} [${g.store}]`)
     .join('\n');
 
+  const tomorrow = addDays(today, 1);
+  const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
+  const tomorrowGerman = format(tomorrow, 'EEEE, d. MMMM yyyy', { locale: de });
+  const dayAfterTomorrow = addDays(today, 2);
+  const dayAfterTomorrowStr = format(dayAfterTomorrow, 'yyyy-MM-dd');
+
   return `
 HEUTIGES DATUM: ${todayGerman} (${todayStr})
+MORGEN IST: ${tomorrowGerman} (${tomorrowStr})
+ÜBERMORGEN IST: ${dayAfterTomorrowStr}
 FAMILIE: ${data.familyName}
 
 MITGLIEDER:
 ${membersSummary || 'Keine Mitglieder'}
 
+HEUTIGER ESSENSPLAN (SEHR WICHTIG - BEREITS EINGETRAGENES GERICHT BEACHTEN!):
+${todayMealsSummary}
+
+ALLE IM SYSTEM HINTERLEGTEN MAHLZEITEN:
+${allRecordedMeals || 'Noch keine Mahlzeiten im System eingetragen'}
+
+HEUTIGE TERMINE:
+${todayAppointments || 'Keine Termine heute eingetragen'}
+
+ESSENSPLAN DER NÄCHSTEN 7 TAGE:
+${upcomingMealPlans}
+
+BELIEBTE REZEPTE DER FAMILIE (FÜR NEUE VORSCHLÄGE):
+${recipesSummary || 'Keine Rezepte hinterlegt'}
+
 TERMINE DIESE WOCHE:
 ${upcomingAppointments || 'Keine anstehenden Termine'}
-
-ESSENSPLAN DIESE WOCHE:
-${upcomingMealPlans || 'Keine Mahlzeiten geplant'}
 
 OFFENE AUFGABEN:
 ${openChores || 'Alle Aufgaben erledigt!'}
@@ -146,6 +232,108 @@ export function queryLocalFamilyAssistant(
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
+
+  // 0. Reminder & Appointment Creation Intent
+  const isReminderIntent =
+    q.includes('reminder') ||
+    q.includes('erinner') ||
+    q.includes('reinstellen') ||
+    q.includes('merk dir') ||
+    q.includes('nicht vergessen') ||
+    (q.includes('termin') && (q.includes('eintragen') || q.includes('anlegen') || q.includes('erstellen') || q.includes('planen') || q.includes('reinstellen') || q.includes('setzen') || q.includes('mach'))) ||
+    (q.includes('mitnehm') && (q.includes('tasche') || q.includes('morgen') || q.includes('denk')));
+
+  if (isReminderIntent) {
+    const targetDate = q.includes('übermorgen')
+      ? format(addDays(today, 2), 'yyyy-MM-dd')
+      : q.includes('morgen')
+      ? tomorrowStr
+      : todayStr;
+
+    const timeMatch = q.match(/(\d{1,2})[:.](\d{2})/);
+    const hourMatch = q.match(/(\d{1,2})\s*uhr/);
+    let time = '08:00';
+    if (timeMatch) {
+      time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+    } else if (hourMatch) {
+      time = `${hourMatch[1].padStart(2, '0')}:00`;
+    } else if (q.includes('früh') || q.includes('morgens')) {
+      time = '07:30';
+    } else if (q.includes('vormittag')) {
+      time = '10:00';
+    } else if (q.includes('mittag')) {
+      time = '12:30';
+    } else if (q.includes('nachmittag')) {
+      time = '15:00';
+    } else if (q.includes('abend')) {
+      time = '18:30';
+    }
+
+    let cleanTitle = query
+      .replace(/kannst du mir/gi, '')
+      .replace(/kannst du/gi, '')
+      .replace(/bitte/gi, '')
+      .replace(/für übermorgen früh/gi, '')
+      .replace(/für übermorgen/gi, '')
+      .replace(/für morgen früh/gi, '')
+      .replace(/für morgen/gi, '')
+      .replace(/für heute früh/gi, '')
+      .replace(/für heute/gi, '')
+      .replace(/morgen früh/gi, '')
+      .replace(/morgen abend/gi, '')
+      .replace(/morgen/gi, '')
+      .replace(/heute früh/gi, '')
+      .replace(/heute/gi, '')
+      .replace(/einen reminder/gi, '')
+      .replace(/nen reminder/gi, '')
+      .replace(/einen termin/gi, '')
+      .replace(/nen termin/gi, '')
+      .replace(/termin/gi, '')
+      .replace(/reminder/gi, '')
+      .replace(/reinstellen/gi, '')
+      .replace(/einstellen/gi, '')
+      .replace(/anlegen/gi, '')
+      .replace(/eintragen/gi, '')
+      .replace(/erinnere mich/gi, '')
+      .replace(/erinner mich/gi, '')
+      .replace(/daran dass ich/gi, '')
+      .replace(/daran das ich/gi, '')
+      .replace(/dass ich/gi, '')
+      .replace(/das ich/gi, '')
+      .replace(/daran/gi, '')
+      .replace(/an/gi, '')
+      .replace(/um \d{1,2}([:.]\d{2})?(\s*uhr)?/gi, '')
+      .replace(/[?!.]/g, '')
+      .trim();
+
+    if (cleanTitle.toLowerCase().includes('tasche') && cleanTitle.toLowerCase().includes('mitnehm')) {
+      cleanTitle = 'Tasche mitnehmen';
+    }
+
+    if (!cleanTitle || cleanTitle.length < 2) {
+      cleanTitle = 'Erinnerung';
+    } else {
+      cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+    }
+
+    const dateLabel = targetDate === tomorrowStr ? 'morgen' : targetDate === todayStr ? 'heute' : targetDate;
+    return {
+      text: `Alles klar! Ich habe dir für ${dateLabel} um ${time} Uhr die Erinnerung **"${cleanTitle}"** direkt in den Kalender eingetragen! 📅`,
+      actions: [
+        {
+          type: 'ADD_APPOINTMENT',
+          description: `Erinnerung "${cleanTitle}" (${dateLabel === 'morgen' ? 'Morgen' : dateLabel === 'heute' ? 'Heute' : dateLabel}, ${time} Uhr)`,
+          payload: {
+            title: cleanTitle,
+            date: targetDate,
+            time,
+            notes: 'Erinnerung vom Famly-Assistenten',
+          },
+        },
+      ],
+      source: 'local',
+    };
+  }
 
   // 1. Meal planning query
   if (
@@ -382,20 +570,58 @@ export async function queryFamilyAssistant(
   }
 
   const systemContext = buildFamilyContextSummary(data);
+
+  // Inspect previous turn for conversation continuity
+  const lastAssistantTurn = [...chatHistory].reverse().find((h) => h.role === 'assistant');
+  let continuityDirective = '';
+  if (lastAssistantTurn && lastAssistantTurn.text) {
+    continuityDirective = `
+WICHTIGE GESPRÄCHSKONTINUITÄT (EXTREM WICHTIG):
+Deine letzte Nachricht an den Nutzer lautete:
+"""
+${lastAssistantTurn.text}
+"""
+Wenn der Nutzer nun mit einer kurzen Bestätigung antwortet (z.B. "plan das ein", "ja bitte", "mach das", "trage das für heute ein" etc.):
+1. Beziehe dich 100% EXAKT auf das Gericht oder die Aufgabe, die DU in dieser letzten Nachricht vorgeschlagen hast!
+2. WECHSLE NIEMALS zu einem anderen Gericht! Wenn du vorhin Käsespätzle vorgeschlagen hast, MUSST du Käsespätzle einplanen!
+3. Erzeuge die passende [ACTION:SET_MEAL:{"date":"...","slot":"dinner","title":"..."}] für GENAU dieses zuvor vorgeschlagene Gericht.
+`;
+  }
+
   const systemPrompt = `
-Du bist Famly Copilot, der persönliche, warme, kluge Familien-Assistent für Familie ${data.familyName}.
+Du bist Famly Copilot, der persönliche, herzliche, kluge Familien-Assistent für Familie ${data.familyName}.
 Du kennst alle Termine, Essenspläne, Rezepte, Aufgaben und Einkaufszettel der Familie ganz genau.
 
-WICHTIGE REGELN:
-1. Antworte stets auf Deutsch, freundlich, präzise und lösungsorientiert.
-2. Wenn nach dem Essen gefragt wird, beziehe dich IMMER ZUERST auf den hinterlegten Essensplan (nicht erfinden). Wenn ein Tag noch frei ist, schlage passende Rezepte der Familie vor.
-3. Wenn der Nutzer bittet, Aufgaben einzuplanen, schlage konkrete freie Zeitfenster vor und erzeuge eine Aktion.
-4. Wenn der Nutzer bittet, etwas einzukaufen, bestätige es und gib eine Aktion aus.
-5. Um Aktionen im System auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
-   - [ACTION:ADD_GROCERY:{"name":"Milch","store":"Rewe"}]
-   - [ACTION:SCHEDULE_CHORE:{"choreId":"ID","title":"Titel"}]
-   - [ACTION:SET_MEAL:{"date":"YYYY-MM-DD","slot":"dinner","title":"Titel","recipeId":"r1"}]
-
+WICHTIGE VERHALTENSREGELN:
+1. Antworte stets auf Deutsch, herzlich, präzise, kurz und lösungsorientiert.
+2. ESSENSPLAN BEFOLGEN: Beziehe dich IMMER ZUERST auf den Abschnitt "HEUTIGER ESSENSPLAN".
+   - Wenn dort bereits ein Gericht (z.B. "Frische Lachs-Sashimi-Bowl mit Edamame & Duftreis" o.ä.) hinterlegt ist, bestätige dieses Gericht und behaupte NIEMALS, dass noch nichts geplant sei!
+   - Nur wenn der Tag tatsächlich frei ist, schlage passende Rezepte der Familie oder aus dem Vorrat vor.
+3. GESPRÄCHSKONTINUITÄT:
+   - Wenn du in der vorherigen Nachricht ein Gericht vorgeschlagen hast und der Nutzer sagt "plan das bitte ein", trage GENAU dieses Gericht ein! Wechsle niemals zu einem anderen!
+4. MORGENGRÜSSE & TÄGLICHE ROUTINE (WORKFLOW):
+   - Wenn der Nutzer nach Morgengrüßen für jedes Familienmitglied fragt (z.B. "kannst du allen einen netten spruch zum morgen schicken", "morgen routine", "spruch zum montag"):
+     1. Formuliere für JEDES Familienmitglied (Mama, Papa, Kinder etc.) einen liebevollen, persönlichen Spruch passend zu deren Rolle und Tag.
+     2. Hänge den Tag [ACTION:SET_MORNING_BRIEFING:{"headline":"Guten Morgen Familie ${data.familyName}! ☀️","summary":"Eure persönlichen Tagesgrüße","highlights":["Für Mama: ...","Für Papa: ...","Für die Kids: ..."],"tipOfTheDay":"..."}] an.
+     3. Erwähne kurz, dass diese Grüße nun auch direkt auf dem Dashboard gespeichert sind!
+5. REMINDER & TERMINE SOFORT EINTRAGEN (KEINE RÜCKFRAGEN):
+   - Wenn der Nutzer um einen Reminder, eine Erinnerung oder einen Kalendereintrag bittet (z.B. "kannst du mir für morgen früh nen reminder reinstellen das ich die tasche mitnehme", "erinnere mich morgen früh an X", "trag termin Y ein"):
+     1. Stelle KEINE Rückfragen (wie "Wäre das ein passendes Zeitfenster für dich?") und mache keine bloßen Vorschläge!
+     2. Führe die Aktion SOFORT aus: Hänge IMMER [ACTION:ADD_APPOINTMENT:{"title":"...","date":"YYYY-MM-DD","time":"HH:MM","notes":"Erinnerung"}] an.
+     3. Bestimme das genaue Datum anhand von "MORGEN IST: ..." aus dem Kontext und die passende Uhrzeit ("morgen früh" = 07:30, "vormittags" = 09:30 oder die genannte Uhrzeit).
+     4. Formuliere einen prägnanten Titel im Infinitiv (z.B. "Tasche mitnehmen").
+     5. Bestätige dem Nutzer kurz und herzlich, dass der Reminder direkt im Kalender eingetragen wurde (z.B. "Erledigt! Ich habe dir für morgen um 07:30 Uhr die Erinnerung '**Tasche mitnehmen**' direkt in den Kalender eingetragen. 📅").
+6. AUTOMATISCHE AKTIONEN IM SYSTEM:
+   Um Aktionen im System direkt auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
+   * [ACTION:ADD_APPOINTMENT:{"title":"Titel","date":"YYYY-MM-DD","time":"HH:MM","notes":"Notiz"}]
+   * [ACTION:SET_MEAL:{"date":"YYYY-MM-DD","slot":"dinner","title":"Gerichtname"}]
+   * [ACTION:ADD_GROCERY:{"name":"Artikel","store":"Rewe","amount":"Menge"}]
+   * [ACTION:SCHEDULE_CHORE:{"title":"Aufgabe","date":"YYYY-MM-DD","time":"HH:MM","durationMinutes":15}]
+   * [ACTION:ADD_CHORE:{"title":"Aufgabe","stars":3}]
+   * [ACTION:CLEAN_SHOPPING_LIST:{}]
+   * [ACTION:SET_MORNING_BRIEFING:{"headline":"Titel","summary":"Text","highlights":["Spruch 1","Spruch 2"]}]
+   Das System führt diese Aktionen sofort automatisch live im Familien-Hub aus.
+${continuityDirective}
 AKTUELLE FAMILIENDATEN:
 ${systemContext}
 `.trim();
@@ -407,18 +633,63 @@ ${systemContext}
       const model = await resolveGeminiFlashModel(aiConfig.apiKey);
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${aiConfig.apiKey}`;
 
-      const contents = [
-        {
-          role: 'user',
-          parts: [{ text: `${systemPrompt}\n\nNutzerfrage: ${userQuery}` }],
-        },
-      ];
+      // Build proper multi-turn Gemini conversation history
+      const geminiContents: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }> = [];
+      const recentHistory = chatHistory.slice(-8);
 
-      const res = await fetch(endpoint, {
+      for (const turn of recentHistory) {
+        if (!turn.text || !turn.text.trim()) continue;
+        const role = turn.role === 'assistant' ? 'model' : 'user';
+        if (geminiContents.length > 0 && geminiContents[geminiContents.length - 1].role === role) {
+          geminiContents[geminiContents.length - 1].parts[0].text += `\n\n${turn.text}`;
+        } else {
+          geminiContents.push({ role, parts: [{ text: turn.text }] });
+        }
+      }
+
+      if (geminiContents.length > 0 && geminiContents[geminiContents.length - 1].role === 'user') {
+        geminiContents[geminiContents.length - 1].parts[0].text += `\n\n${userQuery}`;
+      } else {
+        geminiContents.push({ role: 'user', parts: [{ text: userQuery }] });
+      }
+
+      // First turn must have role 'user'
+      if (geminiContents.length > 0 && geminiContents[0].role === 'model') {
+        geminiContents.unshift({ role: 'user', parts: [{ text: 'Hallo Famly Assistent!' }] });
+      }
+
+      const requestBody: any = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+        contents: geminiContents,
+        generationConfig: {
+          temperature: 0.6,
+        },
+      };
+
+      let res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents }),
+        body: JSON.stringify(requestBody),
       });
+
+      if (!res.ok) {
+        // Fallback: embed systemPrompt directly in contents if systemInstruction is rejected
+        const fallbackContents = [
+          {
+            role: 'user',
+            parts: [{
+              text: `${systemPrompt}\n\n--- UNTERHALTUNGSVERLAUF ---\n${chatHistory.slice(-6).map((h) => `${h.role === 'user' ? 'Nutzer' : 'Assistent'}: ${h.text}`).join('\n\n')}\n\nAktuelle Nutzeranfrage: ${userQuery}`,
+            }],
+          },
+        ];
+        res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: fallbackContents }),
+        });
+      }
 
       if (!res.ok) {
         return queryLocalFamilyAssistant(userQuery, data);
@@ -431,7 +702,7 @@ ${systemContext}
       const endpoint = 'https://api.openai.com/v1/chat/completions';
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...chatHistory.slice(-4).map((h) => ({ role: h.role, content: h.text })),
+        ...chatHistory.slice(-6).map((h) => ({ role: h.role, content: h.text })),
         { role: 'user', content: userQuery },
       ];
 
@@ -444,7 +715,7 @@ ${systemContext}
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages,
-          temperature: 0.7,
+          temperature: 0.6,
         }),
       });
 
@@ -464,16 +735,20 @@ ${systemContext}
     const actions: CopilotAction[] = [];
     let cleanText = rawResponse;
 
-    const actionRegex = /\[ACTION:(SCHEDULE_CHORE|ADD_GROCERY|SET_MEAL):(.*?)\]/g;
+    const actionRegex = /\[ACTION:(SCHEDULE_CHORE|ADD_CHORE|ADD_GROCERY|SET_MEAL|ADD_APPOINTMENT|CLEAN_SHOPPING_LIST|SET_MORNING_BRIEFING):(.*?)\]/g;
     let match;
     while ((match = actionRegex.exec(rawResponse)) !== null) {
       const actionType = match[1] as CopilotAction['type'];
       try {
         const payload = JSON.parse(match[2]);
         let description = 'Aktion ausführen';
-        if (actionType === 'ADD_GROCERY') description = `"${payload.name}" zur Einkaufsliste`;
-        if (actionType === 'SCHEDULE_CHORE') description = `Aufgabe in Kalender einplanen`;
-        if (actionType === 'SET_MEAL') description = `"${payload.title}" in Essensplan (${payload.date})`;
+        if (actionType === 'ADD_GROCERY') description = `"${payload.name}" auf die Einkaufsliste`;
+        if (actionType === 'SET_MEAL') description = `"${payload.title}" in den Essensplan (${payload.date || 'Heute'})`;
+        if (actionType === 'ADD_APPOINTMENT') description = `Termin "${payload.title}" in Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
+        if (actionType === 'SCHEDULE_CHORE') description = `"${payload.title || 'Aufgabe'}" in den Kalender (${payload.date || 'Heute'} ${payload.time || ''})`;
+        if (actionType === 'ADD_CHORE') description = `Aufgabe "${payload.title}" anlegen`;
+        if (actionType === 'CLEAN_SHOPPING_LIST') description = `Einkaufsliste bereinigt`;
+        if (actionType === 'SET_MORNING_BRIEFING') description = `Morgengrüße in Dashboard-Routine gespeichert`;
 
         actions.push({ type: actionType, payload, description });
       } catch (e) {

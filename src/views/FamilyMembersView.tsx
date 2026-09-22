@@ -87,9 +87,6 @@ export const FamilyMembersView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-black text-stone-900 dark:text-white">Kinder & Familienmitglieder</h2>
-            <p className="text-xs font-bold text-stone-400 dark:text-slate-400">
-              Kleidergrößen, Kinderarzt, Schulinformationen und persönliche Profile
-            </p>
           </div>
         </div>
 

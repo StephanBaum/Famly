@@ -71,9 +71,6 @@ export const PhotoStreamView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-black text-stone-900 dark:text-white">Familien-Momente & Fotoalben</h2>
-            <p className="text-xs font-bold text-stone-400 dark:text-slate-400">
-              Gemeinsame Fotoalben zum Mitmachen & Teilen mit Verwandten (Oma, Opa, Freunde)
-            </p>
           </div>
         </div>
 

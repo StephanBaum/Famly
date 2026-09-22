@@ -18,8 +18,8 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
 }) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-stone-50/80 dark:bg-slate-800/80 p-2.5 sm:p-3.5 rounded-2xl border border-stone-200/70 dark:border-slate-700 overflow-hidden">
-      {/* Category Pills */}
-      <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+      {/* Category Pills (Horizontal scroll on mobile, flex-wrap on desktop) */}
+      <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-none sm:flex-wrap">
         <span className="text-xs font-bold text-stone-500 dark:text-slate-400 flex items-center gap-1 shrink-0 mr-1">
           <Tag className="w-3 h-3" /> Filter:
         </span>

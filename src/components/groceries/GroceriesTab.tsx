@@ -97,6 +97,13 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
     return groceries.filter((g) => !g.checked && g.targetDate && g.targetDate < todayStr).length;
   }, [groceries]);
 
+  // Automatically self-clean obsolete past meal groceries on mount / view
+  React.useEffect(() => {
+    if (pastItemsCount > 0 && onCleanPast) {
+      onCleanPast();
+    }
+  }, [pastItemsCount, onCleanPast]);
+
   // Filter items by store (alias & case-insensitive aware)
   const isStoreMatch = (itemStore: string, filter: string): boolean => {
     if (filter === 'all') return true;
@@ -412,26 +419,6 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
         </div>
       )}
 
-      {/* Obsolete Past Meal Ingredients Banner */}
-      {pastItemsCount > 0 && onCleanPast && (
-        <div className="duo-card p-3 sm:p-3.5 bg-sky-50 dark:bg-sky-950/60 border-2 border-sky-300 dark:border-sky-700 text-xs font-bold text-sky-950 dark:text-sky-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-base shrink-0">✨</span>
-            <span>
-              {pastItemsCount} {pastItemsCount === 1 ? 'ungekaufte Zutat' : 'ungekaufte Zutaten'} von bereits vergangenen Tagen gefunden.
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onCleanPast}
-            className="duo-btn duo-btn-blue px-3 py-1.5 text-xs font-black rounded-xl shrink-0 self-start sm:self-auto flex items-center gap-1"
-            title="Entfernt alte, nicht gekaufte Mahlzeiten-Zutaten (manuelle und gekaufte Artikel bleiben sicher)"
-          >
-            <span>Alte Zutaten bereinigen</span>
-            <span>🧹</span>
-          </button>
-        </div>
-      )}
 
       {/* STORE RUN SELECTOR PILLS */}
       <div className="duo-card p-3 sm:p-4 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
@@ -550,9 +537,8 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
             }`}
-            title="Zeigt alles für die nächsten 3–4 Tage sowie alle haltbaren Vorräte"
           >
-            <span>⚡ Sofort / Nächste 3–4 Tage</span>
+            <span>⚡ Demnächst</span>
           </button>
           <button
             type="button"
@@ -562,9 +548,8 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200'
             }`}
-            title="Zeigt Artikel für spätere Tage & nächste Woche (z.B. Fisch oder Hackfleisch, die man erst frisch kauft)"
           >
-            <span>🗓️ Später / Nächste Woche</span>
+            <span>🗓️ Später</span>
           </button>
         </div>
       )}
@@ -681,28 +666,17 @@ export const GroceriesTab: React.FC<GroceriesTabProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1 pt-1">
                 <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>⚡</span> Sofort & Nächste Tage ({immediateItems.length})
-                </span>
-                <span className="text-[11px] font-bold text-stone-400 dark:text-slate-500">
-                  Manuelle Einträge & zeitnahe Mahlzeiten
+                  <span>⚡</span> Demnächst ({immediateItems.length})
                 </span>
               </div>
               {immediateItems.map(renderGroceryRow)}
             </div>
 
             <div className="pt-2 pb-1 space-y-2">
-              <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-2 border-dashed border-amber-300/80 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-base shrink-0">🗓️</span>
-                  <div>
-                    <div className="text-xs font-black text-amber-950 dark:text-amber-200">
-                      Für spätere Tage & Folgewoche ({futureItems.length})
-                    </div>
-                    <div className="text-[11px] font-medium text-amber-800/80 dark:text-amber-300/80">
-                      💡 Frische Zutaten (Fleisch, Fisch) erst kurz vor der Zubereitung kaufen
-                    </div>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between px-1 pt-1">
+                <span className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🗓️</span> Später & Folgewoche ({futureItems.length})
+                </span>
               </div>
               {futureItems.map(renderGroceryRow)}
             </div>

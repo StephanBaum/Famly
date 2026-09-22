@@ -14,8 +14,6 @@ import {
   Wifi,
   AlertCircle,
   PartyPopper,
-  Shirt,
-  CloudSun,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -24,7 +22,6 @@ import { FamilyAssistantModal } from '../components/FamilyAssistantModal';
 import { FamilyMember, Chore, isChoreRelevantForMember } from '../types';
 import { ActiveTab } from '../components/Header';
 import { ModalPortal } from '../components/ModalPortal';
-import { DailyBriefingCard } from '../components/DailyBriefingCard';
 
 interface DashboardViewProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -46,7 +43,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     recipes,
     chores,
     toggleChore,
-    groceries,
     notes,
     addNote,
     deleteNote,
@@ -89,7 +85,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Filter chores for member
   const relevantChores = chores.filter((c) => isChoreRelevantForMember(c, currentMemberId));
-  const completedChoresCount = relevantChores.filter((c) => c.completed).length;
 
   const getEligibleClaimants = (chore: Chore): FamilyMember[] => {
     if (chore.assignedMemberIds && chore.assignedMemberIds.length > 0) {
@@ -145,264 +140,101 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       : `Familie ${familyName}`;
 
   return (
-    <div className="space-y-6">
-      {/* Autonomous KI-Morgenbriefing (Upstash Workflow / Gemini 3+ Flash) */}
-      <DailyBriefingCard />
-
-      {/* Duolingo-style Cheerful Welcome Header */}
-      <div className="duo-card p-6 bg-gradient-to-br from-amber-50 via-rose-50 to-emerald-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-2 border-stone-200 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-3xl bg-white dark:bg-slate-800 border-2 border-b-4 border-stone-300 dark:border-slate-700 flex items-center justify-center text-3xl shadow-sm shrink-0">
+    <div className="space-y-5">
+      {/* Calm, Stress-Free Today Hero */}
+      <div className="duo-card p-4 sm:p-5 bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-xs">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-amber-100 dark:bg-slate-800 border-2 border-amber-300 dark:border-slate-700 flex items-center justify-center text-2xl sm:text-3xl shrink-0">
               {currentMember ? currentMember.avatar : '🏡'}
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-2xl font-black text-stone-900 dark:text-white tracking-tight">
-                  Hallo {displayGreetingName}!
-                </h2>
-                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#FFC800] text-stone-900 border-b-2 border-[#E5A500]">
-                  {format(new Date(), 'EEEE', { locale: de })}
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white tracking-tight truncate">
+                Hallo {displayGreetingName}! 👋
+              </h2>
+              <div className="flex items-center gap-2 text-xs font-semibold text-stone-500 dark:text-slate-400 mt-0.5 flex-wrap">
+                <span className="font-bold text-stone-800 dark:text-stone-200">
+                  {format(new Date(), 'EEEE, d. MMMM', { locale: de })}
                 </span>
+                {weather && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400">
+                      <span>{weather.icon}</span>
+                      <span>{weather.temperature}°C</span>
+                    </span>
+                    {weather.familyTip && (
+                      <>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline truncate text-stone-600 dark:text-slate-300">
+                          {weather.familyTip}
+                        </span>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
-              <p className="text-xs font-bold text-stone-500 dark:text-slate-400 mt-0.5">
-                {todayAppointments.length === 0
-                  ? 'Heute keine Termine • Zeit für die Familie!'
-                  : todayAppointments.length === 1
-                    ? '1 Termin auf dem heutigen Plan.'
-                    : `${todayAppointments.length} Termine auf dem heutigen Plan.`}
-              </p>
             </div>
           </div>
 
           <button
             onClick={onOpenAddAppointment}
-            className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-2xl self-start md:self-auto"
+            className="duo-btn duo-btn-green px-3.5 sm:px-4 py-2 text-xs font-black rounded-xl sm:rounded-2xl shrink-0 flex items-center gap-1 shadow-xs"
           >
-            <Plus className="w-4 h-4 mr-1 stroke-[3]" />
-            <span>Termin planen</span>
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span className="hidden sm:inline">Termin planen</span>
+            <span className="sm:hidden">Termin</span>
           </button>
         </div>
-
-        {/* Morning Weather & Family Advice Briefing */}
-        {weather && (
-          <div className="mt-5 p-4 bg-white/80 dark:bg-slate-800/80 rounded-2xl border-2 border-amber-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <span className="text-3xl p-2 bg-amber-100 dark:bg-slate-700 rounded-2xl shrink-0">
-                {weather.icon}
-              </span>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm sm:text-base font-black text-stone-900 dark:text-white">
-                    {weather.temperature}°C • {weather.condition}
-                  </span>
-                  {weather.tempMax !== undefined && weather.tempMin !== undefined && (
-                    <span className="text-xs font-bold text-stone-400 dark:text-slate-400">
-                      (Max {weather.tempMax}° / Min {weather.tempMin}°)
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-stone-600 dark:text-slate-300 font-bold mt-0.5 truncate sm:whitespace-normal">
-                  💡 {weather.familyTip}
-                </p>
-              </div>
-            </div>
-
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/70 dark:bg-slate-700/60 text-[11px] font-black text-amber-900 dark:text-amber-200 shrink-0">
-              <CloudSun className="w-3.5 h-3.5 text-amber-600" />
-              <span>Familien-Wetter</span>
-            </div>
-          </div>
-        )}
-
-        {/* Chunky 4-stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-          
-          <div
-            onClick={() => onNavigate('calendar')}
-            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-blue-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-700 transition-all text-center"
-          >
-            <span className="text-xl">📅</span>
-            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">{todayAppointments.length}</p>
-            <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Termine heute</p>
-          </div>
-
-          <div
-            onClick={() => onNavigate('meals')}
-            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-teal-200 dark:border-teal-900/60 hover:border-teal-400 dark:hover:border-teal-700 transition-all text-center"
-          >
-            <span className="text-xl">🍲</span>
-            <p className="text-sm font-black text-stone-900 dark:text-white truncate mt-1">
-              {todayMeal?.dinner?.title || 'Tippen zum Planen'}
-            </p>
-            <p className="text-[11px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wide truncate">
-              {dinnerChef ? `Koch: ${dinnerChef.name}` : 'Abendessen'}
-            </p>
-          </div>
-
-          <div
-            onClick={() => onNavigate('lists')}
-            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-amber-200 dark:border-amber-900/60 hover:border-amber-400 dark:hover:border-amber-700 transition-all text-center"
-          >
-            <span className="text-xl">⭐</span>
-            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">
-              {completedChoresCount}/{relevantChores.length}
-            </p>
-            <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Aufgaben erledigt</p>
-          </div>
-
-          <div
-            onClick={() => onNavigate('lists')}
-            className="cursor-pointer bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border-2 border-b-4 border-emerald-200 dark:border-emerald-900/60 hover:border-emerald-400 dark:hover:border-emerald-700 transition-all text-center"
-          >
-            <span className="text-xl">🛒</span>
-            <p className="text-lg font-black text-stone-900 dark:text-white mt-1">
-              {groceries.filter((g) => !g.checked).length}
-            </p>
-            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Einkäufe nötig</p>
-          </div>
-
-        </div>
       </div>
 
-      {/* Famly KI-Assistent & Smart-Planer Banner */}
-      <div
-        onClick={() => {
-          if (onOpenAssistant) {
-            onOpenAssistant();
-          } else {
-            setIsDecisionModalOpen(true);
-          }
-        }}
-        className="duo-card p-3.5 sm:p-4 bg-linear-to-r from-amber-500/15 via-orange-500/10 to-rose-500/10 dark:from-amber-950/40 dark:via-orange-950/40 dark:to-rose-950/40 border-2 border-amber-300 dark:border-amber-900/60 rounded-3xl flex items-center justify-between gap-3 cursor-pointer hover:border-amber-400 dark:hover:border-amber-700 transition-all group"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-lg shadow-xs group-hover:scale-110 transition-transform shrink-0">
-            ✨
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h4 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white">
-                Famly Assistent & Smart-Planer
-              </h4>
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[10px] font-black">
-                Proaktiv & Chat
-              </span>
-            </div>
-            <p className="text-[11px] text-stone-500 dark:text-slate-400 truncate">
-              Fragen stellen, Aufgaben in den Kalender einplanen & Essensplan abstimmen.
-            </p>
-          </div>
-        </div>
-        <button className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-black rounded-xl shrink-0 hidden xs:flex items-center gap-1 text-amber-700 dark:text-amber-300">
-          <span>Öffnen</span>
-          <span>→</span>
-        </button>
-      </div>
-
-      {/* QUICK CHILD DETAILS BAR (Sizes, Doctor, School) - Render only if kids exist */}
+      {/* QUICK CHILD DETAILS (Sizes & School) - Clean Glance Strip */}
       {kids.length > 0 && (
-        <div className="duo-card p-5 bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/50">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xl shrink-0">🧸</span>
-              <div className="min-w-0">
-                <h3 className="font-extrabold text-stone-900 dark:text-white text-sm truncate">
-                  Wichtige Kinder-Infos & Kleidergrößen
-                </h3>
-                <p className="text-[11px] font-semibold text-stone-400 dark:text-slate-400 truncate">
-                  Schuhgrößen, Kinderarzt-Telefon und Schuldetails sofort griffbereit
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <span className="text-xs font-extrabold text-stone-400 dark:text-slate-500 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+            <span>🧸</span> Kinder:
+          </span>
+          {kids.map((kid) => (
             <button
-              onClick={() => onNavigate('members')}
-              className="text-xs font-black text-purple-600 dark:text-purple-400 hover:text-purple-800 underline shrink-0 whitespace-nowrap"
+              key={kid.id}
+              onClick={() => {
+                setSelectedChildForModal(kid);
+                setChildModalInitialEdit(false);
+              }}
+              className="px-3 py-1.5 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-slate-900 hover:border-purple-400 text-xs font-bold flex items-center gap-2 shadow-2xs shrink-0 transition-all cursor-pointer"
             >
-              <span className="hidden sm:inline">Familienmitglieder verwalten →</span>
-              <span className="sm:hidden">Verwalten →</span>
+              <span>{kid.avatar}</span>
+              <span className="font-extrabold text-stone-900 dark:text-white">{kid.name}</span>
+              <span className="text-stone-300 dark:text-slate-600">•</span>
+              <span className="text-purple-700 dark:text-purple-300 font-semibold">
+                Gr. {kid.childDetails?.clothingSize || '–'} / 👟 {kid.childDetails?.shoeSize || '–'}
+              </span>
             </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {kids.map((kid) => (
-              <div
-                key={kid.id}
-                onClick={() => {
-                  setSelectedChildForModal(kid);
-                  setChildModalInitialEdit(false);
-                }}
-                className="cursor-pointer p-3.5 rounded-2xl border-2 border-b-4 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/60 hover:bg-purple-50/40 dark:hover:bg-purple-950/30 hover:border-purple-300 dark:hover:border-purple-700 transition-all flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-2xl shrink-0">{kid.avatar}</span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <strong className="text-xs font-black text-stone-900 dark:text-white truncate">{kid.name}</strong>
-                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-md shrink-0">
-                        {kid.role}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] text-stone-600 dark:text-slate-300 font-semibold mt-1 truncate">
-                      <span className="flex items-center gap-1 shrink-0">
-                        <Shirt className="w-3 h-3 text-stone-400 dark:text-slate-400" />
-                        <span>{kid.childDetails?.clothingSize || 'Größe k.A.'}</span>
-                      </span>
-                      <span>•</span>
-                      <span className="shrink-0">👟 {kid.childDetails?.shoeSize || 'Schuhe k.A.'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedChildForModal(kid);
-                      setChildModalInitialEdit(false);
-                    }}
-                    className="duo-btn duo-btn-white px-2.5 py-1 text-[11px] font-black rounded-xl"
-                  >
-                    Karte
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedChildForModal(kid);
-                      setChildModalInitialEdit(true);
-                    }}
-                    className="duo-btn px-2 py-1 text-[11px] font-black rounded-xl bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-200 hover:bg-purple-200 border border-purple-200 dark:border-purple-800"
-                    title="Direkt bearbeiten"
-                  >
-                    ✏️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
+          <button
+            onClick={() => onNavigate('members')}
+            className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline shrink-0 px-2 py-1"
+          >
+            Alle Details →
+          </button>
         </div>
       )}
 
-      {/* Main Grid: Left Column (Events & Dinner) / Right Column (Board & Memories) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Main Grid: Left Column (Events & Dinner) / Right Column (Board & Chores) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Left Column (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-4 sm:space-y-6">
           
           {/* Today's Schedule Card */}
-          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+          <div className="duo-card p-4 sm:p-6 bg-white dark:bg-slate-900">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center font-black shrink-0">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutige Termine</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">
-                    Gemeinsamer Plan für {currentMember ? currentMember.name : 'die ganze Familie'}
-                  </p>
+                  <h3 className="font-black text-stone-900 dark:text-white text-base truncate">Termine heute</h3>
                 </div>
               </div>
               <button
@@ -482,15 +314,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Tonight's Dinner Card */}
-          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+          <div className="duo-card p-4 sm:p-6 bg-white dark:bg-slate-900">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center font-black shrink-0">
                   <Utensils className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutiges Abendessen</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">Gemeinsame Wochenplanung</p>
+                  <h3 className="font-black text-stone-900 dark:text-white text-base truncate">Abendessen</h3>
                 </div>
               </div>
               <button
@@ -568,18 +399,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Right Column (5 cols): Bulletin Board & Chores */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-4 sm:space-y-6">
 
           {/* Quick Chores */}
-          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+          <div className="duo-card p-4 sm:p-6 bg-white dark:bg-slate-900">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center font-black shrink-0">
                   <span>⭐</span>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Heutige Aufgaben</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">Sterne sammeln für Mithilfe!</p>
+                  <h3 className="font-black text-stone-900 dark:text-white text-base truncate">Aufgaben heute</h3>
                 </div>
               </div>
               <button
@@ -678,15 +508,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Family Notice Board */}
-          <div className="duo-card p-6 bg-white dark:bg-slate-900">
+          <div className="duo-card p-4 sm:p-6 bg-white dark:bg-slate-900">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center font-black shrink-0">
                   <Pin className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-extrabold text-stone-900 dark:text-white truncate">Schwarzes Brett</h3>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-slate-400 truncate">WLAN, Buspläne & Notizen</p>
+                  <h3 className="font-black text-stone-900 dark:text-white text-base truncate">Notizen & Infos</h3>
                 </div>
               </div>
               <button

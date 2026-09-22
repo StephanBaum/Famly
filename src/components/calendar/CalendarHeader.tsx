@@ -84,22 +84,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {/* Quick Add on mobile right top */}
           <div className="flex items-center gap-1.5 sm:hidden shrink-0">
             <button
-              onClick={onExportICal}
-              className="p-2 text-stone-600 dark:text-slate-300 bg-stone-100 dark:bg-slate-800 rounded-xl hover:bg-stone-200"
-              title="iCal Export"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onOpenAddChore}
-              className="duo-btn duo-btn-amber px-2.5 py-1.5 text-xs font-black rounded-xl shadow-xs flex items-center gap-1 whitespace-nowrap"
-            >
-              <Sparkles className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Aufgabe</span>
-            </button>
-            <button
               onClick={onOpenAddAppointment}
-              className="duo-btn duo-btn-blue px-2.5 py-1.5 text-xs font-black rounded-xl shadow-xs flex items-center gap-1 whitespace-nowrap"
+              className="duo-btn duo-btn-blue px-3 py-1.5 text-xs font-black rounded-xl shadow-xs flex items-center gap-1 whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5 stroke-[3]" />
               <span>Termin</span>

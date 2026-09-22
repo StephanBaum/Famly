@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import {
   Calendar as CalendarIcon,
@@ -8,10 +8,11 @@ import {
   Home,
   Users,
   Plus,
-  LogOut,
   Settings,
   Sparkles,
   QrCode,
+  X,
+  UserCheck,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'calendar' | 'meals' | 'photos' | 'lists' | 'members';
@@ -43,140 +44,272 @@ export const Header: React.FC<HeaderProps> = ({
     familyName,
   } = useFamily();
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-stone-200 dark:border-slate-800 shadow-xs transition-colors w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-1.5 sm:gap-3">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-stone-200 dark:border-slate-800 shadow-xs transition-colors w-full">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           
           {/* Brand */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-base sm:text-xl shadow-xs shrink-0 animate-pop-in">
-                🏡
-              </div>
-              <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight truncate">
-                {familyName
-                  ? (familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`)
-                  : 'Famly'}
-              </h1>
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-[#58CC02] border-b-4 border-[#46A302] flex items-center justify-center text-base sm:text-xl shadow-xs shrink-0 animate-pop-in">
+              🏡
             </div>
+            <h1 className="text-base sm:text-xl font-black text-stone-900 dark:text-white tracking-tight truncate">
+              {familyName
+                ? (familyName.toLowerCase().startsWith('familie') ? familyName : `Familie ${familyName}`)
+                : 'Famly'}
+            </h1>
+          </div>
 
-          {/* Right Side: Logged-in Profile Badge & Actions */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            
-            {/* Active Logged-in Member Pill */}
-            {loggedInMember && (
-              <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-2xl border-2 border-stone-200 dark:border-slate-700 shrink-0">
-                <button
-                  type="button"
-                  onClick={logout}
-                  title={`${loggedInMember.name} (${loggedInMember.role}) - Tippen zum Profilwechsel`}
-                  className="flex items-center gap-1.5 px-1.5 py-1 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-all text-left group"
-                >
-                  <div
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-sm sm:text-base border shrink-0 group-hover:scale-105 transition-transform"
-                    style={{
-                      backgroundColor: `${loggedInMember.color}20`,
-                      borderColor: `${loggedInMember.color}50`,
-                    }}
-                  >
-                    {loggedInMember.avatar}
-                  </div>
-
-                  <div className="text-left leading-none max-w-[70px] sm:max-w-none">
-                    <span className="block text-xs font-black text-stone-900 dark:text-white truncate">
-                      {loggedInMember.name}
-                    </span>
-                    <span className="text-[9px] font-bold text-stone-400 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 flex items-center gap-0.5">
-                      Wechseln
-                    </span>
-                  </div>
-                </button>
-
-                {/* View toggle: My Tasks vs All Family */}
-                <button
-                  onClick={() =>
-                    setCurrentMemberId(currentMemberId === 'all' ? loggedInMember.id : 'all')
-                  }
-                  title="Zwischen persönlicher Ansicht und der ganzen Familie wechseln"
-                  className={`duo-btn px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-extrabold rounded-xl ${
-                    currentMemberId === 'all'
-                      ? 'duo-btn-white text-stone-700 dark:text-slate-200'
-                      : 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600'
-                  }`}
-                >
-                  {currentMemberId === 'all' ? 'Alle' : 'Ich'}
-                </button>
-
-                {/* Switch Profile / Log Out */}
-                <button
-                  onClick={logout}
-                  title="Profil wechseln / Abmelden"
-                  className="flex p-1.5 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Kids Mode Toggle Button */}
-            {onToggleKidsMode && (
-              <button
-                onClick={onToggleKidsMode}
-                title="Kindgerechte Spiel- & Belohnungsansicht"
-                className="px-2.5 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
-              >
-                <span>🚀</span>
-                <span className="hidden sm:inline">Kids</span>
-              </button>
-            )}
-
-            {/* Famly Assistant & Smart-Planer Button */}
+          {/* DESKTOP CONTROLS (Clean & Calm) */}
+          <div className="hidden sm:flex items-center gap-2.5 shrink-0">
+            {/* Famly Assistant Button */}
             {onOpenDecision && (
               <button
                 onClick={onOpenDecision}
-                title="Famly Assistent & Smart-Planer (Chat & Aufgaben einplanen)"
-                className="px-2.5 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
+                title="Famly Assistent & Smart-Planer"
+                className="px-3 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 text-xs font-black flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all shadow-2xs"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
-                <span className="hidden sm:inline">Assistent</span>
+                <span>Assistent</span>
               </button>
             )}
-
-            {/* Join Family / Connect Device QR Button */}
-            {onOpenJoinQR && (
-              <button
-                type="button"
-                onClick={onOpenJoinQR}
-                title="Gerät verbinden & Familie per QR-Code beitreten"
-                className="px-2.5 py-1.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border-2 border-indigo-200 dark:border-indigo-800 text-xs font-black flex items-center gap-1 hover:scale-105 transition-transform shrink-0"
-              >
-                <QrCode className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.5]" />
-                <span className="hidden sm:inline">QR-Code</span>
-              </button>
-            )}
-
-            {/* Settings & Data Button */}
-            <button
-              onClick={onOpenSettings}
-              title="Einstellungen & Datenverwaltung"
-              aria-label="Einstellungen"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border-2 border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center justify-center shrink-0"
-            >
-              <Settings className="w-4 h-4 text-stone-700 dark:text-slate-300" />
-            </button>
 
             {/* Quick Add Button */}
             <button
               onClick={onQuickAdd}
-              className="duo-btn duo-btn-green px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1 shrink-0"
+              className="duo-btn duo-btn-green px-3.5 py-1.5 text-xs font-black rounded-2xl shadow-xs whitespace-nowrap flex items-center gap-1"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span className="hidden xs:inline">Neu</span>
+              <span>Neu</span>
             </button>
 
+            {/* Active Logged-in Member Pill (Opens Options) */}
+            {loggedInMember && (
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                title={`${loggedInMember.name} (${loggedInMember.role}) - Optionen & Profil`}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-2xl bg-stone-100 dark:bg-slate-800 border-2 border-stone-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition-all text-left shadow-2xs group cursor-pointer"
+              >
+                <div
+                  className="w-7 h-7 rounded-xl flex items-center justify-center text-sm border shrink-0 group-hover:scale-105 transition-transform"
+                  style={{
+                    backgroundColor: `${loggedInMember.color}20`,
+                    borderColor: `${loggedInMember.color}60`,
+                  }}
+                >
+                  {loggedInMember.avatar}
+                </div>
+                <span className="text-xs font-black text-stone-900 dark:text-white truncate max-w-[100px]">
+                  {loggedInMember.name}
+                </span>
+                <span className="text-stone-400 text-xs">▾</span>
+              </button>
+            )}
           </div>
+
+          {/* MOBILE STREAMLINED CONTROLS (Only visible on < sm) */}
+          <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+            {/* Famly AI Assistant Quick Button */}
+            {onOpenDecision && (
+              <button
+                onClick={onOpenDecision}
+                title="Famly Assistent"
+                className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-center active:scale-95 transition-transform shadow-2xs"
+              >
+                <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+              </button>
+            )}
+
+            {/* Quick Add Button */}
+            <button
+              onClick={onQuickAdd}
+              className="w-8 h-8 rounded-xl bg-[#58CC02] border-b-2 border-[#46A302] text-white flex items-center justify-center active:scale-95 transition-transform shadow-2xs"
+              title="Neuer Eintrag"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+            </button>
+
+            {/* Mobile Profile & Menu Trigger */}
+            {loggedInMember && (
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-sm border-2 shadow-2xs transition-transform active:scale-95"
+                style={{
+                  backgroundColor: `${loggedInMember.color}25`,
+                  borderColor: `${loggedInMember.color}70`,
+                }}
+                title="Profil & Optionen"
+              >
+                {loggedInMember.avatar}
+              </button>
+            )}
+          </div>
+
         </div>
       </div>
+
+      {/* OPTIONS MODAL / SHEET (Responsive for Mobile & Desktop) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="relative bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border-t-2 sm:border-2 border-stone-200 dark:border-slate-800 p-5 shadow-2xl space-y-4 w-full sm:max-w-md max-h-[85vh] overflow-y-auto">
+            {/* Sheet Handle and Close */}
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🏡</span>
+                <span className="text-sm font-black text-stone-900 dark:text-white">
+                  Familien-Optionen
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-7 h-7 rounded-xl bg-stone-100 dark:bg-slate-800 flex items-center justify-center text-stone-500 hover:text-stone-800 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Logged in member badge */}
+            {loggedInMember && (
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/80 rounded-2xl border-2 border-stone-200 dark:border-slate-700 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl border-2 shrink-0"
+                    style={{
+                      backgroundColor: `${loggedInMember.color}20`,
+                      borderColor: `${loggedInMember.color}60`,
+                    }}
+                  >
+                    {loggedInMember.avatar}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-stone-900 dark:text-white truncate">
+                      {loggedInMember.name}
+                    </p>
+                    <p className="text-[10px] font-bold text-stone-400 dark:text-slate-400 truncate">
+                      {loggedInMember.role}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="duo-btn duo-btn-white px-2.5 py-1.5 text-[11px] font-black rounded-xl text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 shrink-0"
+                >
+                  Profil wechseln
+                </button>
+              </div>
+            )}
+
+            {/* View Filter: Alle vs Meine */}
+            {loggedInMember && (
+              <div>
+                <p className="text-[10px] font-extrabold text-stone-400 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Dashboard & Aufgaben filtern
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentMemberId('all');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-black border-2 transition-all flex items-center justify-center gap-1.5 ${
+                      currentMemberId === 'all'
+                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs'
+                        : 'bg-stone-50 dark:bg-slate-800 text-stone-700 dark:text-slate-300 border-stone-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Ganze Familie</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentMemberId(loggedInMember.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-black border-2 transition-all flex items-center justify-center gap-1.5 ${
+                      currentMemberId === loggedInMember.id
+                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs'
+                        : 'bg-stone-50 dark:bg-slate-800 text-stone-700 dark:text-slate-300 border-stone-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Nur ich ({loggedInMember.name})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation & Utilities */}
+            <div className="space-y-1.5 pt-1">
+              {onToggleKidsMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onToggleKidsMode();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-2 border-amber-200 dark:border-amber-800 text-xs font-black"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🚀</span>
+                    <span>Kids-Modus (Punkte & Belohnung)</span>
+                  </div>
+                  <span>→</span>
+                </button>
+              )}
+
+              {onOpenJoinQR && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenJoinQR();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border-2 border-indigo-200 dark:border-indigo-800 text-xs font-black"
+                >
+                  <div className="flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Gerät verbinden (QR-Code teilen)</span>
+                  </div>
+                  <span>→</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenSettings();
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-slate-200 border-2 border-stone-200 dark:border-slate-700 text-xs font-black"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-stone-600 dark:text-slate-400" />
+                  <span>Einstellungen & KI-Schlüssel</span>
+                </div>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Desktop Navigation Tabs (Hidden on small mobile screens where bottom nav is used) */}
       <div className="hidden sm:block border-t-2 border-stone-100 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors">

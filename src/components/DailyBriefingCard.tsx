@@ -11,7 +11,7 @@ export const DailyBriefingCard: React.FC<DailyBriefingCardProps> = () => {
   const { familyName, appointments, chores, mealPlans, members } = useFamily();
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
 
   // Filter events and chores for today
   const todayDateStr = new Date().toISOString().split('T')[0];
@@ -37,9 +37,18 @@ export const DailyBriefingCard: React.FC<DailyBriefingCardProps> = () => {
       }
     }
 
+    const handleCustomUpdate = (e: any) => {
+      if (e?.detail && isMounted) {
+        setBriefing(e.detail);
+      }
+    };
+
+    window.addEventListener('famly_daily_briefing_updated', handleCustomUpdate);
     load();
+
     return () => {
       isMounted = false;
+      window.removeEventListener('famly_daily_briefing_updated', handleCustomUpdate);
     };
   }, []);
 

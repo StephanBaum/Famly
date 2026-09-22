@@ -14,6 +14,7 @@ import { getFamilyMemories } from '../services/familyMemoryService';
 import { format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import confetti from 'canvas-confetti';
+import { triggerHaptic } from '../utils/haptics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
 import { getAIConfig } from '../services/aiRecipeService';
@@ -29,10 +30,10 @@ import {
   Plus,
   Compass,
   RefreshCw,
-  ShoppingCart,
   CalendarCheck,
   Key,
   Brain,
+  Undo2,
 } from 'lucide-react';
 
 interface FamilyAssistantModalProps {
@@ -64,8 +65,13 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     mealPlans,
     groceries,
     addAppointment,
+    deleteAppointment,
     setMealSlot,
     addGrocery,
+    deleteGrocery,
+    addChore,
+    deleteChore,
+    cleanPastMealGroceries,
   } = useFamily();
 
   // Defensively guard all data arrays against null/undefined
@@ -186,11 +192,30 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
         history
       );
 
+      // Auto-execute all actions immediately in the app!
+      const executedActions = (response.actions || []).map((act) => {
+        const ok = handleExecuteAction(act);
+        return { ...act, autoExecuted: ok };
+      });
+
+      if (executedActions.length > 0) {
+        triggerHaptic('success');
+        try {
+          confetti({
+            particleCount: 45,
+            spread: 60,
+            origin: { y: 0.6 },
+          });
+        } catch {
+          // ignore
+        }
+      }
+
       const assistantMsg: ChatMessage = {
         id: `a_${Date.now()}`,
         role: 'assistant',
         text: response.text,
-        actions: response.actions,
+        actions: executedActions,
         timestamp: Date.now(),
       };
 
@@ -210,28 +235,118 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     }
   };
 
-  // Execute Action from Chat or Buttons
-  const handleExecuteAction = (action: CopilotAction) => {
-    if (action.type === 'ADD_GROCERY') {
-      addGrocery(action.payload.name, action.payload.store || 'Supermarkt');
-      setActionSuccessNotice(`✓ "${action.payload.name}" wurde auf die Einkaufsliste gesetzt! 🛒`);
-    } else if (action.type === 'SET_MEAL') {
-      setMealSlot(action.payload.date, action.payload.slot || 'dinner', {
-        title: action.payload.title,
-        recipeId: action.payload.recipeId,
-      });
-      setActionSuccessNotice(`✓ "${action.payload.title}" in den Essensplan eingetragen! 🍽️`);
-    } else if (action.type === 'SCHEDULE_CHORE') {
-      // switch to scheduler tab
-      setActiveTab('scheduler');
-      return;
-    } else if (action.type === 'NAVIGATE') {
-      onClose();
-      onOpenSettings?.();
-      return;
-    }
+  // Execute Action from Chat or Buttons (returns true on success)
+  const handleExecuteAction = (action: CopilotAction): boolean => {
+    try {
+      if (action.type === 'ADD_GROCERY') {
+        addGrocery(action.payload.name, action.payload.store || 'Rewe', action.payload.amount);
+        setActionSuccessNotice(`✓ "${action.payload.name}" auf Einkaufsliste gesetzt! 🛒`);
+        return true;
+      } else if (action.type === 'SET_MEAL') {
+        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
+        const targetSlot = action.payload.slot || 'dinner';
+        setMealSlot(targetDate, targetSlot, {
+          title: action.payload.title,
+          recipeId: action.payload.recipeId,
+        });
+        setActionSuccessNotice(`✓ "${action.payload.title}" in den Essensplan eingetragen! 🍽️`);
+        return true;
+      } else if (action.type === 'ADD_APPOINTMENT') {
+        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
+        addAppointment({
+          title: action.payload.title,
+          date: targetDate,
+          time: action.payload.time || '10:00',
+          memberIds: action.payload.memberIds || (safeMembers[0] ? [safeMembers[0].id] : ['m1']),
+          category: 'family',
+          notes: action.payload.notes || 'Vom Famly-Assistenten eingetragen',
+        });
+        setActionSuccessNotice(`✓ Termin "${action.payload.title}" in Kalender eingetragen! 📅`);
+        return true;
+      } else if (action.type === 'SCHEDULE_CHORE') {
+        const choreObj = safeChores.find((c) => c.id === action.payload.choreId);
+        const proposal = choreProposals.find((p) => p.chore.id === action.payload.choreId);
+        const choreTitle = action.payload.title || choreObj?.title || 'Aufgabe';
+        const targetDate = action.payload.date || proposal?.proposedDate || format(new Date(), 'yyyy-MM-dd');
+        const targetTime = action.payload.time || proposal?.proposedTime || '18:00';
+        const targetMemberId = action.payload.memberId || proposal?.targetMember?.id || choreObj?.assignedMemberId || (safeMembers[0] ? safeMembers[0].id : 'm1');
 
-    setTimeout(() => setActionSuccessNotice(null), 3500);
+        addAppointment({
+          title: `🧹 ${choreTitle}`,
+          date: targetDate,
+          time: targetTime,
+          durationMinutes: action.payload.durationMinutes || proposal?.durationMinutes || 20,
+          memberIds: [targetMemberId],
+          category: 'family',
+          notes: `Aufgabe automatisch eingeplant`,
+        });
+        if (action.payload.choreId) {
+          setScheduledChoreIds((prev) => new Set([...prev, action.payload.choreId]));
+        }
+        setActionSuccessNotice(`✓ "${choreTitle}" für ${targetTime} Uhr im Kalender eingetragen! 📅`);
+        return true;
+      } else if (action.type === 'ADD_CHORE') {
+        addChore(
+          action.payload.title,
+          action.payload.assignedMemberId || '',
+          'once',
+          Number(action.payload.stars) || 3,
+          action.payload.assignedMemberId ? [action.payload.assignedMemberId] : [],
+          action.payload.dueDate
+        );
+        setActionSuccessNotice(`✓ Aufgabe "${action.payload.title}" angelegt! ⭐`);
+        return true;
+      } else if (action.type === 'CLEAN_SHOPPING_LIST') {
+        const { removedCount } = cleanPastMealGroceries();
+        setActionSuccessNotice(`✓ Einkaufsliste bereinigt (${removedCount} alte Zutaten entfernt) 🧹`);
+        return true;
+      } else if (action.type === 'SET_MORNING_BRIEFING') {
+        const briefingObj = {
+          headline: action.payload.headline || `Guten Morgen Familie ${familyName}! ☀️`,
+          summary: action.payload.summary || 'Eure persönlichen Tagesgrüße',
+          highlights: Array.isArray(action.payload.highlights) ? action.payload.highlights : [],
+          tipOfTheDay: action.payload.tipOfTheDay || '',
+          generatedAt: new Date().toISOString(),
+        };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('famly_cached_briefing', JSON.stringify(briefingObj));
+          window.dispatchEvent(new CustomEvent('famly_daily_briefing_updated', { detail: briefingObj }));
+        }
+        setActionSuccessNotice(`✓ Tagesgrüße auf dem Dashboard gespeichert! ☀️`);
+        return true;
+      } else if (action.type === 'NAVIGATE') {
+        onClose();
+        onOpenSettings?.();
+        return true;
+      }
+    } catch (e) {
+      console.warn('handleExecuteAction failed:', e);
+    }
+    return false;
+  };
+
+  // Undo Action
+  const handleUndoAction = (action: CopilotAction) => {
+    try {
+      if (action.type === 'ADD_GROCERY') {
+        const match = safeGroceries.find((g) => g.name.toLowerCase() === action.payload.name.toLowerCase());
+        if (match) deleteGrocery(match.id);
+      } else if (action.type === 'SET_MEAL') {
+        const targetDate = action.payload.date || format(new Date(), 'yyyy-MM-dd');
+        setMealSlot(targetDate, action.payload.slot || 'dinner', { title: '' });
+      } else if (action.type === 'ADD_APPOINTMENT' || action.type === 'SCHEDULE_CHORE') {
+        const titleMatch = action.type === 'SCHEDULE_CHORE' ? `🧹 ${action.payload.title}` : action.payload.title;
+        const match = safeAppointments.find((a) => a.title === titleMatch);
+        if (match) deleteAppointment(match.id);
+      } else if (action.type === 'ADD_CHORE') {
+        const match = safeChores.find((c) => c.title === action.payload.title);
+        if (match) deleteChore(match.id);
+      }
+      setActionSuccessNotice(`Aktion "${action.description}" rückgängig gemacht.`);
+      setTimeout(() => setActionSuccessNotice(null), 3000);
+    } catch (e) {
+      console.warn('handleUndoAction error:', e);
+    }
   };
 
   // Schedule a single chore proposal to the calendar
@@ -447,21 +562,27 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
                         <MarkdownMessage text={msg.text} isUser={msg.role === 'user'} />
                       </div>
 
-                      {/* Attached Action Cards */}
+                      {/* Attached Action Cards (Auto-Executed with 1-click Undo) */}
                       {msg.actions && msg.actions.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
+                        <div className="flex flex-col gap-1.5 pt-1">
                           {msg.actions.map((act, idx) => (
-                            <button
+                            <div
                               key={idx}
-                              type="button"
-                              onClick={() => handleExecuteAction(act)}
-                              className="duo-btn duo-btn-green px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5"
+                              className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 text-xs font-bold text-emerald-900 dark:text-emerald-200 shadow-2xs animate-in fade-in"
                             >
-                              {act.type === 'SCHEDULE_CHORE' && <CalendarCheck className="w-3.5 h-3.5" />}
-                              {act.type === 'ADD_GROCERY' && <ShoppingCart className="w-3.5 h-3.5" />}
-                              {act.type === 'SET_MEAL' && <Utensils className="w-3.5 h-3.5" />}
-                              <span>{act.description}</span>
-                            </button>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-emerald-600 dark:text-emerald-400 font-black">✓</span>
+                                <span className="truncate">{act.description}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleUndoAction(act)}
+                                className="text-[11px] font-black underline text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 shrink-0 cursor-pointer flex items-center gap-1"
+                              >
+                                <Undo2 className="w-3 h-3" />
+                                <span>Rückgängig</span>
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}

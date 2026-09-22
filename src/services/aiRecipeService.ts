@@ -11,13 +11,42 @@ export interface AIConfig {
   apiKey: string;
 }
 
-export const getAIConfig = (): AIConfig | null => {
-  if (typeof window === 'undefined') return null;
-  const provider = (localStorage.getItem(STORAGE_KEY_AI_PROVIDER) as AIProvider) || 'gemini';
-  const apiKey = (localStorage.getItem(STORAGE_KEY_AI_KEY) || '').trim();
+let sharedAIConfig: AIConfig | null = null;
 
-  if (!apiKey || apiKey.length < 5) return null;
-  return { provider, apiKey };
+export const setSharedAIConfig = (config: AIConfig | null): void => {
+  sharedAIConfig = config;
+  if (typeof window !== 'undefined') {
+    if (config && config.apiKey && config.apiKey.length >= 5) {
+      localStorage.setItem(STORAGE_KEY_AI_PROVIDER, config.provider || 'gemini');
+      localStorage.setItem(STORAGE_KEY_AI_KEY, config.apiKey.trim());
+    } else if (config === null) {
+      localStorage.removeItem(STORAGE_KEY_AI_KEY);
+    }
+  }
+};
+
+export const getAIConfig = (): AIConfig | null => {
+  // 1. In-memory synced family config
+  if (sharedAIConfig && sharedAIConfig.apiKey && sharedAIConfig.apiKey.length >= 5) {
+    return sharedAIConfig;
+  }
+
+  // 2. Local storage config
+  if (typeof window !== 'undefined') {
+    const provider = (localStorage.getItem(STORAGE_KEY_AI_PROVIDER) as AIProvider) || 'gemini';
+    const apiKey = (localStorage.getItem(STORAGE_KEY_AI_KEY) || '').trim();
+    if (apiKey && apiKey.length >= 5) {
+      return { provider, apiKey };
+    }
+  }
+
+  // 3. Optional Vite env fallback (e.g. VITE_GEMINI_API_KEY set on Vercel)
+  const envKey = (import.meta.env?.VITE_GEMINI_API_KEY as string | undefined)?.trim();
+  if (envKey && envKey.length >= 5) {
+    return { provider: 'gemini', apiKey: envKey };
+  }
+
+  return null;
 };
 
 export const isAIConfigured = (): boolean => {
@@ -25,16 +54,18 @@ export const isAIConfigured = (): boolean => {
 };
 
 export const saveAIConfig = (provider: AIProvider, apiKey: string): void => {
+  const cleanKey = apiKey.trim();
+  sharedAIConfig = { provider, apiKey: cleanKey };
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY_AI_PROVIDER, provider);
-    localStorage.setItem(STORAGE_KEY_AI_KEY, apiKey.trim());
+    localStorage.setItem(STORAGE_KEY_AI_KEY, cleanKey);
   }
 };
 
 export const clearAIConfig = (): void => {
+  sharedAIConfig = null;
   if (typeof window !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY_AI_KEY);
-    // keep default provider as gemini
     localStorage.setItem(STORAGE_KEY_AI_PROVIDER, 'gemini');
   }
 };

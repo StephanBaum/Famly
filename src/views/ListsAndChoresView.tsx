@@ -210,9 +210,6 @@ export const ListsAndChoresView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-black text-stone-900 dark:text-white">Einkauf & Aufgaben</h2>
-            <p className="text-xs font-bold text-stone-400 dark:text-slate-400">
-              Getrennte Einkäufe nach Geschäft mit Vorrats-Automatik & Aufgaben-Sternen
-            </p>
           </div>
         </div>
 

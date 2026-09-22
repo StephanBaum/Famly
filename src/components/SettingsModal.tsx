@@ -3,8 +3,6 @@ import { useFamily } from '../context/FamilyContext';
 import { ModalPortal } from './ModalPortal';
 import {
   getAIConfig,
-  saveAIConfig,
-  clearAIConfig,
   testAIConnection,
   AIProvider,
 } from '../services/aiRecipeService';
@@ -61,6 +59,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     appointments,
     chores,
     galleries,
+    saveAIConfig: saveSharedAIConfig,
+    clearAIConfig: clearSharedAIConfig,
   } = useFamily();
 
   const [inputFamilyName, setInputFamilyName] = useState(familyName);
@@ -181,8 +181,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setAiTesting(false);
 
     if (result.success) {
-      saveAIConfig(aiProvider, aiKeyInput.trim());
-      setAiFeedback({ success: true, message: result.message });
+      saveSharedAIConfig(aiProvider, aiKeyInput.trim());
+      setAiFeedback({ success: true, message: `${result.message} (Für alle Familiengeräte synchronisiert ✓)` });
       setTimeout(() => setAiFeedback(null), 4000);
     } else {
       setAiFeedback({ success: false, message: result.message });
@@ -190,9 +190,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleClearAI = () => {
-    clearAIConfig();
+    clearSharedAIConfig();
     setAiKeyInput('');
-    setAiFeedback({ success: true, message: 'KI-Key entfernt. Lokaler Heuristik-Modus aktiv.' });
+    setAiFeedback({ success: true, message: 'KI-Key für die Familie entfernt. Lokaler Heuristik-Modus aktiv.' });
     setTimeout(() => setAiFeedback(null), 3000);
   };
 

@@ -25,6 +25,14 @@ import {
   startVercelSyncListener,
 } from '../services/vercelSync';
 import {
+  AIConfig,
+  AIProvider,
+  getAIConfig,
+  saveAIConfig as saveLocalAIConfig,
+  clearAIConfig as clearLocalAIConfig,
+  setSharedAIConfig,
+} from '../services/aiRecipeService';
+import {
   INITIAL_MEMBERS,
   INITIAL_RECIPES,
   INITIAL_MEAL_PLANS,
@@ -186,6 +194,11 @@ export interface FamilyContextType {
   // Data Management
   exportAllData: () => string;
   importAllData: (jsonData: string) => { success: boolean; error?: string };
+
+  // Shared Family AI Config
+  aiConfig: AIConfig | null;
+  saveAIConfig: (provider: AIProvider, apiKey: string) => void;
+  clearAIConfig: () => void;
 }
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
@@ -307,9 +320,26 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [groceries, setGroceries] = useState<GroceryItem[]>(() => {
     const stored = getStoredOrDefault<GroceryItem[] | null>(STORAGE_KEYS.GROCERIES, null);
-    if (stored !== null) return sanitizeAndDeduplicateGroceries(stored);
+    if (stored !== null) {
+      const sanitized = sanitizeAndDeduplicateGroceries(stored);
+      const { updatedGroceries } = cleanPastMealGroceriesUtil(sanitized);
+      return updatedGroceries;
+    }
     return [];
   });
+
+  // Shared Family AI Config state (synced with Vercel Storage / Upstash Redis)
+  const [aiConfig, setAiConfigState] = useState<AIConfig | null>(() => getAIConfig());
+
+  const saveAIConfig = (provider: AIProvider, apiKey: string) => {
+    saveLocalAIConfig(provider, apiKey);
+    setAiConfigState({ provider, apiKey });
+  };
+
+  const clearAIConfig = () => {
+    clearLocalAIConfig();
+    setAiConfigState(null);
+  };
 
   const [chores, setChores] = useState<Chore[]>(() => {
     const stored = getStoredOrDefault<Chore[] | null>(STORAGE_KEYS.CHORES, null);
@@ -472,10 +502,18 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (Array.isArray(res.data.appointments)) setAppointments(res.data.appointments);
             if (Array.isArray(res.data.recipes) && res.data.recipes.length > 0) setRecipes(res.data.recipes);
             if (Array.isArray(res.data.mealPlans)) setMealPlans(res.data.mealPlans);
-            if (Array.isArray(res.data.groceries)) setGroceries(res.data.groceries);
+            if (Array.isArray(res.data.groceries)) {
+              const sanitized = sanitizeAndDeduplicateGroceries(res.data.groceries);
+              const { updatedGroceries } = cleanPastMealGroceriesUtil(sanitized);
+              setGroceries(updatedGroceries);
+            }
             if (Array.isArray(res.data.chores)) setChores(res.data.chores);
             if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
             if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+            if (res.data.aiConfig && typeof res.data.aiConfig === 'object' && res.data.aiConfig.apiKey) {
+              setSharedAIConfig(res.data.aiConfig);
+              setAiConfigState(res.data.aiConfig);
+            }
           }
         });
       }
@@ -497,10 +535,18 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Array.isArray(remoteData.appointments)) setAppointments(remoteData.appointments);
       if (Array.isArray(remoteData.recipes) && remoteData.recipes.length > 0) setRecipes(remoteData.recipes);
       if (Array.isArray(remoteData.mealPlans)) setMealPlans(remoteData.mealPlans);
-      if (Array.isArray(remoteData.groceries)) setGroceries(remoteData.groceries);
+      if (Array.isArray(remoteData.groceries)) {
+        const sanitized = sanitizeAndDeduplicateGroceries(remoteData.groceries);
+        const { updatedGroceries } = cleanPastMealGroceriesUtil(sanitized);
+        setGroceries(updatedGroceries);
+      }
       if (Array.isArray(remoteData.chores)) setChores(remoteData.chores);
       if (Array.isArray(remoteData.notes)) setNotes(remoteData.notes);
       if (Array.isArray(remoteData.rewards)) setRewards(remoteData.rewards);
+      if (remoteData.aiConfig && typeof remoteData.aiConfig === 'object' && remoteData.aiConfig.apiKey) {
+        setSharedAIConfig(remoteData.aiConfig);
+        setAiConfigState(remoteData.aiConfig);
+      }
     });
 
     return () => {
@@ -525,8 +571,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       notes,
       rewards,
       earnedStars,
+      aiConfig,
     });
-  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars]);
+  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars, aiConfig]);
 
   const joinFamilyFromCloud = async (): Promise<boolean> => {
     try {
@@ -539,10 +586,18 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(res.data.appointments)) setAppointments(res.data.appointments);
         if (Array.isArray(res.data.recipes)) setRecipes(res.data.recipes);
         if (Array.isArray(res.data.mealPlans)) setMealPlans(res.data.mealPlans);
-        if (Array.isArray(res.data.groceries)) setGroceries(res.data.groceries);
+        if (Array.isArray(res.data.groceries)) {
+          const sanitized = sanitizeAndDeduplicateGroceries(res.data.groceries);
+          const { updatedGroceries } = cleanPastMealGroceriesUtil(sanitized);
+          setGroceries(updatedGroceries);
+        }
         if (Array.isArray(res.data.chores)) setChores(res.data.chores);
         if (Array.isArray(res.data.notes)) setNotes(res.data.notes);
         if (Array.isArray(res.data.rewards)) setRewards(res.data.rewards);
+        if (res.data.aiConfig && typeof res.data.aiConfig === 'object' && res.data.aiConfig.apiKey) {
+          setSharedAIConfig(res.data.aiConfig);
+          setAiConfigState(res.data.aiConfig);
+        }
         setIsOnboarded(true);
         localStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, 'true');
         return true;
@@ -1832,6 +1887,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         joinFamilyFromCloud,
         exportAllData,
         importAllData,
+        aiConfig,
+        saveAIConfig,
+        clearAIConfig,
       }}
     >
       {children}

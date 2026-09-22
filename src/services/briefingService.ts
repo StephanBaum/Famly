@@ -167,7 +167,7 @@ Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Backticks:
   const weekday = new Date().toLocaleDateString('de-DE', { weekday: 'long' });
   const fallbackBriefing: DailyBriefing = {
     headline: `Guten Morgen Familie ${context.familyName || 'Baum'}! ☀️`,
-    summary: `Einen wunderschönen ${weekday}! Alle Systeme laufen und die Familie ist bereit.`,
+    summary: `Einen wunderschönen ${weekday} für euch alle!`,
     highlights: [
       context.events && context.events.length > 0
         ? `📅 ${context.events.length} Termin(e) heute im Kalender`
@@ -179,7 +179,7 @@ Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Backticks:
         ? `🧹 ${context.chores.length} offene Aufgabe(n) im Plan`
         : '🧹 Keine dringenden Hausarbeiten – super gemacht!',
     ],
-    tipOfTheDay: 'Tragt einen Gemini API-Key in den Einstellungen ein, um täglich ein individuelles KI-Briefing zu erhalten.',
+    tipOfTheDay: 'Ein Lächeln am Morgen schenkt Energie für den ganzen Tag.',
     generatedAt: Date.now(),
     date: todayStr,
     source: 'template_fallback',
@@ -190,4 +190,37 @@ Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Backticks:
   }
 
   return fallbackBriefing;
+}
+
+/**
+ * Saves a custom morning briefing (e.g. created by Famly Copilot workflow / greeting prompt)
+ * and dispatches a window event so DailyBriefingCard updates in real-time.
+ */
+export function saveCustomDailyBriefing(briefing: Partial<DailyBriefing>): DailyBriefing {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const fullBriefing: DailyBriefing = {
+    headline: briefing.headline || 'Guten Morgen Familie! ☀️',
+    summary: briefing.summary || 'Hier sind eure persönlichen Tagesgrüße.',
+    highlights: Array.isArray(briefing.highlights) && briefing.highlights.length > 0
+      ? briefing.highlights
+      : ['Personalisiertes Morgen-Briefing aktiv'],
+    tipOfTheDay: briefing.tipOfTheDay || 'Einen wunderbaren Start in den Tag!',
+    generatedAt: Date.now(),
+    date: todayStr,
+    source: 'assistant_workflow',
+  };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_BRIEFING, JSON.stringify(fullBriefing));
+    window.dispatchEvent(new CustomEvent('famly_daily_briefing_updated', { detail: fullBriefing }));
+  }
+
+  // Also sync to Redis if available
+  fetch('/api/briefing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ briefing: fullBriefing }),
+  }).catch(() => {});
+
+  return fullBriefing;
 }
