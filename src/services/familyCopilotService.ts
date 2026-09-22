@@ -26,6 +26,8 @@ export interface CopilotFamilyData {
   groceries: GroceryItem[];
   notes?: PinnedNote[];
   rewards?: Reward[];
+  loggedInMember?: FamilyMember | null;
+  currentMemberId?: string | 'all' | null;
 }
 
 export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): CopilotFamilyData {
@@ -39,6 +41,8 @@ export function normalizeCopilotData(data?: Partial<CopilotFamilyData>): Copilot
     groceries: Array.isArray(data?.groceries) ? data.groceries.filter(Boolean) : [],
     notes: Array.isArray(data?.notes) ? data.notes.filter(Boolean) : [],
     rewards: Array.isArray(data?.rewards) ? data.rewards.filter(Boolean) : [],
+    loggedInMember: data?.loggedInMember || null,
+    currentMemberId: data?.currentMemberId || 'all',
   };
 }
 
@@ -222,11 +226,19 @@ function buildFamilyContextSummary(inputData: CopilotFamilyData): string {
     .map((r) => ` - ${r.icon} "${r.title}" (${r.starsCost} ⭐)`)
     .join('\n');
 
+  const activeUserName = data.loggedInMember
+    ? `${data.loggedInMember.name} (${data.loggedInMember.role})`
+    : data.currentMemberId && data.currentMemberId !== 'all'
+    ? `${data.members.find((m) => m.id === data.currentMemberId)?.name || 'Familienmitglied'}`
+    : 'Familienmitglied';
+
   return `
 HEUTIGES DATUM: ${todayGerman} (${todayStr})
 MORGEN IST: ${tomorrowGerman} (${tomorrowStr})
 ÜBERMORGEN IST: ${dayAfterTomorrowStr}
 FAMILIE: ${data.familyName}
+AKTUELL EINGELOGGTER NUTZER (DER GERADE MIT DIR SPRICHT): ${activeUserName}
+WICHTIGSTE ZUWEISUNGSREGEL: Wenn der Nutzer "ich", "mich", "mir" oder "für mich" sagt, bezieht er sich IMMER auf ${data.loggedInMember ? data.loggedInMember.name : activeUserName}! Ordne solche Termine oder Aufgaben NIEMALS anderen Familienmitgliedern (wie Adriana) zu!
 
 MITGLIEDER:
 ${membersSummary || 'Keine Mitglieder'}
@@ -466,6 +478,7 @@ export function queryLocalFamilyAssistant(
       cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
     }
 
+    const targetMemberName = data.loggedInMember?.name || 'ich';
     const dateLabel = targetDate === tomorrowStr ? 'morgen' : targetDate === todayStr ? 'heute' : targetDate;
     return {
       text: `Alles klar! Ich habe dir für ${dateLabel} um ${time} Uhr die Erinnerung **"${cleanTitle}"** direkt in den Kalender eingetragen! 📅`,
@@ -477,6 +490,7 @@ export function queryLocalFamilyAssistant(
             title: cleanTitle,
             date: targetDate,
             time,
+            memberNames: [targetMemberName],
             notes: 'Erinnerung vom Famly-Assistenten',
           },
         },
@@ -616,40 +630,122 @@ export function queryLocalFamilyAssistant(
     };
   }
 
-  // 4. Shopping / Groceries query
-  if (
+  // 4. Shopping / Groceries & Compound Delegation queries
+  const isGroceryQuery =
     q.includes('einkauf') ||
     q.includes('kaufen') ||
+    q.includes('kauf') ||
     q.includes('fehlt') ||
     q.includes('liste') ||
-    q.includes('supermarkt')
-  ) {
-    const unchecked = data.groceries.filter((g) => !g.checked);
+    q.includes('supermarkt') ||
+    q.includes('brauchen') ||
+    q.includes('mitbring') ||
+    (q.includes('mitnehm') && !q.includes('tasche') && !q.includes('termin'));
 
-    if (q.startsWith('setze') || q.startsWith('kauf') || q.includes('auf die einkaufsliste')) {
-      // extract item name
-      const cleanItem = query
-        .replace(/setze/i, '')
-        .replace(/auf die einkaufsliste/i, '')
-        .replace(/bitte/i, '')
-        .replace(/kauf/i, '')
+  if (isGroceryQuery) {
+    // Check if user wants to add groceries (or compound grocery + delegation request)
+    const isAddGroceryIntent =
+      q.includes('brauchen') ||
+      q.includes('kauf') ||
+      q.includes('besorg') ||
+      q.includes('setze') ||
+      q.includes('pack') ||
+      q.includes('schreib') ||
+      q.includes('auf die liste') ||
+      q.includes('auf die einkaufsliste') ||
+      q.includes('mitbringen') ||
+      (q.includes('mitnehmen') && (q.includes('noch') || q.includes('und') || q.includes('kann') || q.includes('soll')));
+
+    if (isAddGroceryIntent) {
+      // 1. Check for compound delegation clause like: ", Adriana kann das auf dem Heimweg mitnehmen"
+      let delegatedMember: FamilyMember | undefined = undefined;
+      let delegationClause = '';
+
+      const delegationMatch = query.match(
+        /[,;]?\s*(?:aber\s+)?(\w+)\s+(?:kann|soll|macht|übernimmt|holt)\s+das(?:\s+auf\s+dem\s+heimweg|\s+nachher|\s+später|\s+heute|\s+morgen)?(?:\s+mitnehmen|\s+besorgen|\s+holen|\s+kaufen)?/i
+      );
+      if (delegationMatch) {
+        const potentialName = delegationMatch[1].toLowerCase();
+        delegatedMember = data.members.find(
+          (m) => m.name.toLowerCase() === potentialName || m.role.toLowerCase() === potentialName
+        );
+        if (delegatedMember) {
+          delegationClause = delegationMatch[0];
+        }
+      }
+
+      // If no delegation clause found via the first pattern, check for "X kann das mitnehmen / besorgen" anywhere
+      if (!delegatedMember) {
+        for (const m of data.members) {
+          const nameLower = m.name.toLowerCase();
+          const regex = new RegExp(`(?:,\\s*|\\bund\\s+)?${nameLower}\\s+(?:kann|soll|macht|holt)\\s+(?:das|die|es|alles)?(?:\\s+auf\\s+dem\\s+heimweg|\\s+nachher|\\s+später)?\\s*(?:mitnehmen|besorgen|holen|kaufen|erledigen)`, 'i');
+          const mMatch = query.match(regex);
+          if (mMatch) {
+            delegatedMember = m;
+            delegationClause = mMatch[0];
+            break;
+          }
+        }
+      }
+
+      let cleanGroceryText = query;
+      if (delegationClause) {
+        cleanGroceryText = cleanGroceryText.replace(delegationClause, '');
+      }
+
+      cleanGroceryText = cleanGroceryText
+        .replace(/(?:kannst du|kannst du bitte|bitte)?\s*(?:wir\s+brauchen\s+(?:noch\s+)?)/gi, '')
+        .replace(/(?:setze|schreib|pack|packe|tu|tue|kauf|kaufe|besorg|besorge)\s+(?:bitte\s+)?/gi, '')
+        .replace(/(?:auf\s+die\s+einkaufsliste|auf\s+die\s+liste|zur\s+einkaufsliste|in\s+den\s+einkaufskorb)(?:\s+bei\s+\w+)?/gi, '')
+        .replace(/^(?:noch|auch|bitte|und)\s+/i, '')
+        .replace(/[.?!,]+$/, '')
         .trim();
 
-      if (cleanItem.length > 1) {
-        return {
-          text: `Alles klar! Ich setze **"${cleanItem}"** auf die Einkaufsliste. 🛒`,
-          actions: [
-            {
-              type: 'ADD_GROCERY',
-              description: `"${cleanItem}" zur Einkaufsliste hinzufügen`,
-              payload: { name: cleanItem, store: 'Rewe' },
+      const items = cleanGroceryText
+        .split(/(?:,|\bund\b)/i)
+        .map((i) => i.trim().replace(/^(ein|eine|einen|etwas|noch|zwei|drei)\s+/i, ''))
+        .filter((i) => i.length > 1 && !/^(kann|soll|das|die|es|mitnehmen|besorgen)$/i.test(i));
+
+      if (items.length > 0) {
+        const actions: CopilotAction[] = [];
+        const capitalizedItems: string[] = [];
+
+        items.forEach((item) => {
+          const cap = item.charAt(0).toUpperCase() + item.slice(1);
+          capitalizedItems.push(cap);
+          actions.push({
+            type: 'ADD_GROCERY',
+            description: `"${cap}" auf die Einkaufsliste`,
+            payload: { name: cap, store: 'Supermarkt' },
+          });
+        });
+
+        let text = '';
+        if (delegatedMember) {
+          const taskTitle = `${capitalizedItems.join(' & ')} auf dem Heimweg mitnehmen`;
+          actions.push({
+            type: 'ADD_CHORE',
+            description: `Aufgabe "${taskTitle}" für ${delegatedMember.name}`,
+            payload: {
+              title: taskTitle,
+              assignedMemberName: delegatedMember.name,
+              stars: 2,
             },
-          ],
+          });
+          text = `Alles klar! Ich habe **${capitalizedItems.join('** und **')}** auf die Einkaufsliste gesetzt 🛒 und für **${delegatedMember.name}** die Aufgabe *"${taskTitle}"* (+2 ⭐) eingetragen! 🧹`;
+        } else {
+          text = `Alles klar! Ich habe **${capitalizedItems.join('** und **')}** auf die Einkaufsliste gesetzt. 🛒`;
+        }
+
+        return {
+          text,
+          actions,
           source: 'local',
         };
       }
     }
 
+    const unchecked = data.groceries.filter((g) => !g.checked);
     if (unchecked.length === 0) {
       return {
         text: 'Die Einkaufsliste ist aktuell komplett abgehakt! Braucht ihr noch etwas Besonderes?',
@@ -1011,7 +1107,22 @@ WICHTIGE VERHALTENSREGELN:
      2. Bestätige kurz und freundlich, dass dieser Fakt dauerhaft im Familiengedächtnis für alle Geräte und Familienmitglieder abgespeichert ist!
    - Wenn der Nutzer nach Gewohnheiten, Vorlieben, Terminen oder Fakten fragt:
      Ziehe stets die unten aufgeführten Fakten aus dem Langzeit-Gedächtnis heran!
-7. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
+7. BENUTZERIDENTITÄT & WER GERADE SPRICHT:
+   - Der aktuell sprechende Nutzer ist: ${data.loggedInMember ? data.loggedInMember.name : 'der aktuell angemeldete Nutzer'}.
+   - Wenn der Nutzer "ich", "mich", "mir" oder "für mich" sagt (z.B. "erinnere mich morgen früh an X", "trag mir einen Termin ein"):
+     Trage den Termin mit memberNames: ["${data.loggedInMember ? data.loggedInMember.name : 'ich'}"] ein!
+     Weise persönliche Erinnerungen NIEMALS ungefragt anderen Personen wie Adriana zu!
+8. MEHRTEILIGE ANFRAGEN & INTELLIGENTE DELEGATION (KOMBINATIONSAUFTRÄGE):
+   - Wenn der Nutzer mehrere Anliegen in einem Satz nennt, z.B. Besorgungen kombiniert mit einer Personenzuweisung:
+     Beispiel: "wir brauchen noch brot und milch, adriana kann das auf dem heimweg mitnehmen"
+     1. Trenne alle genannten Einkaufsartikel sauber einzeln auf:
+        [ACTION:ADD_GROCERY:{"name":"Brot","store":"Supermarkt"}]
+        [ACTION:ADD_GROCERY:{"name":"Milch","store":"Supermarkt"}]
+        (Niemals "brot und milch, adriana kann das..." als einen einzigen Artikel speichern!)
+     2. Erkenne die Zuweisung ("Adriana kann das mitnehmen / besorgen / erledigen") und erstelle sofort die passende Aufgabe für die genannte Person:
+        [ACTION:ADD_CHORE:{"title":"Brot & Milch auf dem Heimweg mitnehmen","assignedMemberName":"Adriana","stars":2}]
+     3. Bestätige in deiner Antwort herzlich und präzise sowohl das Eintragen der einzelnen Artikel auf die Einkaufsliste als auch das Anlegen der Aufgabe für das Familienmitglied!
+9. AUTOMATISCHE AKTIONEN IM SYSTEM (DER ASSISTENT KANN JEDE AKTION DIREKT AUSFÜHREN!):
    Um Aktionen im System direkt auszulösen, hänge am Ende deiner Antwort einen oder mehrere Aktions-Tags an:
 ${buildDynamicAgentActionDocs()}
    Das System führt diese Aktionen sofort automatisch live im Familien-Hub aus.

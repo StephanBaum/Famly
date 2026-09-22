@@ -233,6 +233,8 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
           groceries: safeGroceries,
           notes: safeNotes,
           rewards: safeRewards,
+          loggedInMember: family.loggedInMember,
+          currentMemberId: family.currentMemberId,
         },
         history
       );

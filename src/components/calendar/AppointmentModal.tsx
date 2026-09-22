@@ -12,6 +12,7 @@ interface AppointmentModalProps {
   defaultDate?: string;
   members: FamilyMember[];
   currentMemberId: string | 'all';
+  loggedInMemberId?: string | null;
   onSave: (payload: Omit<Appointment, 'id'>) => void;
 }
 
@@ -22,6 +23,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   defaultDate,
   members,
   currentMemberId,
+  loggedInMemberId,
   onSave,
 }) => {
   const [formTitle, setFormTitle] = useState('');
@@ -58,13 +60,20 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setFormDuration(60);
       setFormLocation('');
       setFormCategory('family');
-      setFormMembers(currentMemberId === 'all' ? [members[0]?.id || 'm1'] : [currentMemberId]);
+      // Default to the currently logged in person (the creator), or filtered member, NOT always members[0]
+      const defaultMemberId =
+        (loggedInMemberId && members.some((m) => m.id === loggedInMemberId))
+          ? loggedInMemberId
+          : (currentMemberId !== 'all' && members.some((m) => m.id === currentMemberId))
+            ? currentMemberId
+            : (members[0]?.id || 'm1');
+      setFormMembers([defaultMemberId]);
       setFormNotes('');
       setFormRecurrence('none');
       setFormRecurrenceDays([]);
       setFormRecurrenceEndDate('');
     }
-  }, [isOpen, editingAppointment, defaultDate, currentMemberId, members]);
+  }, [isOpen, editingAppointment, defaultDate, currentMemberId, loggedInMemberId, members]);
 
   if (!isOpen) return null;
 

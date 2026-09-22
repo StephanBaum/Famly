@@ -49,6 +49,7 @@ export const CalendarView: React.FC = () => {
     toggleChore,
     deleteChore,
     currentMemberId,
+    loggedInMemberId,
   } = useFamily();
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -374,6 +375,7 @@ export const CalendarView: React.FC = () => {
         defaultDate={defaultModalDate}
         members={members}
         currentMemberId={currentMemberId}
+        loggedInMemberId={loggedInMemberId}
         onSave={handleSaveAppointment}
       />
 

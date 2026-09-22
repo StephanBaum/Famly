@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import confetti from 'canvas-confetti';
 import { useFamily } from '../context/FamilyContext';
 import { AppointmentCategory, GroceryCategory } from '../types';
 import {
@@ -28,7 +27,7 @@ interface QuickAddModalProps {
 type QuickType = 'smart' | 'event' | 'grocery' | 'chore' | 'note';
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose }) => {
-  const { members, currentMemberId, addAppointment, addGrocery, addChore, addNote, stores } = useFamily();
+  const { members, currentMemberId, loggedInMemberId, addAppointment, addGrocery, addChore, addNote, stores } = useFamily();
   const [selectedType, setSelectedType] = useState<QuickType>('smart');
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
@@ -101,8 +100,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
     if (selectedType !== 'smart' || !smartText.trim()) {
       return { appointments: [], chores: [], groceries: [] };
     }
-    return parseUniversalInput(smartText, members, stores);
-  }, [selectedType, smartText, members, stores]);
+    const defaultCreator = loggedInMemberId || (currentMemberId !== 'all' ? currentMemberId : members[0]?.id || 'm1');
+    return parseUniversalInput(smartText, members, stores, defaultCreator);
+  }, [selectedType, smartText, members, stores, loggedInMemberId, currentMemberId]);
 
   const parsedData = useMemo(() => {
     return {
@@ -133,27 +133,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
     });
 
     // Add chores
-    parsedData.chores.forEach((chore) => {
-      addChore(
-        chore.title,
-        chore.assignedMemberId,
-        chore.frequency,
-        chore.stars,
-        chore.assignedMemberIds,
-        chore.dueDate
-      );
+    parsedData.chores.forEach((c) => {
+      addChore(c.title, c.assignedMemberId, c.frequency, c.stars, c.assignedMemberIds, c.dueDate);
     });
 
     // Add groceries
     parsedData.groceries.forEach((g) => {
       addGrocery(g.name, g.store, g.amount, g.category);
-    });
-
-    // Celebration
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
     });
 
     setSmartText('');
@@ -171,12 +157,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
 
     if (selectedType === 'event') {
       if (!eventTitle.trim()) return;
+      const defaultCreator = (loggedInMemberId && members.some((m) => m.id === loggedInMemberId))
+        ? loggedInMemberId
+        : (currentMemberId !== 'all' && members.some((m) => m.id === currentMemberId))
+          ? currentMemberId
+          : (members[0]?.id || 'm1');
       addAppointment({
         title: eventTitle.trim(),
         date: eventDate,
         time: eventTime,
         category: eventCategory,
-        memberIds: currentMemberId === 'all' ? [members[0]?.id || 'm1'] : [currentMemberId],
+        memberIds: [defaultCreator],
       });
     } else if (selectedType === 'grocery') {
       if (!groceryName.trim()) return;

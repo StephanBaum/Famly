@@ -140,18 +140,42 @@ registerAppAction({
   execute: (p, { family }) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const targetDate = p.date || todayStr;
-    const memberIds = Array.isArray(p.memberNames) && p.memberNames.length > 0
-      ? family.members
-          .filter((m) => p.memberNames.some((n: string) => m.name.toLowerCase().includes(n.toLowerCase())))
-          .map((m) => m.id)
-      : family.members.map((m) => m.id);
+    let memberIds: string[] = [];
+
+    if (Array.isArray(p.memberNames) && p.memberNames.length > 0) {
+      const isSelf = p.memberNames.some((n: string) => /^(ich|mich|mir|me|myself)$/i.test(n.trim()));
+      const isAll = p.memberNames.some((n: string) => /^(alle|familie|everyone|all)$/i.test(n.trim()));
+
+      if (isAll) {
+        memberIds = family.members.map((m) => m.id);
+      } else {
+        const matched = family.members.filter((m) =>
+          p.memberNames.some((n: string) => m.name.toLowerCase().includes(n.toLowerCase()))
+        );
+        memberIds = matched.map((m) => m.id);
+        if (isSelf && family.loggedInMemberId && !memberIds.includes(family.loggedInMemberId)) {
+          memberIds.push(family.loggedInMemberId);
+        }
+      }
+    }
+
+    // If still empty (e.g. no memberNames specified, or "mich" when logged in), default to logged-in user / creator!
+    if (memberIds.length === 0) {
+      if (family.loggedInMemberId) {
+        memberIds = [family.loggedInMemberId];
+      } else if (family.currentMemberId && family.currentMemberId !== 'all') {
+        memberIds = [family.currentMemberId];
+      } else {
+        memberIds = [family.members[0]?.id || 'm1'];
+      }
+    }
 
     family.addAppointment({
       title: p.title || 'Termin',
       date: targetDate,
       time: p.time || '10:00',
       category: p.category || 'family',
-      memberIds: memberIds.length > 0 ? memberIds : family.members.map((m) => m.id),
+      memberIds,
       notes: p.notes,
       location: p.location,
     });
@@ -239,10 +263,39 @@ registerAppAction({
   domain: 'chores',
   title: 'Neue Aufgabe anlegen',
   description: 'Erstellt eine neue Aufgabe mit Sternen und Zuweisung',
-  promptDoc: '[ACTION:ADD_CHORE:{"title":"...","stars":2,"frequency":"daily|weekly|once"}]',
+  promptDoc: '[ACTION:ADD_CHORE:{"title":"...","stars":2,"frequency":"daily|weekly|once","assignedMemberName":"Adriana"}]',
   execute: (p, { family }) => {
-    family.addChore(p.title || 'Aufgabe', 'all', p.frequency || 'once', p.stars || 1);
-    return { success: true, message: `Aufgabe "${p.title}" angelegt (+${p.stars || 1} ⭐).` };
+    let assignedId = 'all';
+    let assignedIds: string[] = [];
+
+    if (p.assignedMemberName) {
+      const match = family.members.find((m) =>
+        m.name.toLowerCase().includes(p.assignedMemberName.toLowerCase()) ||
+        m.role.toLowerCase().includes(p.assignedMemberName.toLowerCase())
+      );
+      if (match) {
+        assignedId = match.id;
+        assignedIds = [match.id];
+      }
+    } else if (p.assignedMemberId) {
+      assignedId = p.assignedMemberId;
+      assignedIds = [p.assignedMemberId];
+    }
+
+    family.addChore(
+      p.title || 'Aufgabe',
+      assignedId,
+      p.frequency || 'once',
+      p.stars || 1,
+      assignedIds.length > 0 ? assignedIds : undefined,
+      p.dueDate
+    );
+
+    const assignedMember = assignedId !== 'all' ? family.members.find((m) => m.id === assignedId)?.name : null;
+    return {
+      success: true,
+      message: `Aufgabe "${p.title}" angelegt (+${p.stars || 1} ⭐)${assignedMember ? ` für ${assignedMember}` : ''}.`,
+    };
   },
   undo: (p, { family }) => {
     const match = family.chores.find((c) => c.title.toLowerCase().includes((p.title || '').toLowerCase()));
@@ -332,21 +385,50 @@ registerAppAction({
   type: 'ADD_GROCERY',
   domain: 'groceries',
   title: 'Artikel auf Einkaufsliste setzen',
-  description: 'Fügt Artikel mit Geschäft und Menge hinzu',
-  promptDoc: '[ACTION:ADD_GROCERY:{"name":"...","store":"Supermarkt","amount":"..."}]',
+  description: 'Fügt Artikel mit Geschäft, Menge und optionalem Abholer hinzu (unterstützt auch mehrere Artikel wie "Brot und Milch")',
+  promptDoc: '[ACTION:ADD_GROCERY:{"name":"...","store":"Supermarkt","amount":"...","assignedMemberName":"..."}]',
   execute: (p, { family }) => {
-    family.addGrocery(p.name, p.store || 'Supermarkt', p.amount);
-    return { success: true, message: `"${p.name}" auf die Einkaufsliste gesetzt.` };
+    const rawName = (p.name || '').trim();
+    if (!rawName) return { success: false, message: 'Kein Artikel angegeben.' };
+
+    const assignedMember = p.assignedMemberName
+      ? family.members.find((m) => m.name.toLowerCase().includes(p.assignedMemberName.toLowerCase()))
+      : undefined;
+
+    // Smart splitting: if name contains comma or " und ", split into separate items!
+    const parts = rawName.includes(' und ') || rawName.includes(',')
+      ? rawName.split(/(?:,|\bund\b)/i).map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+      : [rawName];
+
+    for (const part of parts) {
+      family.addGrocery(part, p.store || 'Supermarkt', p.amount);
+    }
+
+    const assignedText = assignedMember ? ` (Zuständig: ${assignedMember.name})` : '';
+    const message = parts.length > 1
+      ? `${parts.map((item: string) => `"${item}"`).join(' und ')} auf die Einkaufsliste gesetzt 🛒${assignedText}`
+      : `"${rawName}" auf die Einkaufsliste gesetzt 🛒${assignedText}`;
+
+    return {
+      success: true,
+      message,
+    };
   },
   undo: (p, { family }) => {
-    const match = family.groceries.find(
-      (g) => g.name.toLowerCase().trim() === (p.name || '').toLowerCase().trim() && !g.checked
-    );
-    if (match) {
-      family.deleteGrocery(match.id);
-      return { success: true, message: `"${p.name}" von der Einkaufsliste entfernt.` };
-    }
-    return { success: false, message: 'Artikel nicht gefunden.' };
+    const rawName = (p.name || '').trim();
+    const parts = rawName.includes(' und ') || rawName.includes(',')
+      ? rawName.split(/(?:,|\bund\b)/i).map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+      : [rawName];
+
+    parts.forEach((part: string) => {
+      const match = family.groceries.find(
+        (g) => g.name.toLowerCase().trim() === part.toLowerCase().trim() && !g.checked
+      );
+      if (match) {
+        family.deleteGrocery(match.id);
+      }
+    });
+    return { success: true, message: 'Artikel von der Einkaufsliste entfernt.' };
   },
 });
 
