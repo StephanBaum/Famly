@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   REWARD_CLAIMS: 'famly_reward_claims_v2',
   THEME: 'famly_theme_mode',
   FAMILY_NAME: 'famly_family_name',
+  FAMILY_REGION: 'famly_home_region_v1',
   EARNED_STARS: 'famly_earned_stars_v2',
   MEMORIES: 'famly_longterm_memories_v1',
 };

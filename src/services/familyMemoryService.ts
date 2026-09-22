@@ -18,9 +18,9 @@ const DEFAULT_MEMORIES: FamilyMemory[] = [
   },
   {
     id: 'mem_2',
-    text: 'Am Wochenende kochen wir gerne zusammen oder probieren neue Rezepte aus.',
+    text: 'Die Familie liebt abwechslungsreiche Ausflüge, Entdeckungen in der Region und actionreiche Aktivitäten für die Kinder.',
     category: 'preference',
-    importance: 3,
+    importance: 4,
     createdAt: Date.now() - 86400000 * 2,
   },
 ];

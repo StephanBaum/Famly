@@ -56,6 +56,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     toggleDarkMode,
     familyName,
     setFamilyName,
+    familyRegion,
+    setFamilyRegion,
     exportAllData,
     importAllData,
     loadDemoData,
@@ -71,7 +73,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   } = useFamily();
 
   const [inputFamilyName, setInputFamilyName] = useState(familyName);
-  const [nameSaved, setNameSaved] = useState(false);
+  const [inputFamilyRegion, setInputFamilyRegion] = useState(familyRegion || 'München & Umland');
+  const [profileSaved, setProfileSaved] = useState(false);
   const [importStatus, setImportStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -117,6 +120,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setAiKeyInput('');
       }
 
+      setInputFamilyName(familyName);
+      setInputFamilyRegion(familyRegion || 'München & Umland');
+
       if (initialScrollToAI) {
         setTimeout(() => {
           const el = document.getElementById('settings-ai-section');
@@ -124,7 +130,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }, 120);
       }
     }
-  }, [isOpen, initialScrollToAI]);
+  }, [isOpen, initialScrollToAI, familyName, familyRegion]);
 
   const handleManualVercelSync = async () => {
     setIsCheckingVercel(true);
@@ -141,12 +147,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSaveFamilyName = (e: React.FormEvent) => {
+  const handleSaveFamilyProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputFamilyName.trim()) return;
-    setFamilyName(inputFamilyName.trim());
-    setNameSaved(true);
-    setTimeout(() => setNameSaved(false), 2000);
+    if (inputFamilyName.trim()) setFamilyName(inputFamilyName.trim());
+    if (inputFamilyRegion.trim()) setFamilyRegion(inputFamilyRegion.trim());
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2500);
   };
 
   const handleExport = () => {
@@ -284,6 +290,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Section: Family Profile & Region */}
+            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 flex items-center justify-center font-black text-sm">
+                  🏠
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-stone-900 dark:text-white">Familien-Profil & Heimatort</h4>
+                  <p className="text-xs text-stone-500 dark:text-slate-400 font-semibold">
+                    Name der Familie und Region für maßgeschneiderte Ausflugs- & Freizeit-Tipps
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveFamilyProfile} className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
+                      Familienname
+                    </label>
+                    <input
+                      type="text"
+                      value={inputFamilyName}
+                      onChange={(e) => setInputFamilyName(e.target.value)}
+                      placeholder="z.B. Familie Baum"
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-900 text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
+                      📍 Heimatort / Region (für Ausflüge)
+                    </label>
+                    <input
+                      type="text"
+                      value={inputFamilyRegion}
+                      onChange={(e) => setInputFamilyRegion(e.target.value)}
+                      placeholder="z.B. München & Umland, Hamburg..."
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-900 text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  {profileSaved ? (
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Profil erfolgreich gespeichert!
+                    </span>
+                  ) : <span />}
+
+                  <button
+                    type="submit"
+                    className="duo-btn duo-btn-amber px-4 py-2 rounded-xl text-xs font-black shrink-0"
+                  >
+                    Speichern
+                  </button>
+                </div>
+              </form>
             </div>
 
             {/* PWA Homescreen App Installation */}
@@ -610,29 +676,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </form>
             </div>
-
-            {/* Section 4: Family Identity */}
-            <form onSubmit={handleSaveFamilyName} className="space-y-2">
-              <label className="block text-xs font-black uppercase text-stone-500 dark:text-slate-400 tracking-wider">
-                Familienname
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inputFamilyName}
-                  onChange={(e) => setInputFamilyName(e.target.value)}
-                  placeholder="z. B. Familie Baum"
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button
-                  type="submit"
-                  className="duo-btn duo-btn-green px-5 py-2.5 text-xs font-black rounded-xl shrink-0 flex items-center gap-1.5"
-                >
-                  {nameSaved ? <Check className="w-4 h-4 stroke-[3]" /> : null}
-                  <span>{nameSaved ? 'Gespeichert!' : 'Speichern'}</span>
-                </button>
-              </div>
-            </form>
 
             {/* Section 5: Where Data Is Stored (Architecture Explanation) */}
             <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 space-y-2">

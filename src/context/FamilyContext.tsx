@@ -192,6 +192,8 @@ export interface FamilyContextType {
   toggleDarkMode: () => void;
   familyName: string;
   setFamilyName: (name: string) => void;
+  familyRegion: string;
+  setFamilyRegion: (region: string) => void;
   joinFamilyFromCloud: () => Promise<boolean>;
 
   // Data Management
@@ -391,6 +393,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return '';
   });
 
+  const [familyRegion, setFamilyRegionState] = useState<string>(() => {
+    const stored = getStoredOrDefault<string | null>(STORAGE_KEYS.FAMILY_REGION, null);
+    if (stored !== null && typeof stored === 'string') return stored;
+    return 'München & Umland';
+  });
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.THEME, isDarkMode ? 'dark' : 'light');
     if (isDarkMode) {
@@ -406,6 +414,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const clean = name.trim() || 'Familie';
     setFamilyNameState(clean);
     localStorage.setItem(STORAGE_KEYS.FAMILY_NAME, JSON.stringify(clean));
+  };
+
+  const setFamilyRegion = (region: string) => {
+    const clean = region.trim() || 'München & Umland';
+    setFamilyRegionState(clean);
+    localStorage.setItem(STORAGE_KEYS.FAMILY_REGION, JSON.stringify(clean));
   };
 
   // Sync state to localStorage
@@ -511,6 +525,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (remoteData.familyName && typeof remoteData.familyName === 'string') {
         setFamilyName(remoteData.familyName);
       }
+      if (remoteData.familyRegion && typeof remoteData.familyRegion === 'string') {
+        setFamilyRegion(remoteData.familyRegion);
+      }
       if (Array.isArray(remoteData.members) && remoteData.members.length > 0) {
         setMembers(remoteData.members);
         setIsOnboarded(true);
@@ -550,6 +567,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (members.length === 0) return;
     pushVercelFamilyStateDebounced({
       familyName,
+      familyRegion,
       members,
       appointments,
       recipes,
@@ -564,7 +582,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       aiConfig,
       memories,
     });
-  }, [familyName, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars, aiConfig, memories]);
+  }, [familyName, familyRegion, members, appointments, recipes, mealPlans, photos, galleries, groceries, chores, notes, rewards, earnedStars, aiConfig, memories]);
 
   const joinFamilyFromCloud = async (): Promise<boolean> => {
     try {
@@ -1910,6 +1928,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleDarkMode,
         familyName,
         setFamilyName,
+        familyRegion,
+        setFamilyRegion,
         joinFamilyFromCloud,
         exportAllData,
         importAllData,

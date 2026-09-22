@@ -9,10 +9,10 @@ import {
   queryFamilyAssistant,
   CopilotAction,
 } from '../services/familyCopilotService';
-import { decideAutonomous, DecisionResult } from '../services/decisionService';
+import { decideAutonomous, DecisionResult, DecisionOption } from '../services/decisionService';
 import { getFamilyMemories } from '../services/familyMemoryService';
 import { executeRegisteredAction, undoRegisteredAction } from '../services/appActionRegistry';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { triggerHaptic } from '../utils/haptics';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -109,6 +109,7 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
         chores: safeChores,
         recipes: safeRecipes,
         mealPlans: safeMealPlans,
+        region: family.familyRegion,
       });
       setDecisionResult(res);
     } catch (e) {
@@ -200,6 +201,38 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
     setScheduledChoreIds(new Set(choreProposals.map((p) => p.chore.id)));
     confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
     setActionSuccessNotice(`✓ ${count} Aufgaben automatisch in freie Zeitfenster eingetragen! 🎉`);
+    setTimeout(() => setActionSuccessNotice(null), 4000);
+  };
+
+  // Schedule Plan / Activity from Assistant Advice Tab
+  const handleScheduleAdviceOption = (option: DecisionOption, question: string) => {
+    const qLower = question.toLowerCase();
+    const today = new Date();
+    let targetDate = format(today, 'yyyy-MM-dd');
+    if (qLower.includes('morgen')) {
+      targetDate = format(addDays(today, 1), 'yyyy-MM-dd');
+    } else if (qLower.includes('übermorgen')) {
+      targetDate = format(addDays(today, 2), 'yyyy-MM-dd');
+    } else if (qLower.includes('wochenende') || qLower.includes('samstag') || qLower.includes('sonntag')) {
+      const day = today.getDay(); // 0 is Sun, 6 is Sat
+      const daysUntilSaturday = day === 6 ? 7 : (6 - day);
+      targetDate = format(addDays(today, daysUntilSaturday), 'yyyy-MM-dd');
+    }
+
+    addAppointment({
+      title: `🎯 ${option.title}`,
+      date: targetDate,
+      time: '14:00',
+      durationMinutes: 180,
+      category: 'family',
+      memberIds: safeMembers.map((m) => m.id),
+      notes: `${option.fitReason ? `${option.fitReason}\n` : ''}${option.duration ? `Dauer: ${option.duration}\n` : ''}${option.estimatedCost ? `Kosten: ${option.estimatedCost}` : ''}`,
+      location: option.title,
+    });
+
+    confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+    triggerHaptic('success');
+    setActionSuccessNotice(`✓ Ausflug "${option.title}" für ${targetDate} in Kalender eingetragen! 📅`);
     setTimeout(() => setActionSuccessNotice(null), 4000);
   };
 
@@ -425,6 +458,9 @@ const FamilyAssistantModalContent: React.FC<FamilyAssistantModalProps> = ({
             decisionResult={decisionResult}
             handleRunDecision={handleRunDecision}
             familyMemories={familyMemories}
+            familyRegion={family.familyRegion}
+            onUpdateRegion={family.setFamilyRegion}
+            onSelectOption={handleScheduleAdviceOption}
             onSuccessNotice={(msg) => {
               setActionSuccessNotice(msg);
               setTimeout(() => setActionSuccessNotice(null), 3500);

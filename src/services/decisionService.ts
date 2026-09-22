@@ -8,6 +8,10 @@ export interface DecisionOption {
   score: number; // 0..1 calibrated fit score
   percentage: number; // 0..100
   badge?: string;
+  fitReason?: string;
+  estimatedCost?: string;
+  duration?: string;
+  isIndoor?: boolean;
   pros: string[];
   cons: string[];
   payload?: any;
@@ -23,28 +27,46 @@ export interface DecisionResult {
 }
 
 /**
- * Normalizes an array of raw weights into calibrated probability scores (softmax-like)
+ * Normalizes an array of raw weights into realistic, intuitive fit percentages (60..98%)
  */
-function calibrateScores(options: Array<{ rawWeight: number } & Omit<DecisionOption, 'score' | 'percentage'>>): DecisionOption[] {
-  const minScore = 0.05;
-  const weights = options.map((o) => Math.max(minScore, o.rawWeight));
-  const sum = weights.reduce((acc, w) => acc + w, 0);
+function calibrateScores(
+  options: Array<
+    {
+      rawWeight: number;
+      fitReason?: string;
+      estimatedCost?: string;
+      duration?: string;
+      isIndoor?: boolean;
+    } & Omit<DecisionOption, 'score' | 'percentage'>
+  >
+): DecisionOption[] {
+  const sorted = [...options].sort((a, b) => b.rawWeight - a.rawWeight);
 
-  const scored = options.map((opt, idx) => {
-    const probability = sum > 0 ? weights[idx] / sum : 1 / options.length;
+  return sorted.map((opt, idx) => {
+    let pct: number;
+    if (opt.rawWeight >= 10) {
+      // Direct percentage score (e.g. 94, 86, 78)
+      pct = Math.min(98, Math.max(50, Math.round(opt.rawWeight)));
+    } else {
+      // Relative weight score (e.g. 1.2, 0.8), mapped to realistic natural scores
+      pct = Math.max(50, Math.min(96, Math.round(92 - idx * 7)));
+    }
+
     return {
       id: opt.id,
       title: opt.title,
-      score: Number(probability.toFixed(3)),
-      percentage: Math.round(probability * 100),
+      score: Number((pct / 100).toFixed(2)),
+      percentage: pct,
       badge: opt.badge,
+      fitReason: opt.fitReason,
+      estimatedCost: opt.estimatedCost,
+      duration: opt.duration,
+      isIndoor: opt.isIndoor,
       pros: opt.pros,
       cons: opt.cons,
       payload: opt.payload,
     };
   });
-
-  return scored.sort((a, b) => b.score - a.score);
 }
 
 /**
@@ -304,10 +326,31 @@ export function decideActivity(
   };
 }
 
+function extractJsonFromText(raw: string): any {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {}
+  const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (match) {
+    try {
+      return JSON.parse(match[1].trim());
+    } catch {}
+  }
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(raw.slice(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+  return null;
+}
+
 /**
  * Autonomous AI Deliberation Engine powered by Gemini 3+ Flash.
- * Takes a family dilemma, consults family members, schedules, and long-term memories,
- * formulates 3 tailored options itself, and computes genuine trade-offs.
+ * Takes a family dilemma, consults family members, schedules, interests and region,
+ * formulates 3 tailored options with Google Search grounding, and computes genuine trade-offs.
  */
 export async function decideAutonomous(
   question: string,
@@ -318,92 +361,157 @@ export async function decideAutonomous(
     chores: Chore[];
     recipes: Recipe[];
     mealPlans: MealPlanDay[];
+    region?: string;
   }
 ): Promise<DecisionResult> {
   const cleanQuestion = question.trim() || 'Was unternehmen wir als Familie?';
   const aiConfig = getAIConfig();
   const memoriesContext = formatMemoriesForPrompt(cleanQuestion);
+  const targetRegion = familyData.region?.trim() || 'München & Umland';
 
   const membersInfo = (familyData.members || [])
-    .map((m) => `${m.name} (${m.role}${m.isChild ? ', Kind' : ''})`)
-    .join(', ');
+    .map((m) => {
+      let info = `${m.name} (${m.role}${m.isChild ? ', Kind' : ''}`;
+      if (m.birthday) {
+        try {
+          const birthYear = new Date(m.birthday).getFullYear();
+          const currentYear = new Date().getFullYear();
+          if (!isNaN(birthYear) && birthYear > 1920 && birthYear <= currentYear) {
+            info += `, ca. ${currentYear - birthYear} Jahre`;
+          }
+        } catch {}
+      }
+      if (m.notes) info += `, Hobbys/Interessen: "${m.notes}"`;
+      if (m.childDetails?.allergies) info += `, Allergien: "${m.childDetails.allergies}"`;
+      return `${info})`;
+    })
+    .join('\n- ');
 
   const prompt = `
-Du bist ein moderner, intelligenter Familienrat-Moderator für Familie ${familyData.familyName || 'Familie'}.
-Die Familie hat folgendes Dilemma / folgende Frage eingereicht:
+Du bist der kluge, inspirierende Familienrats-Moderator für Familie ${familyData.familyName || 'Familie'}.
+Die Familie hat folgendes Dilemma oder folgende Frage eingereicht:
 "${cleanQuestion}"
 
-FAMILIENKONTEXT:
-- Mitglieder: ${membersInfo || 'Familie'}
-- Bekannte Vorlieben & Langzeit-Gedächtnis:
+FAMILIENKONTEXT & INTERESSEN:
+- Heimatregion / Wohnort: ${targetRegion}
+- Mitglieder & deren Hobbys/Vorlieben:
+- ${membersInfo || 'Familienmitglieder'}
+- Bekannte Fakten & Familiengedächtnis:
 ${memoriesContext}
 
-DEINE AUFGABE:
-1. Erfinde selbstständig genau 3 unterschiedliche, kreative und machbare Optionen (die Familie muss keine Optionen vorgeben).
-2. Bewerte jede Option objektiv mit realistischen Vorteilen ("pros") und Nachteilen ("cons").
-3. Vergib jeder Option einen passenden Eignungs-Score von 1 bis 100 (unterschiedlich gewichtet nach Machbarkeit, Familienfreude und Aufwand).
-4. Bestimme die Gewinner-Option und begründe in 1-2 Sätzen ("summary"), warum diese Option für die Familie aktuell der beste Konsens ist.
+WICHTIGE VERHALTENSREGELN FÜR DIE ENTSCHEIDUNG:
+1. KEIN KOCH-TUNNELBLICK:
+   - Wenn die Frage um Freizeit, Wochenende, Ausflüge, Aktivitäten oder Regentage geht, schlage NIEMALS Kochen, Backen oder Rezepte in der Küche vor (außer die Frage lautet explizit "Was sollen wir kochen/essen?").
+2. REGIONALE RECHERCHE & ECHTE AUSFLUGSZIELE:
+   - Nenne echte, konkrete Ausflugsziele, Museen, Hallenbäder, Boulder-/Kletterhallen, Indoor-Spielplätze, Erlebniswelten, Planetarien oder Naturparks in oder um "${targetRegion}".
+3. DREI DIVERSE, HOCHWERTIGE OPTIONEN:
+   Generiere exakt 3 abwechslungsreiche Optionen:
+   • Option 1: Action, Abenteuer & Auspowern (z.B. Indoor-Erlebniswelt, Trampolinhalle, Bouldern, Klettern, Erlebnisbad)
+   • Option 2: Entdecken, Kultur & Staunen (z.B. interaktives Science-Museum, Planetarium, Detektiv-Trail / Escape-Room, Botanischer Garten)
+   • Option 3: Kreativ, Spiele & Gemütlich (z.B. Keramik-Malstudio, Brettspiel-Café, Familien-Kinoerlebnis oder spannende DIY-Rätsel-Rallye)
+4. ABGLEICH MIT GEMEINSAMEN INTERESSEN:
+   - Erkläre in "fitReason" in 1 prägnanten Satz, warum die jeweilige Option die Interessen von Kindern UND Erwachsenen optimal verbindet (z.B. "Perfekt für Idas Bewegungsdrang und Stephans Technikbegeisterung").
+   - Gib zu jeder Option realistische "pros" (2-3 Vorteile) und "cons" (1-2 ehrliche Punkte zu bedenken) an.
+   - Gib "duration" (z.B. "ca. 2-3 Stunden") und "estimatedCost" (z.B. "Günstig", "Mittel", "Kostenlos") an.
+5. REALISTISCHE MATCH-SCORES:
+   - Vergib jeder Option einen natürlichen Passungs-Score von 65 bis 96 (z.B. Option 1: 94, Option 2: 86, Option 3: 78).
+6. KEIN BELEHRENDER ODER STEIFER TON:
+   - Formuliere lebendig, herzlich und auf den Punkt. Keine geschwollenen Manager-Floskeln ("ist der ideale Konsens").
 
-Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
+Antworte strukturiert im folgenden JSON-Format:
+\`\`\`json
 {
-  "summary": "Begründung für die Familie...",
+  "summary": "1-2 Sätze Kern-Empfehlung für die Familie...",
+  "winnerId": "opt_1",
   "options": [
     {
       "id": "opt_1",
-      "title": "Konkreter Titel von Option 1",
-      "badge": "z.B. Größter Spaß / Wetterfest / Entspannt",
-      "score": 88,
+      "title": "Konkreter Name des Ausflugsziels oder der Aktivität",
+      "badge": "⚡ Action & Auspowern",
+      "score": 94,
+      "fitReason": "Warum es zu den Interessen der Familie passt",
+      "duration": "ca. 2-3 Stunden",
+      "estimatedCost": "Mittel (ca. 12-15€ p.P.)",
+      "isIndoor": true,
       "pros": ["Vorteil 1", "Vorteil 2"],
-      "cons": ["Möglicher Nachteil"]
+      "cons": ["Zu bedenken"]
     },
     {
       "id": "opt_2",
-      "title": "Konkreter Titel von Option 2",
-      "badge": "z.B. Kreativ & Aktiv",
-      "score": 76,
-      "pros": ["Vorteil 1"],
-      "cons": ["Nachteil"]
+      "title": "Zweite Option (z.B. Kultur / Museum / Entdecken)",
+      "badge": "🏛️ Kultur & Entdecken",
+      "score": 86,
+      "fitReason": "Warum es zu den Interessen passt",
+      "duration": "ca. 2 Stunden",
+      "estimatedCost": "Günstig",
+      "isIndoor": true,
+      "pros": ["Vorteil 1", "Vorteil 2"],
+      "cons": ["Zu bedenken"]
     },
     {
       "id": "opt_3",
-      "title": "Konkreter Titel von Option 3",
-      "badge": "z.B. Schnell & Sparsam",
-      "score": 65,
+      "title": "Dritte Option (z.B. Gemütlich / Kreativ / Spiele)",
+      "badge": "🎲 Gemütlich & Kreativ",
+      "score": 78,
+      "fitReason": "Warum es zu den Interessen passt",
+      "duration": "ca. 1,5 Stunden",
+      "estimatedCost": "Kostenlos",
+      "isIndoor": true,
       "pros": ["Vorteil 1"],
-      "cons": ["Nachteil"]
+      "cons": ["Zu bedenken"]
     }
-  ],
-  "winnerId": "opt_1"
+  ]
 }
+\`\`\`
 `.trim();
 
   if (aiConfig?.apiKey && aiConfig.provider === 'gemini') {
     try {
       const model = await resolveGeminiFlashModel(aiConfig.apiKey);
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${aiConfig.apiKey}`;
-      const res = await fetch(endpoint, {
+
+      // 1. First attempt: with Google Search grounding tool enabled
+      let res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }],
           generationConfig: {
-            response_mime_type: 'application/json',
-            temperature: 0.4,
+            temperature: 0.5,
           },
         }),
       });
+
+      // 2. Fallback attempt: standard call without tools if search tool is rejected
+      if (!res.ok) {
+        res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.5,
+            },
+          }),
+        });
+      }
 
       if (res.ok) {
         const data = await res.json();
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
-          const parsed = JSON.parse(text);
-          if (Array.isArray(parsed.options) && parsed.options.length > 0) {
+          const parsed = extractJsonFromText(text);
+          if (parsed && Array.isArray(parsed.options) && parsed.options.length > 0) {
             const rawOpts = parsed.options.map((o: any, idx: number) => ({
               id: o.id || `opt_${idx}`,
               title: o.title || `Option ${idx + 1}`,
               badge: o.badge,
-              rawWeight: typeof o.score === 'number' ? Math.max(1, o.score) : 50,
+              fitReason: o.fitReason,
+              estimatedCost: o.estimatedCost,
+              duration: o.duration,
+              isIndoor: typeof o.isIndoor === 'boolean' ? o.isIndoor : true,
+              rawWeight: typeof o.score === 'number' ? Math.max(1, o.score) : Math.max(60, 92 - idx * 8),
               pros: Array.isArray(o.pros) ? o.pros : [],
               cons: Array.isArray(o.cons) ? o.cons : [],
             }));
@@ -417,7 +525,7 @@ Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
               question: cleanQuestion,
               winner,
               options: calibrated,
-              summary: parsed.summary || `${winner.title} hat die höchste Übereinstimmung (${winner.percentage}%).`,
+              summary: parsed.summary || `${winner.title} passt mit ${winner.percentage}% Match am besten zu euren Interessen!`,
               timestamp: Date.now(),
             };
           }
@@ -428,80 +536,126 @@ Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
     }
   }
 
-  // Smart Contextual Local Fallback Engine (Topic-aware, never blindly picking #2)
+  // Smart Contextual Local Fallback Engine (Topic-aware, never proposing cooking for leisure questions)
   const q = cleanQuestion.toLowerCase();
-  let fallbackOptions: Array<{ title: string; badge: string; rawWeight: number; pros: string[]; cons: string[] }> = [];
+  let fallbackOptions: Array<{
+    title: string;
+    badge: string;
+    rawWeight: number;
+    fitReason: string;
+    duration: string;
+    estimatedCost: string;
+    isIndoor: boolean;
+    pros: string[];
+    cons: string[];
+  }> = [];
 
   if (q.includes('film') || q.includes('kino') || q.includes('video') || q.includes('serie')) {
     fallbackOptions = [
       {
         title: 'Animationsfilm / Familienhit (z.B. Pixar oder Disney Klassiker)',
-        badge: '🍿 Beliebt bei allen Altersgruppen',
-        rawWeight: 88,
+        badge: '🍿 Beliebt bei Groß & Klein',
+        rawWeight: 92,
+        fitReason: 'Perfekt abgestimmt auf die Kinder mit viel Witz für Erwachsene',
+        duration: 'ca. 1,5 Stunden',
+        estimatedCost: 'Streaming-Abo',
+        isIndoor: true,
         pros: ['Gute Laune garantiert', 'Für jüngere Kinder bestens geeignet'],
         cons: ['Eventuell schon einmal gesehen'],
       },
       {
-        title: 'Spannendes Familien-Naturabenteuer (z.B. BBC Erdmännchen / Unsere Erde)',
-        badge: '🌍 Faszinierend & Lehrreich',
-        rawWeight: 78,
-        pros: ['Faszinierende Bilder', 'Gemeinsamer Gesprächsstoff'],
-        cons: ['Braucht etwas mehr Aufmerksamkeit'],
-      },
-      {
         title: 'Humorvoller Comedy-Klassiker (z.B. Paddington oder Nachts im Museum)',
         badge: '😂 Viel zum Lachen',
-        rawWeight: 82,
+        rawWeight: 85,
+        fitReason: 'Großartige Unterhaltung für alle Generationen',
+        duration: 'ca. 1,5 - 2 Stunden',
+        estimatedCost: 'Streaming-Abo',
+        isIndoor: true,
         pros: ['Sehr unterhaltsam für Eltern & Kids', 'Kurzweilig'],
         cons: ['Teilweise etwas temporeich'],
       },
+      {
+        title: 'Spannendes Familien-Naturabenteuer (z.B. Unsere Erde / Erdmännchen)',
+        badge: '🌍 Faszinierend & Lehrreich',
+        rawWeight: 78,
+        fitReason: 'Faszinierende Bilder und spannender Gesprächsstoff',
+        duration: 'ca. 1,5 Stunden',
+        estimatedCost: 'Kostenlos / Mediathek',
+        isIndoor: true,
+        pros: ['Atemberaubende Naturaufnahmen', 'Lehrreich'],
+        cons: ['Erfordert etwas mehr Aufmerksamkeit'],
+      },
     ];
-  } else if (q.includes('regen') || q.includes('schlecht') || q.includes('wetter') || q.includes('drinnen')) {
+  } else if (q.includes('regen') || q.includes('schlecht') || q.includes('wetter') || q.includes('drinnen') || q.includes('ausflug') || q.includes('wochenende') || q.includes('unternehmen')) {
     fallbackOptions = [
       {
-        title: 'Großer Familien-Spielemarathon mit Snack-Buffet',
-        badge: '🎲 Gemütlich & Wetterunabhängig',
+        title: `Indoor-Action & Auspowern (Erlebnisbad / Therme oder Trampolinpark in ${targetRegion})`,
+        badge: '⚡ Viel Bewegung & Spaß',
+        rawWeight: 94,
+        fitReason: 'Gibt den Kindern die nötige Bewegung bei Schmuddelwetter und lässt alle am Abend selig schlafen',
+        duration: 'ca. 3 Stunden',
+        estimatedCost: 'Mittel (ca. 12-18€ p.P.)',
+        isIndoor: true,
+        pros: ['100% wetterunabhängig', 'Großer Spaßfaktor für die ganze Familie'],
+        cons: ['Eintrittskosten und etwas Anfahrtszeit'],
+      },
+      {
+        title: `Mitmach-Museum, Science-Center oder Planetarium in ${targetRegion}`,
+        badge: '🏛️ Entdecken & Staunen',
         rawWeight: 86,
-        pros: ['Kein Verlassen des Hauses nötig', 'Stärkt das Gemeinschaftsgefühl'],
-        cons: ['Benötigt Einigung auf Spielregeln'],
+        fitReason: 'Verbindet Neugier, Technik und spielerisches Lernen für Kinder und Erwachsene',
+        duration: 'ca. 2-3 Stunden',
+        estimatedCost: 'Günstig bis Mittel',
+        isIndoor: true,
+        pros: ['Interaktive Stationen zum Anfassen', 'Spannend & trocken'],
+        cons: ['Am Wochenende eventuell gut besucht'],
       },
       {
-        title: 'Kreatives Back- oder Kochprojekt (z.B. Waffeln oder Mini-Pizzen)',
-        badge: '🍕 Lecker & Interaktiv',
-        rawWeight: 84,
-        pros: ['Kinder können aktiv mithelfen', 'Sofortiges leckeres Ergebnis'],
-        cons: ['Etwas Aufräumarbeit in der Küche'],
-      },
-      {
-        title: 'Ausflug in Hallenbad, Museum oder Indoor-Spielplatz',
-        badge: '⚡ Viel Bewegung',
-        rawWeight: 72,
-        pros: ['Kinder powern sich aus', 'Besonderes Erlebnis'],
-        cons: ['Eintrittskosten und Anfahrt'],
+        title: 'Großer Familien-Spielemarathon mit Deckenburg & DIY-Snack-Buffet',
+        badge: '🎲 Gemütlich & Kostenlos',
+        rawWeight: 80,
+        fitReason: 'Gemütliche Quality-Time zu Hause ohne jeden Reise- oder Packstress',
+        duration: 'ca. 2 Stunden',
+        estimatedCost: 'Kostenlos',
+        isIndoor: true,
+        pros: ['Kein Verlassen des Hauses bei Sauwetter', 'Stärkt das Gemeinschaftsgefühl'],
+        cons: ['Benötigt Einigung auf gemeinsame Spielregeln'],
       },
     ];
   } else {
     fallbackOptions = [
       {
-        title: 'Gemeinsame Aktivität mit klarem Zeitfenster (z.B. 1,5 Stunden)',
-        badge: '⚖️ Ausgewogener Konsens',
+        title: `Spannender Familienausflug in der Region ${targetRegion}`,
+        badge: '🌲 Ausflug & Erlebnis',
+        rawWeight: 92,
+        fitReason: 'Perfekt ausgewogene Aktivität für die ganze Familie mit viel Abwechslung',
+        duration: 'ca. 2-3 Stunden',
+        estimatedCost: 'Günstig',
+        isIndoor: false,
+        pros: ['Gemeinsame Erlebnisse schaffen Erinnerungen', 'Für jedes Alter attraktiv'],
+        cons: ['Erfordert etwas Vorbereitung'],
+      },
+      {
+        title: 'Mitmach-Erlebnis oder interaktive Ausstellung',
+        badge: '🏛️ Kultur & Entdecken',
         rawWeight: 85,
-        pros: ['Verbindet die Familie ohne Überforderung', 'Lässt Raum für freie Zeit danach'],
-        cons: ['Braucht feste Absprache'],
+        fitReason: 'Weckt Neugier und bietet spannende Mitmach-Stationen für die Kids',
+        duration: 'ca. 2 Stunden',
+        estimatedCost: 'Mittel',
+        isIndoor: true,
+        pros: ['Wetterunabhängig', 'Interaktiv'],
+        cons: ['Feste Öffnungszeiten'],
       },
       {
-        title: 'Gezielte Aufteilung: Jeder wählt einen Teil des Nachmittags',
-        badge: '🤝 Fair für alle',
-        rawWeight: 79,
-        pros: ['Niemand fühlt sich übergangen', 'Große Vielfalt'],
-        cons: ['Erfordert Zeitmanagement'],
-      },
-      {
-        title: 'Spontaner Ausflug ins Grüne mit Picknick',
-        badge: '🌲 Frische Luft',
-        rawWeight: 75,
-        pros: ['Abschalten vom Alltag', 'Gut für Gesundheit & Bewegung'],
-        cons: ['Abhängig vom aktuellen Wetter'],
+        title: 'Gemeinsamer Spieletag oder Picknick-Tour',
+        badge: '🧺 Entspannt & Flexibel',
+        rawWeight: 78,
+        fitReason: 'Entspannte Zeit ohne Zeitdruck oder Terminstress',
+        duration: 'ca. 2 Stunden',
+        estimatedCost: 'Kostenlos',
+        isIndoor: false,
+        pros: ['Keine Eintrittskosten', 'Völlig stressfrei'],
+        cons: ['Wetterabhängig'],
       },
     ];
   }
@@ -511,6 +665,10 @@ Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
       id: `local_opt_${idx}`,
       title: o.title,
       badge: o.badge,
+      fitReason: o.fitReason,
+      estimatedCost: o.estimatedCost,
+      duration: o.duration,
+      isIndoor: o.isIndoor,
       rawWeight: o.rawWeight,
       pros: o.pros,
       cons: o.cons,
@@ -523,7 +681,7 @@ Antworte AUSSCHLIESSLICH mit reinem JSON ohne Markdown-Code-Fences:
     question: cleanQuestion,
     winner,
     options: calibrated,
-    summary: `${winner.title} bietet die beste Balance für die Familie (${winner.percentage}% Empfehlung).`,
+    summary: `${winner.title} passt mit ${winner.percentage}% Match am besten zu euren Interessen!`,
     timestamp: Date.now(),
   };
 }

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Brain, RefreshCw, Sparkles, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Brain, RefreshCw, Sparkles, Check, MapPin, Calendar, Clock, DollarSign, Home } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { DecisionResult } from '../../services/decisionService';
+import { DecisionResult, DecisionOption } from '../../services/decisionService';
 
 interface AssistantAdviceTabProps {
   customQuestion: string;
@@ -11,6 +11,9 @@ interface AssistantAdviceTabProps {
   handleRunDecision: (overrideQuestion?: string) => Promise<void>;
   familyMemories: any[];
   onSuccessNotice: (msg: string) => void;
+  familyRegion?: string;
+  onUpdateRegion?: (region: string) => void;
+  onSelectOption?: (option: DecisionOption, question: string) => void;
 }
 
 export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
@@ -21,32 +24,66 @@ export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
   handleRunDecision,
   familyMemories,
   onSuccessNotice,
+  familyRegion = 'München & Umland',
+  onUpdateRegion,
+  onSelectOption,
 }) => {
+  const [localRegion, setLocalRegion] = useState(familyRegion);
+
+  const handleRegionChange = (val: string) => {
+    setLocalRegion(val);
+    onUpdateRegion?.(val);
+  };
+
+  const handleChooseOption = (option: DecisionOption) => {
+    confetti({ particleCount: 65, spread: 70, origin: { y: 0.6 } });
+    if (onSelectOption) {
+      onSelectOption(option, decisionResult?.question || customQuestion);
+    } else {
+      onSuccessNotice(`✓ Ausflug "${option.title}" für die Familie ausgewählt! 📅`);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 scrollbar-thin">
       {/* Info Header */}
-      <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-1.5">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/70 dark:border-amber-900/60 space-y-1">
         <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-black text-xs sm:text-sm">
           <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span>Autonomer KI-Familienrat (Gemini 3+ Flash)</span>
+          <span>Autonomer KI-Familienrat (Gemini 3+ Flash & Google Search)</span>
         </div>
-        <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-          Nennt einfach euer Dilemma: Die KI recherchiert passende Vorschläge, gleicht sie mit eurem Familien-Gedächtnis & Kalender ab und berechnet Vor- und Nachteile.
+        <p className="text-xs text-amber-900/80 dark:text-amber-300/80 leading-relaxed font-medium">
+          Nennt euer Anliegen: Die KI recherchiert echte regionale Highlights, gleicht sie mit euren Familieninteressen ab und präsentiert euch 3 abwechslungsreiche Top-Optionen zum Vergleichen.
         </p>
+      </div>
+
+      {/* Region / Location Selector Pill */}
+      <div className="flex items-center justify-between gap-2 p-2.5 px-3 rounded-2xl bg-stone-100 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 text-xs">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
+          <span className="font-bold text-stone-800 dark:text-slate-200">Eure Region / Stadt:</span>
+        </div>
+        <input
+          type="text"
+          value={localRegion}
+          onChange={(e) => handleRegionChange(e.target.value)}
+          placeholder="z.B. München & Umland, Hamburg..."
+          className="px-3 py-1 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-900 text-stone-900 dark:text-white max-w-[210px] focus:ring-2 focus:ring-amber-500"
+        />
       </div>
 
       {/* Quick Topic Chips */}
       <div className="space-y-1.5">
         <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400">
-          Schnelle Ideen / Häufige Familienfragen
+          Häufige Familienfragen
         </label>
         <div className="flex flex-wrap gap-1.5">
           {[
-            { label: '🌧️ Regentags-Plan', q: 'Was machen wir heute Nachmittag bei schlechtem Wetter / Regen mit den Kindern?' },
+            { label: '🌧️ Regentags-Plan', q: 'Was machen wir am Wochenende bei Regen / schlechtem Wetter mit der Familie?' },
+            { label: '🎯 Wochenend-Ausflug', q: 'Was ist ein schöner, erlebnisreicher Familienausflug für das kommende Wochenende?' },
             { label: '🍿 Familienfilm für heute', q: 'Welchen Familienfilm können wir heute Abend schauen, der allen Spaß macht?' },
-            { label: '🎯 Wochenend-Ausflug', q: 'Was ist ein schöner, stressfreier Familienausflug für das Wochenende?' },
-            { label: '🍕 Schnelles Abendessen', q: 'Was kochen wir heute Abend schnell und unkompliziert für die ganze Familie?' },
-            { label: '🧹 Aufgaben fair verteilen', q: 'Wie teilen wir die anstehenden Haushaltsaufgaben heute fair und motivierend auf?' },
+            { label: '⚡ Indoor-Action', q: 'Welche Indoor-Erlebniswelt oder Hallenaktivität passt am besten zu unseren Kindern?' },
+            { label: '🍕 Schnelles Abendessen', q: 'Was kochen wir heute Abend schnell und lecker für die ganze Familie?' },
           ].map((chip) => (
             <button
               key={chip.label}
@@ -76,7 +113,7 @@ export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
             type="text"
             value={customQuestion}
             onChange={(e) => setCustomQuestion(e.target.value)}
-            placeholder="z.B. Welches Spiel spielen wir heute oder wohin geht der Sonntagsausflug?"
+            placeholder="z.B. Was machen wir am Wochenende falls es regnet?"
             className="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 text-xs sm:text-sm font-bold bg-stone-50 dark:bg-slate-800 text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
           <button
@@ -89,7 +126,7 @@ export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
             ) : (
               <Sparkles className="w-3.5 h-3.5" />
             )}
-            <span>{isDeciding ? 'Berät...' : 'Rat einholen'}</span>
+            <span>{isDeciding ? 'Recherchiert...' : 'Rat einholen'}</span>
           </button>
         </div>
       </form>
@@ -98,7 +135,7 @@ export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
       {familyMemories.length > 0 && (
         <div className="flex items-center gap-1.5 text-[11px] font-bold text-stone-400 dark:text-slate-500 pt-0.5">
           <span className="text-amber-500">🧠</span>
-          <span>Langzeit-Gedächtnis aktiv ({familyMemories.length} Familienfakten fließen in die Empfehlung ein)</span>
+          <span>Familieninteressen & Langzeit-Gedächtnis fließen in die Vorschläge ein</span>
         </div>
       )}
 
@@ -109,92 +146,161 @@ export const AssistantAdviceTab: React.FC<AssistantAdviceTabProps> = ({
             <RefreshCw className="w-5 h-5 animate-spin" />
           </div>
           <h4 className="text-sm font-black text-stone-800 dark:text-slate-200">
-            Der Familienrat berät sich...
+            Der Familienrat recherchiert für {localRegion}...
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400">
-            Gemini 3+ Flash wiegt Möglichkeiten, Wetter, Zeiten und Vorlieben ab.
+            Gemini 3+ Flash wiegt regionale Angebote, Wetter und gemeinsame Familien-Interessen ab.
           </p>
         </div>
       )}
 
-      {/* Decision Result Display */}
+      {/* Decision Result Display: Comparison of all 3 options */}
       {!isDeciding && decisionResult && (
-        <div className="space-y-4 pt-2">
-          {/* Winner Card */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-br from-amber-50 via-orange-50 to-amber-100/60 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/20 border-2 border-amber-300 dark:border-amber-700/60 shadow-xs space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+        <div className="space-y-4 pt-2 animate-in fade-in duration-300">
+          {/* Header Summary */}
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+              <span className="text-xs font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <span>🏆</span>
-                <span>Empfehlung des Familienrats</span>
-              </span>
-              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
-                {decisionResult.winner.percentage}% Übereinstimmung
+                <span>Die 3 besten Ideen im direkten Vergleich:</span>
               </span>
             </div>
+            <p className="text-xs font-medium text-stone-800 dark:text-slate-200 leading-relaxed">
+              {decisionResult.summary}
+            </p>
+          </div>
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black text-amber-950 dark:text-white">
-                  {decisionResult.winner.title}
-                </h3>
-                {decisionResult.winner.badge && (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-slate-700">
-                    {decisionResult.winner.badge}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 mt-1 leading-relaxed">
-                {decisionResult.summary}
-              </p>
-            </div>
+          {/* Cards List for all 3 Options */}
+          <div className="space-y-3">
+            {decisionResult.options.map((option, idx) => {
+              const isWinner = option.id === decisionResult.winner.id || idx === 0;
 
-            {/* Pros & Cons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
-              {decisionResult.winner.pros && decisionResult.winner.pros.length > 0 && (
-                <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
-                    Vorteile:
-                  </span>
-                  <ul className="space-y-0.5 text-stone-700 dark:text-slate-300">
-                    {decisionResult.winner.pros.map((pro, pIdx) => (
-                      <li key={pIdx} className="flex items-start gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{pro}</span>
-                      </li>
-                    ))}
-                  </ul>
+              return (
+                <div
+                  key={option.id}
+                  className={`p-4 sm:p-5 rounded-3xl border-2 transition-all space-y-3 ${
+                    isWinner
+                      ? 'bg-linear-to-br from-amber-50/90 via-orange-50/60 to-amber-100/50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/20 border-amber-300 dark:border-amber-600/70 shadow-sm ring-2 ring-amber-400/20'
+                      : 'bg-white dark:bg-slate-800/80 border-stone-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700/50'
+                  }`}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                          isWinner
+                            ? 'bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200'
+                            : 'bg-stone-100 dark:bg-slate-700 text-stone-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {isWinner ? '🏆 Top-Empfehlung' : `💡 Option ${idx + 1}`}
+                      </span>
+
+                      {option.badge && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-slate-700">
+                          {option.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                      {option.percentage}% Übereinstimmung
+                    </span>
+                  </div>
+
+                  {/* Title & Metadata */}
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-stone-900 dark:text-white">
+                      {option.title}
+                    </h3>
+
+                    {/* Metadata tags */}
+                    <div className="flex items-center gap-3 flex-wrap mt-1 text-[11px] font-bold text-stone-500 dark:text-slate-400">
+                      {option.duration && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{option.duration}</span>
+                        </span>
+                      )}
+                      {option.estimatedCost && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <span>{option.estimatedCost}</span>
+                        </span>
+                      )}
+                      {typeof option.isIndoor === 'boolean' && (
+                        <span className="flex items-center gap-1">
+                          <Home className="w-3.5 h-3.5" />
+                          <span>{option.isIndoor ? 'Wetterfest / Drinnen' : 'Outdoor / Frische Luft'}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Why it matches common family interests */}
+                  {option.fitReason && (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs">
+                      <span className="font-black text-amber-900 dark:text-amber-200">
+                        💡 Passt zu euren Interessen:{' '}
+                      </span>
+                      <span className="text-stone-700 dark:text-slate-300 font-medium">
+                        {option.fitReason}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Pros & Cons */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 text-xs">
+                    {option.pros && option.pros.length > 0 && (
+                      <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-stone-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
+                          Vorteile:
+                        </span>
+                        <ul className="space-y-0.5 text-stone-700 dark:text-slate-300">
+                          {option.pros.map((pro, pIdx) => (
+                            <li key={pIdx} className="flex items-start gap-1.5">
+                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                              <span>{pro}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {option.cons && option.cons.length > 0 && (
+                      <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-stone-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-black uppercase text-stone-500 dark:text-slate-400">
+                          Zu bedenken:
+                        </span>
+                        <ul className="space-y-0.5 text-stone-600 dark:text-slate-400">
+                          {option.cons.map((con, cIdx) => (
+                            <li key={cIdx} className="flex items-start gap-1.5">
+                              <span className="text-stone-400 shrink-0">•</span>
+                              <span>{con}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Button: Choose this plan */}
+                  <div className="pt-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => handleChooseOption(option)}
+                      className={`duo-btn px-4 py-2 text-xs font-black rounded-xl flex items-center gap-1.5 ${
+                        isWinner ? 'duo-btn-amber' : 'duo-btn-white'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{isWinner ? '✨ Diesen Plan wählen & eintragen' : 'Diesen Plan wählen'}</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-
-              {decisionResult.winner.cons && decisionResult.winner.cons.length > 0 && (
-                <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] font-black uppercase text-stone-500 dark:text-slate-400">
-                    Zu bedenken:
-                  </span>
-                  <ul className="space-y-0.5 text-stone-600 dark:text-slate-400">
-                    {decisionResult.winner.cons.map((con, cIdx) => (
-                      <li key={cIdx} className="flex items-start gap-1.5">
-                        <span className="text-stone-400 shrink-0">•</span>
-                        <span>{con}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-                  onSuccessNotice(`Entscheidung "${decisionResult.winner.title}" angenommen! 🚀`);
-                }}
-                className="duo-btn duo-btn-amber px-4 py-2 text-xs font-black rounded-xl"
-              >
-                <span>Vorschlag annehmen</span>
-              </button>
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
