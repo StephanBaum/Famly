@@ -11,8 +11,8 @@
 2. **The "Flour on Hands" Barrier:** Life happens in the kitchen, garage, and school run. If adding milk, checking dinner, or punching a chore requires unlocking a smartphone, finding an app icon, and navigating menus, it doesn't happen.
 3. **The Feature Shower Fallacy:** Adding more tabs, submenus, and complex customization options increases cognitive load. A family organizer should remove cognitive burden, not add administrative chores.
 
-### The \$600 Hardware Comparison (Hearth & Skylight)
-* Dedicated screens like Hearth Display (\$699) and Skylight Calendar (\$319) prove families will pay a massive premium to have an always-on display in the kitchen.
+### The Expensive Hardware Comparison
+* Dedicated wall screens (\$300–\$700) prove families will pay a massive premium to have an always-on display in the kitchen.
 * However, existing hardware displays are still largely **passive digital paper**—the parents still have to do all the work manually.
 * **Famly’s Value Proposition:** An **Autonomous Household Butler** that proactively stages work (grocery baskets, carpool dispatches, kid routines) and requires only a single tap to approve.
 
@@ -72,7 +72,7 @@ src/
 │   └── vercelSync.ts            # Local-first persistence + Vercel Upstash Redis cloud sync
 ├── components/
 │   ├── kiosk/
-│   │   └── AmbientKitchenStation.tsx   # Hearth-grade full-viewport ambient kitchen display
+│   │   └── AmbientKitchenStation.tsx   # Appliance-grade full-viewport ambient kitchen display
 │   ├── groceries/
 │   │   ├── StoreArrivalBanner.tsx      # Geofenced arrival notification card
 │   │   └── ShoppingFocusModal.tsx      # One-handed supermarket cart mode

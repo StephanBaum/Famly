@@ -1,6 +1,6 @@
 import React from 'react';
 import { Appointment, FamilyMember, AppointmentConflict } from '../../types';
-import { CATEGORY_CONFIG } from './calendarConstants';
+import { CATEGORY_CONFIG, detectStickerFromTitle } from './calendarConstants';
 import { Repeat, AlertTriangle, MapPin, Clock, Edit2, Trash2 } from 'lucide-react';
 
 interface CalendarAppointmentCardProps {
@@ -26,13 +26,17 @@ export const CalendarAppointmentCard: React.FC<CalendarAppointmentCardProps> = (
 }) => {
   const conf = CATEGORY_CONFIG[appointment.category] || CATEGORY_CONFIG.family;
   const assignedMembers = members.filter((m) => appointment.memberIds.includes(m.id));
+  const sticker = appointment.sticker || detectStickerFromTitle(appointment.title, appointment.category);
 
   // Agenda view variant
   if (variant === 'agenda') {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border-2 border-stone-200 dark:border-slate-800 bg-stone-50/40 dark:bg-slate-800/60 hover:bg-stone-50 dark:hover:bg-slate-800 transition-all gap-4">
-        <div className="flex items-start gap-3">
-          <div className="space-y-1">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-stone-200 dark:border-slate-700 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+            {sticker}
+          </div>
+          <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${conf.bg} ${conf.border} ${conf.text}`}>
                 {conf.icon} {conf.label}
@@ -199,16 +203,22 @@ export const CalendarAppointmentCard: React.FC<CalendarAppointmentCardProps> = (
         </div>
       )}
 
-      <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-black text-stone-900 dark:text-white leading-snug`}>
-        {appointment.title}
-      </h4>
-
-      {appointment.location && (
-        <p className="text-[10px] text-stone-600 dark:text-slate-300 flex items-center gap-1">
-          <MapPin className="w-3 h-3 text-stone-400" />
-          <span>{appointment.location}</span>
-        </p>
-      )}
+      <div className="flex items-start gap-2">
+        <span className="w-8 h-8 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-stone-200/80 dark:border-slate-700 flex items-center justify-center text-lg shrink-0 shadow-2xs">
+          {sticker}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-black text-stone-900 dark:text-white leading-snug`}>
+            {appointment.title}
+          </h4>
+          {appointment.location && (
+            <p className="text-[10px] text-stone-600 dark:text-slate-300 flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3 text-stone-400" />
+              <span>{appointment.location}</span>
+            </p>
+          )}
+        </div>
+      </div>
 
       {!isCompact && appointment.notes && (
         <p className="text-xs text-stone-500 dark:text-slate-400 italic">

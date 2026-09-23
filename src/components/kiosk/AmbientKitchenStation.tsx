@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Heart,
   Sparkles,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { fetchFamilyWeather, FamilyWeather } from '../../services/weatherService';
@@ -21,6 +22,11 @@ import {
 } from '../../services/contextEngine';
 import { getButlerStagedCart } from '../../services/storeCartService';
 import { ActiveTab } from '../Header';
+import { FamilyBoardCalendarView } from '../calendar/FamilyBoardCalendarView';
+import { KitchenRecipeView } from './KitchenRecipeView';
+import { AppointmentModal } from '../calendar/AppointmentModal';
+import { CarpoolManageModal } from '../calendar/CarpoolManageModal';
+import { Appointment } from '../../types';
 
 interface AmbientKitchenStationProps {
   onOpenFullHub: (tab?: ActiveTab) => void;
@@ -36,6 +42,8 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
   const {
     members,
     appointments,
+    addAppointment,
+    updateAppointment,
     mealPlans,
     recipes,
     chores,
@@ -44,6 +52,14 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
     familyName,
     groceries,
   } = useFamily();
+
+  const [kioskView, setKioskView] = useState<'station' | 'calendar_board' | 'recipes'>('station');
+  const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null);
+  const [isAddAppOpen, setIsAddAppOpen] = useState(false);
+  const [selectedAppDate, setSelectedAppDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedMemberId, setSelectedMemberId] = useState<string | 'all'>('all');
+  const [editingApp, setEditingApp] = useState<Appointment | null>(null);
+  const [carpoolApp, setCarpoolApp] = useState<Appointment | null>(null);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather, setWeather] = useState<FamilyWeather | null>(null);
@@ -202,6 +218,74 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
 
   const uncheckedGroceriesCount = groceries.filter((g) => !g.checked).length;
 
+  if (kioskView === 'calendar_board') {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9] dark:bg-[#0c1222] text-stone-900 dark:text-white select-none p-4 sm:p-8 flex flex-col justify-between">
+        <FamilyBoardCalendarView
+          isKioskMode={true}
+          onReturnToStation={() => setKioskView('station')}
+          onOpenAddAppointment={(dateStr, prefillMemberId) => {
+            setSelectedAppDate(dateStr || format(new Date(), 'yyyy-MM-dd'));
+            setSelectedMemberId(prefillMemberId || 'all');
+            setEditingApp(null);
+            setIsAddAppOpen(true);
+          }}
+          onEditAppointment={(app) => {
+            setEditingApp(app);
+            setIsAddAppOpen(true);
+          }}
+          onManageCarpool={(app) => setCarpoolApp(app)}
+        />
+
+        {/* Appointment Modal in Kiosk */}
+        <AppointmentModal
+          isOpen={isAddAppOpen}
+          onClose={() => setIsAddAppOpen(false)}
+          editingAppointment={editingApp}
+          defaultDate={selectedAppDate}
+          members={members}
+          currentMemberId={selectedMemberId}
+          loggedInMemberId={null}
+          onSave={(payload) => {
+            if (editingApp) {
+              updateAppointment(editingApp.id, payload);
+            } else {
+              addAppointment(payload);
+            }
+          }}
+        />
+
+        {/* Carpool Modal in Kiosk */}
+        {carpoolApp && (
+          <CarpoolManageModal
+            isOpen={!!carpoolApp}
+            onClose={() => setCarpoolApp(null)}
+            appointment={carpoolApp}
+            members={members}
+            familyName={familyName}
+            onSave={(updated) => {
+              updateAppointment(updated.id, updated);
+              setCarpoolApp(null);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (kioskView === 'recipes') {
+    return (
+      <KitchenRecipeView
+        recipes={recipes}
+        mealPlans={mealPlans}
+        members={members}
+        initialRecipeId={activeRecipeId}
+        onReturnToStation={() => setKioskView('station')}
+        onOpenAssistant={onOpenAssistant}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen flex flex-col justify-between transition-colors duration-700 select-none p-4 sm:p-8 ${
       daypart === 'night_dim'
@@ -219,6 +303,36 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
           <span className="text-base sm:text-xl font-bold text-stone-500 dark:text-slate-400">
             {format(currentTime, 'EEEE, d. MMMM', { locale: de })}
           </span>
+        </div>
+
+        {/* Primary View Switcher: Station vs Kalender-Board vs Rezepte */}
+        <div className="flex items-center bg-stone-200/80 dark:bg-slate-800 p-1 rounded-2xl text-xs font-black gap-1 shadow-2xs">
+          <button
+            onClick={() => setKioskView('station')}
+            className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 bg-amber-400 text-stone-900 shadow-xs"
+          >
+            <span>🏡 Station</span>
+          </button>
+          <button
+            onClick={() => setKioskView('calendar_board')}
+            className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white"
+          >
+            <span>📅 Kalender-Board</span>
+            {todayAppointments.length > 0 && (
+              <span className="w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold bg-blue-200 text-blue-900">
+                {todayAppointments.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveRecipeId(dinnerRecipe?.id || null);
+              setKioskView('recipes');
+            }}
+            className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-stone-600 dark:text-slate-300 hover:text-stone-900 dark:hover:text-white"
+          >
+            <span>🍳 Rezepte</span>
+          </button>
         </div>
 
         {/* Weather & Daypart Tag */}
@@ -398,7 +512,7 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
         )}
 
         {/* ========================================================================= */}
-        {/* 2. DAY AMBIENT (09:00 - 15:30): Calm Hearth & Memory Slideshow            */}
+        {/* 2. DAY AMBIENT (09:00 - 15:30): Calm Ambient & Memory Slideshow            */}
         {/* ========================================================================= */}
         {daypart === 'day_ambient' && (
           <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-center animate-in fade-in duration-700">
@@ -497,6 +611,18 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
                   <p className="text-sm font-bold text-orange-100 mt-1">
                     {dinnerChef ? `Zubereitet von ${dinnerChef.name} ${dinnerChef.avatar || '👨‍🍳'}` : 'Familien-Abendessen'}
                   </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <button
+                      onClick={() => {
+                        setActiveRecipeId(dinnerRecipe?.id || null);
+                        setKioskView('recipes');
+                      }}
+                      className="px-3.5 py-1.5 bg-white text-orange-600 rounded-xl text-xs font-black flex items-center gap-1.5 hover:bg-orange-50 active:scale-95 transition-all shadow-xs"
+                    >
+                      <ChefHat className="w-3.5 h-3.5" />
+                      <span>{dinnerRecipe ? 'Rezept & Koch-Modus öffnen 👨‍🍳' : 'Rezept aus Kochbuch wählen'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Cooking Timer Button */}
@@ -642,6 +768,29 @@ export const AmbientKitchenStation: React.FC<AmbientKitchenStationProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Quick Calendar Board Button */}
+          <button
+            onClick={() => setKioskView('calendar_board')}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-900 dark:text-blue-200 border-2 border-blue-300 dark:border-blue-700 text-xs font-black shadow-xs active:scale-95 transition-all"
+            title="Kalender-Board öffnen"
+          >
+            <CalendarIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 stroke-[2.5]" />
+            <span className="hidden sm:inline">Kalender-Board</span>
+          </button>
+
+          {/* Quick Kitchen Recipes Button */}
+          <button
+            onClick={() => {
+              setActiveRecipeId(dinnerRecipe?.id || null);
+              setKioskView('recipes');
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-orange-100 dark:bg-orange-950/80 text-orange-900 dark:text-orange-200 border-2 border-orange-300 dark:border-orange-700 text-xs font-black shadow-xs active:scale-95 transition-all"
+            title="Rezepte & Kochen"
+          >
+            <ChefHat className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 stroke-[2.5]" />
+            <span className="hidden sm:inline">Rezepte</span>
+          </button>
+
           {/* Famly AI Assistant Quick Trigger */}
           {onOpenAssistant && (
             <button

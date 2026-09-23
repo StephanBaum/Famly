@@ -1,6 +1,6 @@
 import React from 'react';
 import { Appointment, Chore, FamilyMember } from '../../types';
-import { CATEGORY_CONFIG } from './calendarConstants';
+import { CATEGORY_CONFIG, detectStickerFromTitle } from './calendarConstants';
 import { Plus, Sparkles, Repeat } from 'lucide-react';
 import { format, isSameMonth, isSameDay } from 'date-fns';
 
@@ -112,6 +112,7 @@ export const CalendarMonthGrid: React.FC<CalendarMonthGridProps> = ({
                 {dayAppointments.map((app) => {
                   const conf = CATEGORY_CONFIG[app.category] || CATEGORY_CONFIG.family;
                   const assignedMembers = members.filter((m) => app.memberIds.includes(m.id));
+                  const sticker = app.sticker || detectStickerFromTitle(app.title, app.category);
                   return (
                     <div
                       key={app.id}
@@ -124,6 +125,7 @@ export const CalendarMonthGrid: React.FC<CalendarMonthGridProps> = ({
                       className={`px-1.5 py-0.5 rounded-lg border text-[11px] leading-tight font-bold flex items-center justify-between gap-1 shadow-2xs cursor-pointer hover:scale-102 transition-transform ${conf.bg} ${conf.border} ${conf.text}`}
                     >
                       <div className="truncate flex items-center gap-1">
+                        <span className="text-xs shrink-0">{sticker}</span>
                         {app.recurrence && app.recurrence !== 'none' && (
                           <Repeat className="w-2.5 h-2.5 shrink-0 opacity-75" />
                         )}

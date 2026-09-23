@@ -99,6 +99,7 @@ export interface Appointment {
   recurrenceEndDate?: string; // YYYY-MM-DD
   recurrenceDays?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
   carpool?: CarpoolDetails;
+  sticker?: string; // Custom sticker/icon (e.g. "⚽", "🥋", "🩰", "🎂", "🦷", "🎹")
 }
 
 export const isAppointmentOnDate = (appointment: Appointment, dateInput: Date | string): boolean => {

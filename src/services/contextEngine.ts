@@ -46,7 +46,7 @@ export function getCurrentDaypart(date: Date = new Date()): Daypart {
     return 'morning_rush';
   }
 
-  // 09:00 - 15:30: Calm Ambient (School / Work time, quiet hearth)
+  // 09:00 - 15:30: Calm Ambient (School / Work time, quiet home)
   if (decimalHour >= 9.0 && decimalHour < 15.5) {
     return 'day_ambient';
   }

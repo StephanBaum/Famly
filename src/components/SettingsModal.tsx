@@ -399,7 +399,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <h5 className="text-xs font-black text-stone-900 dark:text-white mt-1">Kühlschrank / Wand-Tablet</h5>
                   <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-0.5">
-                    Ruhige Kiosk-Station (Hearth-Stil), tageszeit-gesteuert & 60s Auto-Reset.
+                    Ruhige Kiosk-Station (Ambient-Modus), tageszeit-gesteuert & 60s Auto-Reset.
                   </p>
                 </button>
               </div>

@@ -1,6 +1,6 @@
 # Famly 🏡 - Kitchen Kiosk & Ambient Display Guide
 
-This guide explains how Famly operates on wall-mounted screens, countertop tablets, and fridge displays (similar to Hearth Display or Skylight Calendar) without requiring dedicated proprietary hardware.
+This guide explains how Famly operates on wall-mounted screens, countertop tablets, and fridge displays without requiring expensive proprietary hardware.
 
 ---
 

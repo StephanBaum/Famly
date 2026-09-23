@@ -5,8 +5,8 @@ import { de } from 'date-fns/locale';
 
 interface CalendarHeaderProps {
   currentDate: Date;
-  viewMode: 'month' | 'agenda';
-  setViewMode: (mode: 'month' | 'agenda') => void;
+  viewMode: 'board' | 'month' | 'agenda';
+  setViewMode: (mode: 'board' | 'month' | 'agenda') => void;
   onPrevPeriod: () => void;
   onNextPeriod: () => void;
   onGoToToday: () => void;
@@ -116,25 +116,35 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {/* View Mode Switcher */}
           <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200/60 dark:border-slate-700">
             <button
-              onClick={() => setViewMode('month')}
+              onClick={() => setViewMode('board')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'month'
-                  ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-xs'
+                viewMode === 'board'
+                  ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-xs font-black'
                   : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
-              <span className="sm:hidden">Kalender</span>
+              🎨 Board
+            </button>
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'month'
+                  ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-xs font-black'
+                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="sm:hidden">Monat</span>
               <span className="hidden sm:inline">Monatsansicht</span>
             </button>
             <button
               onClick={() => setViewMode('agenda')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 viewMode === 'agenda'
-                  ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-xs'
+                  ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-xs font-black'
                   : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
-              Terminliste
+              Liste
             </button>
           </div>
 

@@ -32,6 +32,7 @@ import { CalendarWeekStrip } from '../components/calendar/CalendarWeekStrip';
 import { CalendarMonthGrid } from '../components/calendar/CalendarMonthGrid';
 import { CalendarDayDetails } from '../components/calendar/CalendarDayDetails';
 import { CalendarAgendaView } from '../components/calendar/CalendarAgendaView';
+import { FamilyBoardCalendarView } from '../components/calendar/FamilyBoardCalendarView';
 import { AppointmentModal } from '../components/calendar/AppointmentModal';
 import { CalendarChoreModal } from '../components/calendar/CalendarChoreModal';
 import { CalendarClaimModal } from '../components/calendar/CalendarClaimModal';
@@ -58,7 +59,7 @@ export const CalendarView: React.FC = () => {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
+  const [viewMode, setViewMode] = useState<'board' | 'month' | 'agenda'>('board');
   const [selectedCategory, setSelectedCategory] = useState<AppointmentCategory | 'all' | 'chores_only'>('all');
   const [calendarTab, setCalendarTab] = useState<'calendar' | 'chores'>('calendar');
 
@@ -321,6 +322,16 @@ export const CalendarView: React.FC = () => {
             currentMemberId={currentMemberId}
             members={members}
           />
+
+          {/* View Mode: Board (Multi-Member Columns) */}
+          {viewMode === 'board' && (
+            <FamilyBoardCalendarView
+              initialDate={selectedDay}
+              onOpenAddAppointment={(dateStr) => openAddAppointmentModal(dateStr)}
+              onEditAppointment={openEditAppointmentModal}
+              onManageCarpool={(app) => setCarpoolAppointment(app)}
+            />
+          )}
 
           {/* View Mode: Month */}
           {viewMode === 'month' && (

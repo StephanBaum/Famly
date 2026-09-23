@@ -14,7 +14,7 @@ Modern family life is plagued by **cognitive overload and asymmetric friction**:
 3. **The Friction of the Outside World:** Grandparents, babysitters, and sports carpool parents refuse to download another app or create another password just to see a photo or coordinate a ride.
 
 ### The Strategic Moat: "Appliance Over App"
-* **The Hardware Proof:** Dedicated displays like **Hearth Display (\$699)** and **Skylight Calendar (\$319)** have proven that families will pay hundreds of dollars for a physical, glanceable presence in the kitchen.
+* **The Hardware Proof:** Dedicated wall-mounted smart displays (\$300–\$700) have proven that families will pay hundreds of dollars for a physical, glanceable presence in the kitchen.
 * **The Competitor Flaw:** Existing smart displays and apps (Cozi, TimeTree, Maple) remain **passive digital paper**. The user still has to do all the manual data entry.
 * **Famly’s Leapfrog:** An **Autonomous Household Butler** that stages 90% of the work in the background (grocery baskets, carpool requests, meal prep, kid routines) and presents them as simple **1-tap approvals**.
 

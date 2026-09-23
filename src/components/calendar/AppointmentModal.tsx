@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Appointment, AppointmentCategory, FamilyMember, RecurrenceFrequency } from '../../types';
 import { ModalPortal } from '../ModalPortal';
-import { CATEGORY_CONFIG } from './calendarConstants';
-import { Repeat } from 'lucide-react';
+import { CATEGORY_CONFIG, detectStickerFromTitle } from './calendarConstants';
+import { StickerPickerModal } from './StickerPickerModal';
+import { Repeat, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface AppointmentModalProps {
@@ -37,6 +38,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [formRecurrence, setFormRecurrence] = useState<RecurrenceFrequency>('none');
   const [formRecurrenceDays, setFormRecurrenceDays] = useState<number[]>([]);
   const [formRecurrenceEndDate, setFormRecurrenceEndDate] = useState<string>('');
+  const [formSticker, setFormSticker] = useState<string>('⭐');
+  const [hasCustomSticker, setHasCustomSticker] = useState(false);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,6 +57,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setFormRecurrence(editingAppointment.recurrence || 'none');
       setFormRecurrenceDays(editingAppointment.recurrenceDays || []);
       setFormRecurrenceEndDate(editingAppointment.recurrenceEndDate || '');
+      const existingSticker = editingAppointment.sticker || detectStickerFromTitle(editingAppointment.title, editingAppointment.category);
+      setFormSticker(existingSticker);
+      setHasCustomSticker(Boolean(editingAppointment.sticker));
     } else {
       setFormTitle('');
       setFormDate(defaultDate || format(new Date(), 'yyyy-MM-dd'));
@@ -60,6 +67,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setFormDuration(60);
       setFormLocation('');
       setFormCategory('family');
+      setFormSticker('⭐');
+      setHasCustomSticker(false);
       // Default to the currently logged in person (the creator), or filtered member, NOT always members[0]
       const defaultMemberId =
         (loggedInMemberId && members.some((m) => m.id === loggedInMemberId))
@@ -74,6 +83,20 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setFormRecurrenceEndDate('');
     }
   }, [isOpen, editingAppointment, defaultDate, currentMemberId, loggedInMemberId, members]);
+
+  const handleTitleChange = (val: string) => {
+    setFormTitle(val);
+    if (!hasCustomSticker) {
+      setFormSticker(detectStickerFromTitle(val, formCategory));
+    }
+  };
+
+  const handleCategoryChange = (cat: AppointmentCategory) => {
+    setFormCategory(cat);
+    if (!hasCustomSticker) {
+      setFormSticker(detectStickerFromTitle(formTitle, cat));
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -102,6 +125,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
           ? formRecurrenceDays
           : undefined,
       recurrenceEndDate: formRecurrence !== 'none' && formRecurrenceEndDate ? formRecurrenceEndDate : undefined,
+      sticker: formSticker || detectStickerFromTitle(formTitle.trim(), formCategory),
     });
     onClose();
   };
@@ -124,17 +148,37 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
           <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-6 pt-4 flex-1 overflow-y-auto scrollbar-thin">
             <div>
-              <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase mb-1">
-                Titel
-              </label>
-              <input
-                type="text"
-                placeholder="z.B. Leo Fußballturnier, Zahnarztkontrolle, Klavier"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
-                required
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-stone-600 dark:text-slate-300 uppercase">
+                  Titel & Kalender-Sticker
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsStickerPickerOpen(true)}
+                  className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Sticker wählen</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsStickerPickerOpen(true)}
+                  title="Klicken, um Sticker zu ändern"
+                  className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/80 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-center text-2xl shadow-xs shrink-0 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                >
+                  {formSticker}
+                </button>
+                <input
+                  type="text"
+                  placeholder="z.B. Leo Fußballturnier, Zahnarztkontrolle, Ballett..."
+                  value={formTitle}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -184,7 +228,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 </label>
                 <select
                   value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value as AppointmentCategory)}
+                  onChange={(e) => handleCategoryChange(e.target.value as AppointmentCategory)}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-900 dark:text-white text-sm focus:outline-none"
                 >
                   {Object.entries(CATEGORY_CONFIG).map(([k, v]) => (
@@ -349,6 +393,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
           </form>
         </div>
       </div>
+
+      <StickerPickerModal
+        isOpen={isStickerPickerOpen}
+        onClose={() => setIsStickerPickerOpen(false)}
+        selectedSticker={formSticker}
+        onSelectSticker={(emoji) => {
+          setFormSticker(emoji);
+          setHasCustomSticker(true);
+        }}
+      />
     </ModalPortal>
   );
 };

@@ -22,7 +22,7 @@ Famly is an intuitive, tactile, mobile-first household operating system designed
   - Relative love notes & reaction guestbook.
 - **⭐ Chores & Rewards**: Gamified star tracker for kids with completion celebrations.
 - **👶 Kids & Family Info**: Quick access to clothing/shoe sizes, doctor contacts, allergies, school schedules, and vaccination records.
-- **📺 Ambient Kitchen Station (Hearth-Style)**: Glanceable, zero-clutter kitchen display with automatic daypart adaptation, 60s idle auto-reset, and pre-reader kids punch cards.
+- **📺 Ambient Kitchen Station**: Glanceable, zero-clutter kitchen display with automatic daypart adaptation, 60s idle auto-reset, and pre-reader kids punch cards.
 - **📍 Supermarket Geofence**: Automatically detects proximity to your grocery store and surfaces the 1-tap aisle-sorted shopping list.
 
 ---
