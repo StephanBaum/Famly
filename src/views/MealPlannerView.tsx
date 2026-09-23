@@ -274,36 +274,51 @@ export const MealPlannerView: React.FC = () => {
         <div className="space-y-4">
           {/* Day Strip & View Layout Toggle */}
           <div className="duo-card bg-white dark:bg-slate-900 p-3 sm:p-4 border-2 border-stone-200 dark:border-slate-800 space-y-3 shadow-xs">
-            {/* Header: Week Title, Horizon Switcher, and Nav */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black text-stone-800 dark:text-slate-200 uppercase tracking-wider">
-                  {horizonMode === 'today-14' ? '2-Wochen-Plan:' : 'Wochenplan:'}{' '}
+            {/* Header: Date Range with Nav + Horizon & Mode Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              {/* Range & Nav */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setDayOffset((prev) => prev - (horizonMode === 'today-14' ? 14 : 7))}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 text-xs font-black transition-colors"
+                  title="Vorherige Periode"
+                >
+                  ◀
+                </button>
+                <span className="text-xs font-black text-stone-800 dark:text-slate-200 px-1 tracking-tight">
                   {format(weekDays[0], 'd. MMM', { locale: de })} – {format(weekDays[weekDays.length - 1], 'd. MMM', { locale: de })}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setDayOffset((prev) => prev + (horizonMode === 'today-14' ? 14 : 7))}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 text-xs font-black transition-colors"
+                  title="Nächste Periode"
+                >
+                  ▶
+                </button>
                 {dayOffset !== 0 && (
                   <button
                     type="button"
                     onClick={() => setDayOffset(0)}
-                    className="duo-btn px-2 py-0.5 text-[10px] font-black rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200"
+                    className="px-2 py-0.5 text-[11px] font-black rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-colors ml-1"
                   >
-                    ★ Zurück zu Heute
+                    Heute
                   </button>
                 )}
               </div>
 
+              {/* View & Horizon Controls */}
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Rolling Horizon Switcher: 7 Tage vs 14 Tage */}
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0 text-xs font-black">
+                <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-0.5 rounded-xl border border-stone-200 dark:border-slate-700 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setHorizonMode('today-7')}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       horizonMode === 'today-7'
-                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                        ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-slate-200'
                     }`}
-                    title="7 Tage rollend ab heute anzeigen"
                   >
                     7 Tage
                   </button>
@@ -312,67 +327,33 @@ export const MealPlannerView: React.FC = () => {
                     onClick={() => setHorizonMode('today-14')}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       horizonMode === 'today-14'
-                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                        ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-slate-200'
                     }`}
-                    title="14 Tage (2 Wochen) im Voraus planen"
                   >
-                    14 Tage (2 Wo.)
+                    14 Tage
                   </button>
                 </div>
 
-                {/* Shift Navigation: ◀ Heute ▶ */}
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setDayOffset((prev) => prev - (horizonMode === 'today-14' ? 14 : 7))}
-                    className="px-2 py-1 text-xs font-black text-stone-600 dark:text-slate-300 hover:text-stone-900"
-                    title="Frühere Tage anzeigen"
-                  >
-                    ◀
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDayOffset(0)}
-                    className={`px-2 py-1 text-xs font-black rounded-lg ${
-                      dayOffset === 0
-                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-900'
-                    }`}
-                    title="Heute ganz links anzeigen"
-                  >
-                    Heute
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDayOffset((prev) => prev + (horizonMode === 'today-14' ? 14 : 7))}
-                    className="px-2 py-1 text-xs font-black text-stone-600 dark:text-slate-300 hover:text-stone-900"
-                    title="Spätere Tage anzeigen"
-                  >
-                    ▶
-                  </button>
-                </div>
-
-                {/* Mode Switcher: Focus Day vs Full Week Grid */}
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-800 p-1 rounded-xl border border-stone-200 dark:border-slate-700 shrink-0">
+                <div className="flex items-center bg-stone-100 dark:bg-slate-800 p-0.5 rounded-xl border border-stone-200 dark:border-slate-700 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setPlannerMode('focus')}
-                    className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                    className={`px-2.5 py-1 rounded-lg transition-all ${
                       plannerMode === 'focus'
-                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                        ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    ⭐ Fokus-Tag
+                    ⭐ Fokus
                   </button>
                   <button
                     type="button"
                     onClick={() => setPlannerMode('grid')}
-                    className={`px-2.5 sm:px-3 py-1 text-xs font-black rounded-lg transition-all ${
+                    className={`px-2.5 py-1 rounded-lg transition-all ${
                       plannerMode === 'grid'
-                        ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-xs'
-                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800'
+                        ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-200 shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-slate-200'
                     }`}
                   >
                     📅 Raster
@@ -442,6 +423,12 @@ export const MealPlannerView: React.FC = () => {
                 onToggleFavorite={toggleFavoriteRecipe}
                 onQuickSetSlot={(slot, title, oldRecipeId) =>
                   handleQuickSetSlot(dateStr, slot, title, oldRecipeId)
+                }
+                onSelectQuickRecipe={(recipe) =>
+                  handleSlotSave(dateStr, 'dinner', {
+                    title: recipe.title,
+                    recipeId: recipe.id,
+                  })
                 }
               />
             );

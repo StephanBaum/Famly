@@ -409,20 +409,24 @@ ${memoriesContext}
 WICHTIGE VERHALTENSREGELN FÜR DIE ENTSCHEIDUNG:
 1. KEIN KOCH-TUNNELBLICK:
    - Wenn die Frage um Freizeit, Wochenende, Ausflüge, Aktivitäten oder Regentage geht, schlage NIEMALS Kochen, Backen oder Rezepte in der Küche vor (außer die Frage lautet explizit "Was sollen wir kochen/essen?").
-2. REGIONALE RECHERCHE & ECHTE AUSFLUGSZIELE:
-   - Nenne echte, konkrete Ausflugsziele, Museen, Hallenbäder, Boulder-/Kletterhallen, Indoor-Spielplätze, Erlebniswelten, Planetarien oder Naturparks in oder um "${targetRegion}".
-3. DREI DIVERSE, HOCHWERTIGE OPTIONEN:
+2. STRENGES MAINSTREAM- & KLISCHEE-VERBOT:
+   - Schlage KEINE 08/15-Konzepte vor: KEINE langweiligen Einkaufszentren / Shopping-Malls, KEINE gewöhnlichen Multiplex-Kinos (CinemaxX etc.) und KEINE austauschbaren Standard-Spielplätze!
+3. ECHTE REGIONALE GEHEIMTIPPS ("HIDDEN GEMS"):
+   - Recherchiere und nenne echte, charakterstarke regionale Geheimtipps in oder um "${targetRegion}".
+   - Beispiele für echte Perlen: Versteckte Natur- oder Kletterpfade, urige Erlebnis- und Alpakahöfe, handwerkliche Kreativ-Werkstätten (z.B. Keramik/Schmiede/Holz), Boulder-Höhlen, immersive Licht- oder Klangausstellungen, historische Burgruinen mit Erlebnisrallyes, interaktive Science-Mitmachwelten oder Geocaching-Touren.
+   - Kennzeichne die beste, originellste Entdeckung mit dem Badge "💎 Echter Geheimtipp"!
+4. DREI DIVERSE, HOCHWERTIGE OPTIONEN:
    Generiere exakt 3 abwechslungsreiche Optionen:
-   • Option 1: Action, Abenteuer & Auspowern (z.B. Indoor-Erlebniswelt, Trampolinhalle, Bouldern, Klettern, Erlebnisbad)
-   • Option 2: Entdecken, Kultur & Staunen (z.B. interaktives Science-Museum, Planetarium, Detektiv-Trail / Escape-Room, Botanischer Garten)
-   • Option 3: Kreativ, Spiele & Gemütlich (z.B. Keramik-Malstudio, Brettspiel-Café, Familien-Kinoerlebnis oder spannende DIY-Rätsel-Rallye)
-4. ABGLEICH MIT GEMEINSAMEN INTERESSEN:
+   • Option 1: Origineller Geheimtipp / Abenteuer & Auspowern (Badge: "💎 Echter Geheimtipp" oder "⚡ Action & Erlebnis")
+   • Option 2: Entdecken, Kultur & Staunen (Badge: "🏛️ Kultur & Entdecken" oder "🔭 Staunen & Forschen")
+   • Option 3: Kreativ, Spiele & Gemütlich (Badge: "🎲 Kreativ & Gemütlich" oder "🌿 Entspanntes Natur-Erlebnis")
+5. ABGLEICH MIT GEMEINSAMEN INTERESSEN:
    - Erkläre in "fitReason" in 1 prägnanten Satz, warum die jeweilige Option die Interessen von Kindern UND Erwachsenen optimal verbindet (z.B. "Perfekt für Idas Bewegungsdrang und Stephans Technikbegeisterung").
    - Gib zu jeder Option realistische "pros" (2-3 Vorteile) und "cons" (1-2 ehrliche Punkte zu bedenken) an.
    - Gib "duration" (z.B. "ca. 2-3 Stunden") und "estimatedCost" (z.B. "Günstig", "Mittel", "Kostenlos") an.
-5. REALISTISCHE MATCH-SCORES:
+6. REALISTISCHE MATCH-SCORES:
    - Vergib jeder Option einen natürlichen Passungs-Score von 65 bis 96 (z.B. Option 1: 94, Option 2: 86, Option 3: 78).
-6. KEIN BELEHRENDER ODER STEIFER TON:
+7. KEIN BELEHRENDER ODER STEIFER TON:
    - Formuliere lebendig, herzlich und auf den Punkt. Keine geschwollenen Manager-Floskeln ("ist der ideale Konsens").
 
 Antworte strukturiert im folgenden JSON-Format:
@@ -632,36 +636,36 @@ Antworte strukturiert im folgenden JSON-Format:
   } else {
     fallbackOptions = [
       {
-        title: `Spannender Familienausflug in der Region ${targetRegion}`,
-        badge: '🌲 Ausflug & Erlebnis',
-        rawWeight: 92,
-        fitReason: 'Perfekt ausgewogene Aktivität für die ganze Familie mit viel Abwechslung',
-        duration: 'ca. 2-3 Stunden',
-        estimatedCost: 'Günstig',
+        title: `Versteckter Natur- & Erlebnispfad / Geocaching-Rallye in ${targetRegion}`,
+        badge: '💎 Echter Geheimtipp',
+        rawWeight: 94,
+        fitReason: 'Abseits der Touristenpfade: Echte Entdecker-Freude für die Kinder und herrlich entspannt für die Großen',
+        duration: 'ca. 2,5 Stunden',
+        estimatedCost: 'Kostenlos',
         isIndoor: false,
-        pros: ['Gemeinsame Erlebnisse schaffen Erinnerungen', 'Für jedes Alter attraktiv'],
-        cons: ['Erfordert etwas Vorbereitung'],
+        pros: ['Natur pur ohne Menschenmassen', 'Spannende Schatzsuche für alle'],
+        cons: ['Festes Schuhwerk empfohlen'],
       },
       {
-        title: 'Mitmach-Erlebnis oder interaktive Ausstellung',
-        badge: '🏛️ Kultur & Entdecken',
-        rawWeight: 85,
-        fitReason: 'Weckt Neugier und bietet spannende Mitmach-Stationen für die Kids',
+        title: `Handwerkliche Mitmach-Werkstatt & Kreativhof in ${targetRegion}`,
+        badge: '🎨 Selbermachen & Staunen',
+        rawWeight: 87,
+        fitReason: 'Kreatives Erleben zum Anfassen, das gemeinsame Erinnerungsstücke schafft',
         duration: 'ca. 2 Stunden',
-        estimatedCost: 'Mittel',
+        estimatedCost: 'Günstig bis Mittel',
         isIndoor: true,
-        pros: ['Wetterunabhängig', 'Interaktiv'],
-        cons: ['Feste Öffnungszeiten'],
+        pros: ['Interaktiv & lehrreich', 'Wettergeschützt'],
+        cons: ['Eventuell kurze Voranmeldung nötig'],
       },
       {
-        title: 'Gemeinsamer Spieletag oder Picknick-Tour',
-        badge: '🧺 Entspannt & Flexibel',
-        rawWeight: 78,
-        fitReason: 'Entspannte Zeit ohne Zeitdruck oder Terminstress',
+        title: 'Familien-Picknick an einem ruhigen Waldsee mit Natur-Suchspiel',
+        badge: '🌿 Entspannt & Flexibel',
+        rawWeight: 80,
+        fitReason: 'Völlig entschleunigter Nachmittag mit Freiraum zum Toben und Träumen',
         duration: 'ca. 2 Stunden',
         estimatedCost: 'Kostenlos',
         isIndoor: false,
-        pros: ['Keine Eintrittskosten', 'Völlig stressfrei'],
+        pros: ['Kein Konsumzwang', '100% stressfrei und flexibel'],
         cons: ['Wetterabhängig'],
       },
     ];

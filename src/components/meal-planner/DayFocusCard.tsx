@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Recipe, MealPlanDay, FamilyMember } from '../../types';
@@ -24,6 +24,7 @@ interface DayFocusCardProps {
     title: string,
     oldRecipeId?: string
   ) => void;
+  onSelectQuickRecipe?: (recipe: Recipe) => void;
 }
 
 export const DayFocusCard: React.FC<DayFocusCardProps> = ({
@@ -36,7 +37,12 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
   onSelectRecipe,
   onToggleFavorite,
   onQuickSetSlot,
+  onSelectQuickRecipe,
 }) => {
+  const quickRecipes = useMemo(() => {
+    const favs = recipes.filter((r) => r.isFavorite);
+    return favs.length > 0 ? favs.slice(0, 3) : recipes.slice(0, 3);
+  }, [recipes]);
   const dinnerRecipe = mealPlan?.dinner?.recipeId
     ? recipes.find((r) => r.id === mealPlan.dinner?.recipeId)
     : null;
@@ -233,17 +239,56 @@ export const DayFocusCard: React.FC<DayFocusCardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center space-y-3">
-            <p className="text-sm font-bold text-stone-500 dark:text-slate-400 capitalize">
-              Noch kein Abendessen für {format(focusDay, 'EEEE', { locale: de })} geplant!
+          <div className="p-6 text-center space-y-4">
+            <p className="text-sm font-bold text-stone-600 dark:text-slate-300">
+              Noch kein Abendessen für {format(focusDay, 'EEEE, d. MMMM', { locale: de })} eingetragen
             </p>
-            <button
-              type="button"
-              onClick={() => onOpenEditSlot('dinner', '', undefined, undefined)}
-              className="duo-btn duo-btn-green px-6 py-2.5 text-xs font-black rounded-xl shadow-xs"
-            >
-              + Abendessen aus Rezeptbox wählen
-            </button>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenEditSlot('dinner', '', undefined, undefined)}
+                className="duo-btn duo-btn-green px-5 py-2 text-xs font-black rounded-xl shadow-xs"
+              >
+                + Aus Rezeptbox wählen
+              </button>
+
+              {onQuickSetSlot && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onQuickSetSlot('dinner', '🍽️ Auswärts essen / Restaurant')}
+                    className="px-3 py-2 text-xs font-bold rounded-xl bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-slate-700 hover:bg-stone-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    🍽️ Auswärts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onQuickSetSlot('dinner', '🥡 Reste vom Vortag')}
+                    className="px-3 py-2 text-xs font-bold rounded-xl bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-slate-700 hover:bg-stone-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    🥡 Reste
+                  </button>
+                </>
+              )}
+            </div>
+
+            {quickRecipes.length > 0 && onSelectQuickRecipe && (
+              <div className="pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-wrap items-center justify-center gap-1.5">
+                <span className="text-[11px] font-bold text-stone-500 dark:text-slate-400 mr-1">Lieblingsgerichte:</span>
+                {quickRecipes.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => onSelectQuickRecipe(r)}
+                    className="px-2.5 py-1 text-xs font-black rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-all flex items-center gap-1 shadow-2xs"
+                  >
+                    <span>⭐</span>
+                    <span>{r.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
