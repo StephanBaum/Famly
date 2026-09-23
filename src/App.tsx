@@ -11,6 +11,7 @@ import { GroceriesView } from './views/GroceriesView';
 import { FamilyMembersView } from './views/FamilyMembersView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { GuestGalleryViewer } from './components/GuestGalleryViewer';
+import { GuestCarpoolViewer } from './components/calendar/GuestCarpoolViewer';
 import { SettingsModal } from './components/SettingsModal';
 import { FamilyAssistantModal } from './components/FamilyAssistantModal';
 import { OnboardingView } from './views/OnboardingView';
@@ -18,9 +19,25 @@ import { KidsView } from './views/KidsView';
 import { JoinFamilyQRModal } from './components/JoinFamilyQRModal';
 import { pullVercelFamilyState } from './services/vercelSync';
 import { initReminderScheduler } from './services/notificationService';
+import { AmbientKitchenStation } from './components/kiosk/AmbientKitchenStation';
+import { StoreArrivalBanner } from './components/groceries/StoreArrivalBanner';
+import { ShoppingFocusModal } from './components/ShoppingFocusModal';
+import { isKioskDevice, setupIdleWatcher } from './services/contextEngine';
 
 const MainAppContent: React.FC = () => {
-  const { loggedInMemberId, galleries, isOnboarded, joinFamilyFromCloud, appointments } = useFamily();
+  const {
+    loggedInMemberId,
+    galleries,
+    isOnboarded,
+    joinFamilyFromCloud,
+    appointments,
+    updateAppointment,
+    familyName,
+    groceries,
+    stores,
+    toggleGrocery,
+    clearCheckedGroceries,
+  } = useFamily();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -29,6 +46,32 @@ const MainAppContent: React.FC = () => {
   const [isJoinQROpen, setIsJoinQROpen] = useState(false);
   const [settingsScrollToAI, setSettingsScrollToAI] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+
+  // Kiosk & Ambient Kitchen Display State
+  const [isKiosk, setIsKiosk] = useState(() => isKioskDevice());
+  const [isViewingFullHub, setIsViewingFullHub] = useState(() => !isKioskDevice());
+  const [isGlobalShoppingFocusOpen, setIsGlobalShoppingFocusOpen] = useState(false);
+
+  useEffect(() => {
+    const handleRoleChange = () => {
+      const kiosk = isKioskDevice();
+      setIsKiosk(kiosk);
+      if (kiosk) {
+        setIsViewingFullHub(false);
+      }
+    };
+    window.addEventListener('famly_device_role_change', handleRoleChange);
+    return () => window.removeEventListener('famly_device_role_change', handleRoleChange);
+  }, []);
+
+  // Idle reset: if user opened full hub on a kiosk display, return to Ambient Station after 60s of inactivity
+  useEffect(() => {
+    if (!isKiosk || !isViewingFullHub) return;
+    const cleanup = setupIdleWatcher(() => {
+      setIsViewingFullHub(false);
+    }, 60000);
+    return cleanup;
+  }, [isKiosk, isViewingFullHub]);
 
   const handleOpenSettingsForAI = () => {
     setIsDecisionOpen(false);
@@ -46,12 +89,24 @@ const MainAppContent: React.FC = () => {
     return null;
   });
 
-  // Listen for hash changes (e.g. guest gallery or join family)
+  // Detect direct guest link for carpools: e.g. #carpool=c_98x
+  const [guestCarpoolId, setGuestCarpoolId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const hash = window.location.hash;
+    if (hash.startsWith('#carpool=')) {
+      return hash.replace('#carpool=', '');
+    }
+    return null;
+  });
+
+  // Listen for hash changes (e.g. guest gallery, carpool, or join family)
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash;
       if (hash.startsWith('#guest-gallery=')) {
         setGuestGalleryId(hash.replace('#guest-gallery=', ''));
+      } else if (hash.startsWith('#carpool=')) {
+        setGuestCarpoolId(hash.replace('#carpool=', ''));
       } else if (hash.startsWith('#join-family')) {
         joinFamilyFromCloud().then((success) => {
           if (success) {
@@ -143,6 +198,50 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  const sharedGuestCarpool = guestCarpoolId
+    ? appointments.find((a) => a.id === guestCarpoolId || a.carpool?.shareCode === guestCarpoolId)
+    : null;
+
+  // If visiting via guest carpool link: e.g. #carpool=c_98x
+  if (guestCarpoolId) {
+    if (sharedGuestCarpool) {
+      return (
+        <GuestCarpoolViewer
+          appointment={sharedGuestCarpool}
+          familyName={familyName}
+          onUpdateAppointment={(updated) => updateAppointment(updated.id, updated)}
+          onClose={() => {
+            window.location.hash = '';
+            setGuestCarpoolId(null);
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-[#0F172A] text-white flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="space-y-4 max-w-sm animate-in fade-in">
+          <div className="w-16 h-16 rounded-3xl bg-blue-500/20 border-2 border-blue-400 flex items-center justify-center text-3xl mx-auto">
+            🚗
+          </div>
+          <h2 className="text-xl font-black">Fahrt nicht gefunden</h2>
+          <p className="text-xs text-slate-400">
+            Diese Fahrgemeinschaft existiert nicht oder wurde bereits beendet.
+          </p>
+          <button
+            onClick={() => {
+              window.location.hash = '';
+              setGuestCarpoolId(null);
+            }}
+            className="duo-btn duo-btn-white px-5 py-2.5 rounded-xl text-xs font-bold text-stone-900"
+          >
+            Zur Startseite
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // If family is not onboarded yet, show friendly Onboarding Wizard
   if (!isOnboarded) {
     return <OnboardingView />;
@@ -158,8 +257,47 @@ const MainAppContent: React.FC = () => {
     return <KidsView onExitKidsMode={() => setIsKidsMode(false)} />;
   }
 
+  // If Kiosk / Kitchen Display is active, render Ambient Kitchen Station by default
+  if (isKiosk && !isViewingFullHub) {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9] dark:bg-[#0c1222] select-none">
+        <AmbientKitchenStation
+          onOpenFullHub={(tab) => {
+            if (tab) setActiveTab(tab);
+            setIsViewingFullHub(true);
+          }}
+          onLaunchShopping={() => setIsGlobalShoppingFocusOpen(true)}
+          onOpenAssistant={() => setIsDecisionOpen(true)}
+        />
+
+        {/* Global Store Arrival Banner */}
+        <StoreArrivalBanner onOpenShoppingFocus={() => setIsGlobalShoppingFocusOpen(true)} />
+
+        {/* Global Shopping Focus Modal */}
+        <ShoppingFocusModal
+          isOpen={isGlobalShoppingFocusOpen}
+          onClose={() => setIsGlobalShoppingFocusOpen(false)}
+          groceries={groceries}
+          stores={stores}
+          onToggleItem={toggleGrocery}
+          onClearChecked={clearCheckedGroceries}
+        />
+
+        {/* AI Assistant Modal */}
+        <FamilyAssistantModal
+          isOpen={isDecisionOpen}
+          onClose={() => setIsDecisionOpen(false)}
+          onOpenSettings={handleOpenSettingsForAI}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FA] dark:bg-[#0c1222] text-stone-900 dark:text-slate-100 font-sans pb-24 sm:pb-8 transition-colors">
+      {/* Global Store Arrival Banner (Fires on proximity to grocery store) */}
+      <StoreArrivalBanner onOpenShoppingFocus={() => setIsGlobalShoppingFocusOpen(true)} />
+
       {/* Sticky Header with Logged-in Profile, Theme & Quick Add */}
       <Header
         activeTab={activeTab}
@@ -169,6 +307,7 @@ const MainAppContent: React.FC = () => {
         onToggleKidsMode={() => setIsKidsMode(true)}
         onOpenDecision={() => setIsDecisionOpen(true)}
         onOpenJoinQR={() => setIsJoinQROpen(true)}
+        onReturnToAmbient={isKiosk ? () => setIsViewingFullHub(false) : undefined}
       />
 
       {/* Main Content Area with Smooth Page Animation */}
@@ -235,6 +374,16 @@ const MainAppContent: React.FC = () => {
       <JoinFamilyQRModal
         isOpen={isJoinQROpen}
         onClose={() => setIsJoinQROpen(false)}
+      />
+
+      {/* Global Shopping Focus Modal */}
+      <ShoppingFocusModal
+        isOpen={isGlobalShoppingFocusOpen}
+        onClose={() => setIsGlobalShoppingFocusOpen(false)}
+        groceries={groceries}
+        stores={stores}
+        onToggleItem={toggleGrocery}
+        onClearChecked={clearCheckedGroceries}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import { DashboardChoresCard } from '../components/dashboard/DashboardChoresCard
 import { DashboardNoticeBoardCard } from '../components/dashboard/DashboardNoticeBoardCard';
 import { AddNoteModal } from '../components/dashboard/AddNoteModal';
 import { ChoreClaimModal } from '../components/dashboard/ChoreClaimModal';
+import { ButlerProvisioningCard } from '../components/dashboard/ButlerProvisioningCard';
 
 interface DashboardViewProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -125,6 +126,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         }}
         onNavigate={onNavigate}
       />
+
+      {/* Proactive Butler Store Provisioner */}
+      <ButlerProvisioningCard onNavigateGroceries={() => onNavigate('groceries')} />
 
       {/* Main Grid: Left Column (Events & Dinner) / Right Column (Board & Chores) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">

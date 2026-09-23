@@ -19,6 +19,7 @@ interface CalendarDayDetailsProps {
   onToggleChore: (chore: Chore) => void;
   onEditChore: (chore: Chore) => void;
   onDeleteChore: (chore: Chore) => void;
+  onManageCarpool?: (app: Appointment) => void;
   isMobile?: boolean;
 }
 
@@ -35,6 +36,7 @@ export const CalendarDayDetails: React.FC<CalendarDayDetailsProps> = ({
   onToggleChore,
   onEditChore,
   onDeleteChore,
+  onManageCarpool,
   isMobile = false,
 }) => {
   const selectedDayStr = format(selectedDay, 'yyyy-MM-dd');
@@ -93,6 +95,7 @@ export const CalendarDayDetails: React.FC<CalendarDayDetailsProps> = ({
                     conflicts={conflicts.get(app.id)}
                     hasConflict={conflicts.has(app.id)}
                     onEdit={onEditAppointment}
+                    onManageCarpool={onManageCarpool}
                     variant="compact"
                   />
                 ))}
@@ -204,6 +207,7 @@ export const CalendarDayDetails: React.FC<CalendarDayDetailsProps> = ({
                     conflicts={conflicts.get(app.id)}
                     hasConflict={conflicts.has(app.id)}
                     onEdit={onEditAppointment}
+                    onManageCarpool={onManageCarpool}
                     variant="full"
                   />
                 ))}

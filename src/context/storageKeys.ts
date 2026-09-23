@@ -23,6 +23,8 @@ export const STORAGE_KEYS = {
   FAMILY_REGION: 'famly_home_region_v1',
   EARNED_STARS: 'famly_earned_stars_v2',
   MEMORIES: 'famly_longterm_memories_v1',
+  DEVICE_ROLE: 'famly_device_role_v1',
+  SUPERMARKET_LOCATION: 'famly_supermarket_location_v1',
 };
 
 export const INITIAL_REWARDS: Reward[] = [

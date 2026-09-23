@@ -37,6 +37,16 @@ import {
   requestNotificationPermission,
   sendDeviceNotification,
 } from '../services/notificationService';
+import {
+  getDeviceRole,
+  setDeviceRole,
+  getSavedSupermarket,
+  saveSupermarket,
+  setSimulatedStoreProximity,
+  getSimulatedStoreProximity,
+  SupermarketLocation,
+} from '../services/contextEngine';
+import { MapPin } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -101,6 +111,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         body: 'Famly erinnert dich zuverlässig an anstehende Termine und Aufgaben.',
       });
     }
+  };
+
+  // Device Role & Ambient Kiosk State
+  const [deviceRole, setDeviceRoleState] = useState<'personal' | 'kiosk'>(() => getDeviceRole());
+  const [supermarket, setSupermarketState] = useState<SupermarketLocation>(() => getSavedSupermarket());
+  const [isSimulatedNear, setIsSimulatedNear] = useState(() => getSimulatedStoreProximity());
+  const [storeFeedback, setStoreFeedback] = useState<string | null>(null);
+
+  const handleToggleDeviceRole = (role: 'personal' | 'kiosk') => {
+    setDeviceRoleState(role);
+    setDeviceRole(role);
+  };
+
+  const handleCaptureStoreGPS = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const updated: SupermarketLocation = {
+            ...supermarket,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          setSupermarketState(updated);
+          saveSupermarket(updated);
+          setStoreFeedback('GPS-Standort gespeichert! ✓');
+          setTimeout(() => setStoreFeedback(null), 3000);
+        },
+        () => {
+          setStoreFeedback('GPS-Zugriff wurde verweigert oder ist nicht verfügbar.');
+          setTimeout(() => setStoreFeedback(null), 3500);
+        }
+      );
+    } else {
+      setStoreFeedback('GPS nicht im Browser verfügbar.');
+      setTimeout(() => setStoreFeedback(null), 3000);
+    }
+  };
+
+  const handleSaveStoreName = (name: string) => {
+    const updated: SupermarketLocation = { ...supermarket, name };
+    setSupermarketState(updated);
+    saveSupermarket(updated);
+  };
+
+  const handleToggleSimulatedStoreArrival = () => {
+    const next = !isSimulatedNear;
+    setIsSimulatedNear(next);
+    setSimulatedStoreProximity(next);
   };
 
   // Load existing credentials and check Vercel status on mount / open
@@ -289,6 +347,129 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* Section: Device Role (Wall Tablet / Fridge Display vs Smartphone) */}
+            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-400 flex items-center justify-center font-black text-sm">
+                  📺
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-stone-900 dark:text-white">Geräte-Rolle & Küchen-Station</h4>
+                  <p className="text-xs text-stone-500 dark:text-slate-400 font-semibold">
+                    Bestimmt das Verhalten dieses Bildschirms im Alltag
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleToggleDeviceRole('personal')}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                    deviceRole === 'personal'
+                      ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30'
+                      : 'border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">📱</span>
+                    {deviceRole === 'personal' && <Check className="w-4 h-4 text-emerald-600" />}
+                  </div>
+                  <h5 className="text-xs font-black text-stone-900 dark:text-white mt-1">Persönliches Handy</h5>
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-0.5">
+                    Startet direkt in der App-Übersicht mit allen Navigationstabs.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleDeviceRole('kiosk')}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                    deviceRole === 'kiosk'
+                      ? 'border-sky-500 bg-sky-50/60 dark:bg-sky-950/30'
+                      : 'border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">📺</span>
+                    {deviceRole === 'kiosk' && <Check className="w-4 h-4 text-sky-600" />}
+                  </div>
+                  <h5 className="text-xs font-black text-stone-900 dark:text-white mt-1">Kühlschrank / Wand-Tablet</h5>
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-0.5">
+                    Ruhige Kiosk-Station (Hearth-Stil), tageszeit-gesteuert & 60s Auto-Reset.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Section: Supermarket Geofence & Auto-Shopping Mode */}
+            <div className="duo-card p-4 sm:p-5 bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-sm">
+                    🛒
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-stone-900 dark:text-white">Supermarkt-Standort & Auto-Einkauf</h4>
+                    <p className="text-xs text-stone-500 dark:text-slate-400 font-semibold">
+                      Öffnet die Einkaufsliste automatisch bei Ankunft im Laden
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
+                      Stamm-Supermarkt
+                    </label>
+                    <input
+                      type="text"
+                      value={supermarket.name}
+                      onChange={(e) => handleSaveStoreName(e.target.value)}
+                      placeholder="z.B. Rewe Center, Aldi Süd..."
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 text-xs font-bold bg-white dark:bg-slate-900 text-stone-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-stone-500 dark:text-slate-400 mb-1">
+                      GPS-Erkennung
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleCaptureStoreGPS}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-800 dark:text-slate-200 hover:bg-stone-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Standort hier speichern</span>
+                    </button>
+                  </div>
+                </div>
+
+                {storeFeedback && (
+                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+                    {storeFeedback}
+                  </p>
+                )}
+
+                {/* Simulation button for easy demoing and testing */}
+                <div className="pt-2 flex items-center justify-between border-t border-stone-200 dark:border-slate-700">
+                  <span className="text-xs text-stone-500 font-semibold">
+                    {isSimulatedNear ? '🟢 Supermarkt-Ankunft simuliert' : '⚪ Geofence aktiv (wartet auf Ankunft)'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleSimulatedStoreArrival}
+                    className="duo-btn duo-btn-white px-3 py-1.5 text-xs font-bold rounded-xl"
+                  >
+                    {isSimulatedNear ? 'Simulation beenden' : 'Ankunft jetzt testen'}
+                  </button>
+                </div>
               </div>
             </div>
 

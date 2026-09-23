@@ -35,6 +35,7 @@ import { CalendarAgendaView } from '../components/calendar/CalendarAgendaView';
 import { AppointmentModal } from '../components/calendar/AppointmentModal';
 import { CalendarChoreModal } from '../components/calendar/CalendarChoreModal';
 import { CalendarClaimModal } from '../components/calendar/CalendarClaimModal';
+import { CarpoolManageModal } from '../components/calendar/CarpoolManageModal';
 import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
 import { ChoresAndRewardsSection } from '../components/chores/ChoresAndRewardsSection';
 
@@ -52,6 +53,7 @@ export const CalendarView: React.FC = () => {
     deleteChore,
     currentMemberId,
     loggedInMemberId,
+    familyName,
   } = useFamily();
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -64,6 +66,7 @@ export const CalendarView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [defaultModalDate, setDefaultModalDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [carpoolAppointment, setCarpoolAppointment] = useState<Appointment | null>(null);
 
   const [isChoreModalOpen, setIsChoreModalOpen] = useState(false);
   const [editingChore, setEditingChore] = useState<Chore | null>(null);
@@ -348,6 +351,7 @@ export const CalendarView: React.FC = () => {
                   onToggleChore={handleChoreToggle}
                   onEditChore={openEditChoreModal}
                   onDeleteChore={handleDeleteChore}
+                  onManageCarpool={(app) => setCarpoolAppointment(app)}
                   isMobile={true}
                 />
               </div>
@@ -380,6 +384,7 @@ export const CalendarView: React.FC = () => {
                   onToggleChore={handleChoreToggle}
                   onEditChore={openEditChoreModal}
                   onDeleteChore={handleDeleteChore}
+                  onManageCarpool={(app) => setCarpoolAppointment(app)}
                   isMobile={false}
                 />
               </div>
@@ -396,6 +401,7 @@ export const CalendarView: React.FC = () => {
               onOpenAddChore={() => openAddChoreModal()}
               onEditAppointment={openEditAppointmentModal}
               onDeleteAppointment={handleDeleteAppointment}
+              onManageCarpool={(app) => setCarpoolAppointment(app)}
               onToggleChore={handleChoreToggle}
               onEditChore={openEditChoreModal}
               onDeleteChore={handleDeleteChore}
@@ -437,6 +443,19 @@ export const CalendarView: React.FC = () => {
           eligibleClaimants={getEligibleClaimants(claimingChore)}
         />
       )}
+
+      {/* Carpool Logistics Modal */}
+      <CarpoolManageModal
+        isOpen={!!carpoolAppointment}
+        onClose={() => setCarpoolAppointment(null)}
+        appointment={carpoolAppointment}
+        members={members}
+        familyName={familyName}
+        onSave={(updated) => {
+          updateAppointment(updated.id, updated);
+          setCarpoolAppointment(null);
+        }}
+      />
     </div>
   );
 };

@@ -10,6 +10,7 @@ interface CalendarAppointmentCardProps {
   hasConflict?: boolean;
   onEdit?: (appointment: Appointment) => void;
   onDelete?: (appointment: Appointment) => void;
+  onManageCarpool?: (appointment: Appointment) => void;
   variant?: 'compact' | 'full' | 'agenda';
 }
 
@@ -20,6 +21,7 @@ export const CalendarAppointmentCard: React.FC<CalendarAppointmentCardProps> = (
   hasConflict = false,
   onEdit,
   onDelete,
+  onManageCarpool,
   variant = 'full',
 }) => {
   const conf = CATEGORY_CONFIG[appointment.category] || CATEGORY_CONFIG.family;
@@ -69,6 +71,37 @@ export const CalendarAppointmentCard: React.FC<CalendarAppointmentCardProps> = (
                 {appointment.notes}
               </p>
             )}
+
+            {/* Carpool Logistics Pill */}
+            {appointment.carpool?.enabled ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageCarpool?.(appointment);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-100 dark:bg-blue-950/60 border-2 border-blue-300 dark:border-blue-700 text-xs font-black text-blue-900 dark:text-blue-200 hover:scale-102 active:scale-98 transition-transform"
+                >
+                  <span>🚗</span>
+                  <span>{appointment.carpool.driverName}: {appointment.carpool.riders.length}/{appointment.carpool.totalSeats} Plätze belegt</span>
+                </button>
+              </div>
+            ) : onManageCarpool && (appointment.category === 'sports' || appointment.category === 'school' || assignedMembers.some((m) => m.isChild)) ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageCarpool(appointment);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-dashed border-stone-300 dark:border-slate-700 text-[11px] font-bold text-stone-500 hover:text-blue-600 hover:border-blue-400 transition-colors"
+                >
+                  <span>🚗</span>
+                  <span>+ Fahrgemeinschaft</span>
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -182,6 +215,37 @@ export const CalendarAppointmentCard: React.FC<CalendarAppointmentCardProps> = (
           {appointment.notes}
         </p>
       )}
+
+      {/* Carpool Logistics Pill */}
+      {appointment.carpool?.enabled ? (
+        <div className="pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onManageCarpool?.(appointment);
+            }}
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-100 dark:bg-blue-950/70 border border-blue-300 dark:border-blue-700 text-[10px] font-black text-blue-900 dark:text-blue-200 hover:scale-102 active:scale-98 transition-transform"
+          >
+            <span>🚗</span>
+            <span>{appointment.carpool.driverName}: {appointment.carpool.riders.length}/{appointment.carpool.totalSeats} Plätze</span>
+          </button>
+        </div>
+      ) : onManageCarpool && (appointment.category === 'sports' || appointment.category === 'school' || assignedMembers.some((m) => m.isChild)) ? (
+        <div className="pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onManageCarpool(appointment);
+            }}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-dashed border-stone-300 dark:border-slate-700 text-[10px] font-bold text-stone-500 hover:text-blue-600 hover:border-blue-400 transition-colors"
+          >
+            <span>🚗</span>
+            <span>+ Fahrgemeinschaft</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };

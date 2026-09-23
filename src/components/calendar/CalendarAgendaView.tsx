@@ -14,6 +14,7 @@ interface CalendarAgendaViewProps {
   onOpenAddChore: () => void;
   onEditAppointment: (app: Appointment) => void;
   onDeleteAppointment: (app: Appointment) => void;
+  onManageCarpool?: (app: Appointment) => void;
   onToggleChore: (chore: Chore) => void;
   onEditChore: (chore: Chore) => void;
   onDeleteChore: (chore: Chore) => void;
@@ -27,6 +28,7 @@ export const CalendarAgendaView: React.FC<CalendarAgendaViewProps> = ({
   onOpenAddChore,
   onEditAppointment,
   onDeleteAppointment,
+  onManageCarpool,
   onToggleChore,
   onEditChore,
   onDeleteChore,
@@ -77,6 +79,7 @@ export const CalendarAgendaView: React.FC<CalendarAgendaViewProps> = ({
                       members={members}
                       onEdit={onEditAppointment}
                       onDelete={onDeleteAppointment}
+                      onManageCarpool={onManageCarpool}
                       variant="agenda"
                     />
                   </div>

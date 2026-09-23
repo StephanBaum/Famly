@@ -22,6 +22,18 @@ Famly is an intuitive, tactile, mobile-first household operating system designed
   - Relative love notes & reaction guestbook.
 - **⭐ Chores & Rewards**: Gamified star tracker for kids with completion celebrations.
 - **👶 Kids & Family Info**: Quick access to clothing/shoe sizes, doctor contacts, allergies, school schedules, and vaccination records.
+- **📺 Ambient Kitchen Station (Hearth-Style)**: Glanceable, zero-clutter kitchen display with automatic daypart adaptation, 60s idle auto-reset, and pre-reader kids punch cards.
+- **📍 Supermarket Geofence**: Automatically detects proximity to your grocery store and surfaces the 1-tap aisle-sorted shopping list.
+
+---
+
+## 📚 Documentation & Architecture Decisions
+
+Comprehensive architectural guides and design rationale are documented in the [`docs/`](file:///c:/Users/Stephan/.gemini/antigravity/scratch/family-hub/docs/) directory:
+
+- [**Master Product Vision & System Architecture**](file:///c:/Users/Stephan/.gemini/antigravity/scratch/family-hub/docs/PRODUCT_VISION_AND_SYSTEM_ARCHITECTURE.md) - The comprehensive North Star goal, full 7-system feature breakdown, and foundational design decisions for the entire app.
+- [**Kitchen Kiosk & Ambient Display Guide**](file:///c:/Users/Stephan/.gemini/antigravity/scratch/family-hub/docs/KITCHEN_KIOSK_GUIDE.md) - Hardware deployment (iPad, Fire Tablet, Raspberry Pi), daypart testing, and auto-reset behavior.
+- [**Autonomous Commerce & Logistics Roadmap (Step 2)**](file:///c:/Users/Stephan/.gemini/antigravity/scratch/family-hub/docs/AUTONOMOUS_COMMERCE_AND_LOGISTICS.md) - Automated cart staging (Rewe, Instacart, Amazon Fresh) and invisible carpool dispatch.
 
 ---
 

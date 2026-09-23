@@ -25,6 +25,7 @@ interface HeaderProps {
   onToggleKidsMode?: () => void;
   onOpenDecision?: () => void;
   onOpenJoinQR?: () => void;
+  onReturnToAmbient?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleKidsMode,
   onOpenDecision,
   onOpenJoinQR,
+  onReturnToAmbient,
 }) => {
   const {
     loggedInMember,
@@ -65,6 +67,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* DESKTOP CONTROLS (Clean & Calm) */}
           <div className="hidden sm:flex items-center gap-2.5 shrink-0">
+            {/* Ambient Station Return Button (Only shown in Kiosk mode) */}
+            {onReturnToAmbient && (
+              <button
+                onClick={onReturnToAmbient}
+                title="Zurück zur Küchen-Station"
+                className="px-3 py-1.5 rounded-2xl bg-sky-100 dark:bg-sky-950/80 text-sky-900 dark:text-sky-200 border-2 border-sky-300 dark:border-sky-700 text-xs font-black flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all shadow-2xs"
+              >
+                <span>📺 Station</span>
+              </button>
+            )}
+
             {/* Famly Assistant Button */}
             {onOpenDecision && (
               <button
@@ -113,6 +126,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* MOBILE STREAMLINED CONTROLS (Only visible on < sm) */}
           <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+            {/* Ambient Station Return Button (Only shown in Kiosk mode) */}
+            {onReturnToAmbient && (
+              <button
+                onClick={onReturnToAmbient}
+                title="Zurück zur Küchen-Station"
+                className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-900 dark:text-sky-200 border-2 border-sky-300 dark:border-sky-700 flex items-center justify-center active:scale-95 transition-transform shadow-2xs text-xs font-black"
+              >
+                📺
+              </button>
+            )}
+
             {/* Famly AI Assistant Quick Button */}
             {onOpenDecision && (
               <button

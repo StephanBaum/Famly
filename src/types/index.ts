@@ -65,6 +65,26 @@ export interface FamilyMember {
 export type AppointmentCategory = 'school' | 'health' | 'sports' | 'family' | 'work' | 'social';
 export type RecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
+export interface CarpoolRider {
+  id: string;
+  childName: string;
+  parentName?: string;
+  phone?: string;
+  notes?: string;
+  confirmedAt: number;
+}
+
+export interface CarpoolDetails {
+  enabled: boolean;
+  driverMemberId?: string;
+  driverName: string;
+  totalSeats: number;
+  riders: CarpoolRider[];
+  shareCode: string;
+  meetingPoint?: string;
+  notes?: string;
+}
+
 export interface Appointment {
   id: string;
   title: string;
@@ -78,6 +98,7 @@ export interface Appointment {
   recurrence?: RecurrenceFrequency;
   recurrenceEndDate?: string; // YYYY-MM-DD
   recurrenceDays?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+  carpool?: CarpoolDetails;
 }
 
 export const isAppointmentOnDate = (appointment: Appointment, dateInput: Date | string): boolean => {
